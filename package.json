@@ -1,0 +1,13 @@
+{
+  "name": "yunjian-zhiyu",
+  "private": true,
+  "packageManager": "pnpm@10.8.1",
+  "scripts": {
+    "dev:mobile": "pnpm --dir apps/mobile start",
+    "dev:server": "uv run --project apps/server fastapi dev app/main.py",
+    "lint:mobile": "pnpm --dir apps/mobile lint",
+    "lint:server": "uv run --project apps/server ruff check .",
+    "test:server": "uv run --project apps/server pytest",
+    "check": "pnpm lint:mobile && pnpm lint:server && pnpm test:server"
+  }
+}
