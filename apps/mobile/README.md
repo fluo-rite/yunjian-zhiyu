@@ -8,6 +8,8 @@ React Native mobile client built with Expo and Expo Router.
 - Expo
 - Expo Router
 - TypeScript
+- Redux Toolkit
+- React Redux
 
 ## Development
 
@@ -35,15 +37,19 @@ EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 
 ## Current Structure
 
-- `app/`: route-based screens
-- `components/`: shared UI building blocks
-- `constants/`: theme and shared constants
-- `hooks/`: reusable hooks
-- `lib/`: environment and API helpers
-- `assets/`: images and app assets
+- `src/app/`: Expo Router routes
+- `src/features/`: business-domain screens and modules
+- `src/components/`: shared UI building blocks
+- `src/lib/`: API helpers and utilities
+- `src/store/`: Redux Toolkit store and slices
+- `src/assets/`: images and app assets
+
+## Import Alias
+
+- Use `@/` as the `src` root alias, for example `@/features/home/screens/home-screen`
 
 ## Next Recommended Steps
 
 - Add `services/` or `api/` for HTTP clients and request wrappers
 - Add `features/` for business-domain screens and logic
-- Introduce state management only when real shared state appears
+- Keep shared client state in Redux Toolkit slices and server state in TanStack Query

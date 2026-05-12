@@ -32,17 +32,19 @@ Copy `.env.example` to `.env` before local development.
 ```env
 APP_NAME=Yunjian Zhiyu API
 DEBUG=true
+LLM_BASE_URL=
+LLM_API_KEY=
+LLM_MODEL=local-fallback
 ```
+
+When `LLM_BASE_URL` and `LLM_API_KEY` are not configured, the chat endpoint falls back to a local deterministic reply so frontend development can continue without an external model.
 
 ## Current Structure
 
 - `app/main.py`: FastAPI application factory and entrypoint
-- `app/api/`: routers and route modules
-- `app/core/`: settings and shared infrastructure
+- `app/api/`: routers, dependencies, and route modules
+- `app/core/`: settings, database, and security helpers
+- `app/models/`: SQLAlchemy models
+- `app/schemas/`: request and response DTOs
+- `app/services/`: business logic services
 - `tests/`: backend tests
-
-## Next Recommended Steps
-
-- Add `app/api/` for routers
-- Add `app/core/` for settings, logging, and shared infrastructure
-- Add `app/schemas/` and `app/services/` as business logic grows

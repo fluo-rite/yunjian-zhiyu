@@ -1,0 +1,242 @@
+import { create, isAxiosError } from "axios";
+import * as SecureStore from "expo-secure-store";
+
+const fallbackApiBaseUrl = "http://127.0.0.1:8000";
+const sessionStorageKey = "yunjian.zhiyu.session";
+
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || fallbackApiBaseUrl;
+export const API_V1_BASE_URL = `${API_BASE_URL}/api/v1`;
+
+export type User = {
+  id: string;
+  email: string;
+  username?: string | null;
+  nickname?: string | null;
+  authProvider: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Tokens = {
+  accessToken: string;
+  refreshToken: string;
+};
+
+export type Chat = {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Citation = {
+  type: "knowledge_card" | "web";
+  title: string;
+  snippet: string;
+  sourceId?: string;
+  url?: string;
+};
+
+export type MessageMetadata = {
+  usedKnowledge?: boolean;
+  usedWebSearch?: boolean;
+  model?: string;
+  latencyMs?: number;
+  citations?: Citation[];
+  requestedUseKnowledge?: boolean;
+  requestedUseWebSearch?: boolean;
+};
+
+export type Message = {
+  id: string;
+  chatId: string;
+  role: string;
+  content: string;
+  metadata?: MessageMetadata | null;
+  createdAt: string;
+};
+
+export type AuthResponse = {
+  user: User;
+  tokens: Tokens;
+};
+
+export type Card = {
+  id: string;
+  title: string;
+  summary?: string | null;
+  content: string;
+  cardType: string;
+  tags: string[];
+  status: string;
+  sourceType: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Pagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+};
+
+export type CardListResponse = {
+  items: Card[];
+  pagination: Pagination;
+};
+
+export type ChatListResponse = {
+  items: Chat[];
+  pagination: Pagination;
+};
+
+export type ChatDetailResponse = {
+  chat: Chat;
+  messages: Message[];
+};
+
+export type RegisterRequest = {
+  email: string;
+  username?: string;
+  nickname?: string;
+  password: string;
+};
+
+export type LoginRequest = {
+  account: string;
+  password: string;
+};
+
+export type CreateCardRequest = {
+  title: string;
+  summary?: string;
+  content: string;
+  cardType: string;
+  tags: string[];
+  status: string;
+  sourceType: string;
+};
+
+export type CreateChatRequest = {
+  title: string;
+};
+
+export type SendMessageRequest = {
+  content: string;
+  options: {
+    useKnowledge: boolean;
+    useWebSearch: boolean;
+  };
+};
+
+export type SendMessageResponse = {
+  message: Message;
+  citations: Citation[];
+};
+
+type SessionPayload = Tokens | null;
+
+export const apiClient = create({
+  baseURL: API_V1_BASE_URL,
+  timeout: 15_000,
+});
+
+export function setAccessToken(token: string | null) {
+  if (token) {
+    apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
+    return;
+  }
+  delete apiClient.defaults.headers.common.Authorization;
+}
+
+export async function saveSession(tokens: Tokens) {
+  await SecureStore.setItemAsync(sessionStorageKey, JSON.stringify(tokens));
+}
+
+export async function hydrateSession(): Promise<SessionPayload> {
+  const raw = await SecureStore.getItemAsync(sessionStorageKey);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as Tokens;
+  } catch {
+    await SecureStore.deleteItemAsync(sessionStorageKey);
+    return null;
+  }
+}
+
+export async function clearPersistedSession() {
+  await SecureStore.deleteItemAsync(sessionStorageKey);
+}
+
+export function extractApiError(error: unknown): string {
+  if (isAxiosError(error)) {
+    const detail = error.response?.data?.detail;
+    if (typeof detail === "string" && detail.length > 0) {
+      return detail;
+    }
+    return error.message || "请求失败，请稍后重试。";
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "发生未知错误，请稍后重试。";
+}
+
+export async function register(payload: RegisterRequest) {
+  const response = await apiClient.post<AuthResponse>("/auth/register", payload);
+  return response.data;
+}
+
+export async function login(payload: LoginRequest) {
+  const response = await apiClient.post<AuthResponse>("/auth/login", payload);
+  return response.data;
+}
+
+export async function fetchCurrentUser() {
+  const response = await apiClient.get<User>("/auth/me");
+  return response.data;
+}
+
+export async function fetchCards(params: { status?: string } = {}) {
+  const response = await apiClient.get<CardListResponse>("/cards", { params });
+  return response.data;
+}
+
+export async function fetchChats() {
+  const response = await apiClient.get<ChatListResponse>("/chats");
+  return response.data;
+}
+
+export async function createChat(payload: CreateChatRequest) {
+  const response = await apiClient.post<Chat>("/chats", payload);
+  return response.data;
+}
+
+export async function fetchChatDetail(chatId: string) {
+  const response = await apiClient.get<ChatDetailResponse>(`/chats/${chatId}`);
+  return response.data;
+}
+
+export async function sendChatMessage(chatId: string, payload: SendMessageRequest) {
+  const response = await apiClient.post<SendMessageResponse>(`/chats/${chatId}/messages`, payload);
+  return response.data;
+}
+
+export async function createCard(payload: CreateCardRequest) {
+  const response = await apiClient.post<Card>("/cards", payload);
+  return response.data;
+}
+
+export async function deleteCard(cardId: string) {
+  await apiClient.delete(`/cards/${cardId}`);
+}
+
+console.log("API_BASE_URL from app:", API_BASE_URL);
+console.log("raw env from app:", process.env.EXPO_PUBLIC_API_BASE_URL);

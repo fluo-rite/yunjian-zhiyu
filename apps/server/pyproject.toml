@@ -5,11 +5,16 @@ description = "FastAPI backend for the Yunjian Zhiyu project."
 requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.136.1",
+    "email-validator>=2.0.0",
+    "httpx>=0.28.1",
     "pydantic-settings>=2.0.0",
+    "pyjwt>=2.10.1",
+    "sqlalchemy>=2.0.36",
 ]
 
 [dependency-groups]
 dev = [
+    "alembic>=1.14.0",
     "pytest>=8.0.0",
     "ruff>=0.11.0",
 ]
