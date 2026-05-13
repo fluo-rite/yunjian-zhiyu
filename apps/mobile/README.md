@@ -42,6 +42,7 @@ EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 - `src/components/`: shared UI building blocks
 - `src/lib/`: API helpers and utilities
 - `src/store/`: Redux Toolkit store and slices
+- `src/theme/`: shared design tokens
 - `src/assets/`: images and app assets
 
 ## Import Alias

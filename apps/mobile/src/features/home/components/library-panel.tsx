@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { CardComposer } from "@/features/cards/components/card-composer";
 import { CardItem } from "@/features/cards/components/card-item";
-import { homeStyles as styles } from "@/features/home/styles";
 import {
   clearPersistedSession,
   deleteCard,
@@ -17,6 +16,8 @@ import {
 } from "@/lib/api";
 import { clearSession } from "@/store/auth-slice";
 import { useAppDispatch } from "@/store/hooks";
+
+import { libraryPanelStyles as styles } from "./library-panel.styles";
 
 export function LibraryPanel() {
   const dispatch = useAppDispatch();

@@ -1,15 +1,24 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AuthPanel, type AuthMode } from "@/features/auth/components/auth-panel";
 import { ChatWorkspace } from "@/features/chat/components/chat-workspace";
 import { LibraryPanel } from "@/features/home/components/library-panel";
-import { homeStyles as styles } from "@/features/home/styles";
 import { saveSession, setAccessToken, type AuthResponse } from "@/lib/api";
 import { selectAccessToken, selectHydrated, setSession } from "@/store/auth-slice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+
+import { homeScreenStyles as styles } from "./home-screen.styles";
 
 export function HomeScreen() {
   const dispatch = useAppDispatch();
@@ -26,6 +35,7 @@ export function HomeScreen() {
     dispatch(setSession(result.tokens));
     await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
     await queryClient.invalidateQueries({ queryKey: ["cards", "list"] });
+    await queryClient.invalidateQueries({ queryKey: ["chats", "list"] });
   };
 
   if (!hydrated) {
@@ -49,21 +59,15 @@ export function HomeScreen() {
           <View style={styles.screen}>
             <View style={styles.workspaceSwitcher}>
               <Text style={styles.workspaceTitle}>学习工作台</Text>
-              <View style={styles.segmentRow}>
-                <View style={styles.workspaceTab}>
-                  <AuthPanel
-                    mode={workspace === "chat" ? "login" : "register"}
-                    onAuthenticated={handleAuthenticated}
-                    onModeChange={setMode}
-                  />
-                </View>
-              </View>
-            </View>
-            <View style={styles.workspaceToggleBar}>
-              <View style={styles.segmentRow}>
-                <View style={styles.workspaceButton}>
+              <View style={styles.workspaceToggleBar}>
+                <Pressable
+                  onPress={() => setWorkspace("chat")}
+                  style={[
+                    styles.workspaceButton,
+                    workspace === "chat" && styles.workspaceButtonActive,
+                  ]}
+                >
                   <Text
-                    onPress={() => setWorkspace("chat")}
                     style={[
                       styles.workspaceButtonLabel,
                       workspace === "chat" && styles.workspaceButtonLabelActive,
@@ -71,10 +75,15 @@ export function HomeScreen() {
                   >
                     AI 对话
                   </Text>
-                </View>
-                <View style={styles.workspaceButton}>
+                </Pressable>
+                <Pressable
+                  onPress={() => setWorkspace("library")}
+                  style={[
+                    styles.workspaceButton,
+                    workspace === "library" && styles.workspaceButtonActive,
+                  ]}
+                >
                   <Text
-                    onPress={() => setWorkspace("library")}
                     style={[
                       styles.workspaceButtonLabel,
                       workspace === "library" && styles.workspaceButtonLabelActive,
@@ -82,7 +91,7 @@ export function HomeScreen() {
                   >
                     知识库
                   </Text>
-                </View>
+                </Pressable>
               </View>
             </View>
             {workspace === "chat" ? <ChatWorkspace /> : <LibraryPanel />}

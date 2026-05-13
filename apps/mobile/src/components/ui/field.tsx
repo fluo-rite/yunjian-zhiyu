@@ -1,6 +1,8 @@
 import { Text, TextInput, View } from "react-native";
 
-import { homeStyles as styles } from "@/features/home/styles";
+import { colors } from "@/theme/tokens";
+
+import { fieldStyles as styles } from "./field.styles";
 
 export function Field(props: {
   label: string;
@@ -17,7 +19,7 @@ export function Field(props: {
         multiline={props.multiline}
         onChangeText={props.onChangeText}
         placeholder={props.placeholder}
-        placeholderTextColor="#7f8c8d"
+        placeholderTextColor={colors.placeholder}
         secureTextEntry={props.secureTextEntry}
         style={[styles.input, props.multiline && styles.inputMultiline]}
         value={props.value}

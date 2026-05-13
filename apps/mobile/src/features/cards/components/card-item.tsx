@@ -2,7 +2,8 @@ import { Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { type Card } from "@/lib/api";
-import { homeStyles as styles } from "@/features/home/styles";
+
+import { cardItemStyles as styles } from "./card-item.styles";
 
 export function CardItem(props: { card: Card; onDelete: (card: Card) => void }) {
   return (

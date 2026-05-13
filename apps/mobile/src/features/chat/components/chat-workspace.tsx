@@ -10,9 +10,10 @@ import {
   fetchChats,
   sendChatMessage,
 } from "@/lib/api";
-import { homeStyles as styles } from "@/features/home/styles";
+import { colors } from "@/theme/tokens";
 
 import { MessageBubble } from "./message-bubble";
+import { chatWorkspaceStyles as styles } from "./chat-workspace.styles";
 
 function buildChatTitle(content: string) {
   const trimmed = content.trim();
@@ -25,6 +26,7 @@ function buildChatTitle(content: string) {
 export function ChatWorkspace() {
   const queryClient = useQueryClient();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [draftChatMode, setDraftChatMode] = useState(false);
   const [draft, setDraft] = useState("");
   const [useKnowledge, setUseKnowledge] = useState(true);
   const [useWebSearch, setUseWebSearch] = useState(false);
@@ -36,7 +38,7 @@ export function ChatWorkspace() {
 
   useEffect(() => {
     const firstChatId = chatsQuery.data?.items[0]?.id ?? null;
-    if (!selectedChatId && firstChatId) {
+    if (!selectedChatId && firstChatId && !draftChatMode) {
       setSelectedChatId(firstChatId);
       return;
     }
@@ -48,7 +50,7 @@ export function ChatWorkspace() {
     ) {
       setSelectedChatId(firstChatId);
     }
-  }, [selectedChatId, chatsQuery.data]);
+  }, [draftChatMode, selectedChatId, chatsQuery.data]);
 
   const detailQuery = useQuery({
     queryKey: ["chats", "detail", selectedChatId],
@@ -59,6 +61,7 @@ export function ChatWorkspace() {
   const createChatMutation = useMutation({
     mutationFn: createChat,
     onSuccess: async (chat) => {
+      setDraftChatMode(false);
       setSelectedChatId(chat.id);
       await queryClient.invalidateQueries({ queryKey: ["chats", "list"] });
     },
@@ -117,7 +120,7 @@ export function ChatWorkspace() {
 
   return (
     <ScrollView contentContainerStyle={styles.listContent}>
-      <View style={styles.libraryHero}>
+      <View style={styles.heroCard}>
         <Text style={styles.heroEyebrow}>第二开发阶段</Text>
         <Text style={styles.heroTitle}>AI 对话工作台</Text>
         <Text style={styles.heroSubtitle}>
@@ -129,6 +132,7 @@ export function ChatWorkspace() {
         <PrimaryButton
           label="新对话"
           onPress={() => {
+            setDraftChatMode(true);
             setSelectedChatId(null);
             setDraft("");
           }}
@@ -167,10 +171,13 @@ export function ChatWorkspace() {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chatChipRow}>
         <Pressable
-          onPress={() => setSelectedChatId(null)}
-          style={[styles.chatChip, !selectedChatId && styles.chatChipActive]}
+          onPress={() => {
+            setDraftChatMode(true);
+            setSelectedChatId(null);
+          }}
+          style={[styles.chatChip, draftChatMode && styles.chatChipActive]}
         >
-          <Text style={[styles.chatChipLabel, !selectedChatId && styles.chatChipLabelActive]}>
+          <Text style={[styles.chatChipLabel, draftChatMode && styles.chatChipLabelActive]}>
             新对话草稿
           </Text>
         </Pressable>
@@ -179,7 +186,10 @@ export function ChatWorkspace() {
           return (
             <Pressable
               key={chat.id}
-              onPress={() => setSelectedChatId(chat.id)}
+              onPress={() => {
+                setDraftChatMode(false);
+                setSelectedChatId(chat.id);
+              }}
               style={[styles.chatChip, selected && styles.chatChipActive]}
             >
               <Text style={[styles.chatChipLabel, selected && styles.chatChipLabelActive]}>
@@ -228,7 +238,7 @@ export function ChatWorkspace() {
           multiline
           onChangeText={setDraft}
           placeholder="例如：帮我总结我知识库里的 FastAPI 路由知识，并指出下一步该补哪些内容。"
-          placeholderTextColor="#7f8c8d"
+          placeholderTextColor={colors.placeholder}
           style={styles.chatInput}
           value={draft}
         />

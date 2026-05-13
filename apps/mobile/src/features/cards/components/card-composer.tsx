@@ -5,7 +5,8 @@ import { Controller, useForm } from "react-hook-form";
 import { Field } from "@/components/ui/field";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { createCard, extractApiError } from "@/lib/api";
-import { homeStyles as styles } from "@/features/home/styles";
+
+import { cardComposerStyles as styles } from "./card-composer.styles";
 
 type CardFormValues = {
   title: string;

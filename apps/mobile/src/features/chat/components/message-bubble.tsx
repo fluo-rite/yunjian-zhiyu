@@ -1,7 +1,8 @@
 import { Text, View } from "react-native";
 
 import { type Citation, type Message } from "@/lib/api";
-import { homeStyles as styles } from "@/features/home/styles";
+
+import { messageBubbleStyles as styles } from "./message-bubble.styles";
 
 function isCitationList(value: unknown): value is Citation[] {
   return Array.isArray(value);

@@ -10,7 +10,8 @@ import {
   register,
   type AuthResponse,
 } from "@/lib/api";
-import { homeStyles as styles } from "@/features/home/styles";
+
+import { authPanelStyles as styles } from "./auth-panel.styles";
 
 export type AuthMode = "login" | "register";
 
