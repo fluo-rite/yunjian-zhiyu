@@ -7,10 +7,32 @@ from app.schemas.card import (
     CardRead,
     CardUpdate,
 )
-from app.schemas.chat import ChatCreate, ChatDetailResponse, ChatListResponse, ChatRead
-from app.schemas.message import CitationRead, MessageCreate, MessageCreateResponse, MessageOptions, MessageRead
+from app.schemas.chat import ChatCreate, ChatListResponse, ChatRead
+from app.schemas.message import (
+    AbortChatMessageResponse,
+    ActiveMessageInfo,
+    ChatGenerationConflictResponse,
+    ChatMessageListResponse,
+    CitationRead,
+    CreateChatMessageResponse,
+    MessageCreate,
+    MessageCreateResponse,
+    MessageOptions,
+    MessageRead,
+)
+from app.schemas.stream import (
+    AgentStreamEvent,
+    ErrorEventData,
+    MessageAbortedEventData,
+    MessageDeltaEventData,
+    MessageDoneEventData,
+    MessageStartEventData,
+)
 
 __all__ = [
+    "AgentStreamEvent",
+    "AbortChatMessageResponse",
+    "ActiveMessageInfo",
     "AuthResponse",
     "BatchConfirmCardsRequest",
     "BatchConfirmCardsResponse",
@@ -20,14 +42,21 @@ __all__ = [
     "CardUpdate",
     "CitationRead",
     "ChatCreate",
-    "ChatDetailResponse",
     "ChatListResponse",
+    "ChatGenerationConflictResponse",
+    "ChatMessageListResponse",
     "ChatRead",
+    "ErrorEventData",
     "LoginRequest",
+    "CreateChatMessageResponse",
+    "MessageAbortedEventData",
     "MessageCreate",
     "MessageCreateResponse",
+    "MessageDeltaEventData",
+    "MessageDoneEventData",
     "MessageOptions",
     "MessageRead",
+    "MessageStartEventData",
     "RegisterRequest",
     "TokenPair",
     "UserRead",

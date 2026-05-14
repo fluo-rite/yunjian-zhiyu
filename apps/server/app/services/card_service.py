@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from sqlalchemy import Select, String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
@@ -85,6 +87,19 @@ class CardService:
                 KnowledgeCard.user_id == user.id,
             )
         ).scalar_one_or_none()
+
+    @staticmethod
+    def list_active_cards(db: Session, user: User) -> list[KnowledgeCard]:
+        return (
+            db.execute(
+                select(KnowledgeCard).where(
+                    KnowledgeCard.user_id == user.id,
+                    KnowledgeCard.status == "active",
+                )
+            )
+            .scalars()
+            .all()
+        )
 
     @staticmethod
     def update(db: Session, card: KnowledgeCard, payload: CardUpdate) -> CardRead:

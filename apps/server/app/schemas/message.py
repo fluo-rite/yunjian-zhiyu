@@ -5,13 +5,18 @@ from pydantic import Field
 
 from app.schemas.common import CamelModel
 
+MessageStatus = Literal["streaming", "done", "failed", "aborted"]
+
 
 class MessageRead(CamelModel):
     id: str
     chat_id: str
-    role: str
+    role: Literal["user", "assistant"]
+    status: MessageStatus
     content: str
+    error_message: str | None = None
     metadata: dict[str, Any] | None = None
+    stream_url: str | None = None
     created_at: datetime
 
 
@@ -36,3 +41,29 @@ class CitationRead(CamelModel):
 class MessageCreateResponse(CamelModel):
     message: MessageRead
     citations: list[CitationRead]
+
+
+class CreateChatMessageResponse(CamelModel):
+    user_message_id: str
+    assistant_message_id: str
+    stream_url: str
+
+
+class ChatMessageListResponse(CamelModel):
+    items: list[MessageRead]
+
+
+class AbortChatMessageResponse(CamelModel):
+    assistant_message_id: str
+    status: Literal["aborting"]
+
+
+class ActiveMessageInfo(CamelModel):
+    id: str
+    stream_url: str
+
+
+class ChatGenerationConflictResponse(CamelModel):
+    code: Literal["CHAT_GENERATION_IN_PROGRESS"] = "CHAT_GENERATION_IN_PROGRESS"
+    message: str
+    active_message: ActiveMessageInfo

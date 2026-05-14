@@ -3,9 +3,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.chat import Chat
 from app.models.user import User
-from app.schemas.chat import ChatCreate, ChatDetailResponse, ChatListResponse, ChatRead
+from app.schemas.chat import ChatCreate, ChatListResponse, ChatRead
 from app.schemas.common import PaginationMeta
-from app.services.message_service import MessageService
 
 
 class ChatService:
@@ -47,16 +46,6 @@ class ChatService:
             .options(selectinload(Chat.messages))
             .where(Chat.id == chat_id, Chat.user_id == user.id)
         ).scalar_one_or_none()
-
-    @staticmethod
-    def detail(chat: Chat) -> ChatDetailResponse:
-        return ChatDetailResponse(
-            chat=ChatRead.model_validate(chat),
-            messages=[
-                MessageService.to_read(message)
-                for message in sorted(chat.messages, key=lambda item: item.created_at)
-            ],
-        )
 
     @staticmethod
     def delete(db: Session, chat: Chat) -> None:

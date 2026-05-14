@@ -1,11 +1,15 @@
 import { create, isAxiosError } from "axios";
 import * as SecureStore from "expo-secure-store";
 
-const fallbackApiBaseUrl = "http://127.0.0.1:8000";
 const sessionStorageKey = "yunjian.zhiyu.session";
 
-export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || fallbackApiBaseUrl;
+export const API_BASE_URL = (() => {
+  const configuredApiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  if (!configuredApiBaseUrl) {
+    throw new Error("EXPO_PUBLIC_API_BASE_URL is required.");
+  }
+  return configuredApiBaseUrl;
+})();
 export const API_V1_BASE_URL = `${API_BASE_URL}/api/v1`;
 
 export type User = {
@@ -46,14 +50,19 @@ export type MessageMetadata = {
   citations?: Citation[];
   requestedUseKnowledge?: boolean;
   requestedUseWebSearch?: boolean;
+  streaming?: boolean;
+  error?: string;
 };
 
 export type Message = {
   id: string;
   chatId: string;
   role: string;
+  status: "streaming" | "done" | "failed" | "aborted";
   content: string;
+  errorMessage?: string | null;
   metadata?: MessageMetadata | null;
+  streamUrl?: string | null;
   createdAt: string;
 };
 
@@ -92,11 +101,6 @@ export type ChatListResponse = {
   pagination: Pagination;
 };
 
-export type ChatDetailResponse = {
-  chat: Chat;
-  messages: Message[];
-};
-
 export type RegisterRequest = {
   email: string;
   username?: string;
@@ -123,7 +127,7 @@ export type CreateChatRequest = {
   title: string;
 };
 
-export type SendMessageRequest = {
+export type CreateChatMessageRequest = {
   content: string;
   options: {
     useKnowledge: boolean;
@@ -131,9 +135,19 @@ export type SendMessageRequest = {
   };
 };
 
-export type SendMessageResponse = {
-  message: Message;
-  citations: Citation[];
+export type CreateChatMessageResponse = {
+  userMessageId: string;
+  assistantMessageId: string;
+  streamUrl: string;
+};
+
+export type ChatMessageListResponse = {
+  items: Message[];
+};
+
+export type AbortChatMessageResponse = {
+  assistantMessageId: string;
+  status: "aborting";
 };
 
 type SessionPayload = Tokens | null;
@@ -219,13 +233,20 @@ export async function createChat(payload: CreateChatRequest) {
   return response.data;
 }
 
-export async function fetchChatDetail(chatId: string) {
-  const response = await apiClient.get<ChatDetailResponse>(`/chats/${chatId}`);
+export async function fetchChatMessages(chatId: string) {
+  const response = await apiClient.get<ChatMessageListResponse>(`/chats/${chatId}/messages`);
   return response.data;
 }
 
-export async function sendChatMessage(chatId: string, payload: SendMessageRequest) {
-  const response = await apiClient.post<SendMessageResponse>(`/chats/${chatId}/messages`, payload);
+export async function createChatMessage(chatId: string, payload: CreateChatMessageRequest) {
+  const response = await apiClient.post<CreateChatMessageResponse>(`/chats/${chatId}/messages`, payload);
+  return response.data;
+}
+
+export async function abortChatMessage(chatId: string, assistantMessageId: string) {
+  const response = await apiClient.post<AbortChatMessageResponse>(
+    `/chats/${chatId}/messages/${assistantMessageId}/abort`,
+  );
   return response.data;
 }
 
@@ -237,6 +258,3 @@ export async function createCard(payload: CreateCardRequest) {
 export async function deleteCard(cardId: string) {
   await apiClient.delete(`/cards/${cardId}`);
 }
-
-console.log("API_BASE_URL from app:", API_BASE_URL);
-console.log("raw env from app:", process.env.EXPO_PUBLIC_API_BASE_URL);

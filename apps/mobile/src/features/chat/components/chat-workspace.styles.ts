@@ -160,4 +160,9 @@ export const chatWorkspaceStyles = StyleSheet.create({
     fontSize: 15,
     textAlignVertical: "top",
   },
+  streamErrorText: {
+    color: "#a6412b",
+    fontSize: 13,
+    lineHeight: 20,
+  },
 });
