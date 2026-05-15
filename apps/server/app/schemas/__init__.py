@@ -8,6 +8,7 @@ from app.schemas.card import (
     CardUpdate,
 )
 from app.schemas.chat import ChatCreate, ChatListResponse, ChatRead
+from app.schemas.document import DocumentRead
 from app.schemas.message import (
     AbortChatMessageResponse,
     ActiveMessageInfo,
@@ -49,6 +50,7 @@ __all__ = [
     "ErrorEventData",
     "LoginRequest",
     "CreateChatMessageResponse",
+    "DocumentRead",
     "MessageAbortedEventData",
     "MessageCreate",
     "MessageCreateResponse",

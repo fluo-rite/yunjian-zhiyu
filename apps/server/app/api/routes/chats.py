@@ -28,6 +28,13 @@ from app.services.stream_store_service import (
 router = APIRouter(prefix="/chats", tags=["chats"])
 
 
+def _normalize_last_event_id(value: str | None) -> str:
+    normalized = (value or "").strip()
+    if not normalized:
+        return "0-0"
+    return normalized
+
+
 @router.post("", response_model=ChatRead, status_code=status.HTTP_201_CREATED)
 def create_chat(
     payload: ChatCreate,
@@ -104,10 +111,6 @@ async def create_chat_message(
     return CreateChatMessageResponse(
         user_message_id=user_message.id,
         assistant_message_id=assistant_message.id,
-        stream_url=MessageService.build_stream_url(
-            chat_id=chat.id,
-            assistant_message_id=assistant_message.id,
-        ),
     )
 
 
@@ -136,7 +139,7 @@ async def stream_chat_message(
         chat_id=chat_id,
         assistant_message_id=assistant_message_id,
         current_user=current_user,
-        last_event_id=last_event_id,
+        last_event_id=_normalize_last_event_id(last_event_id),
     )
 
 

@@ -335,6 +335,61 @@ def test_cards_crud_flow() -> None:
     assert delete_response.status_code == 204
 
 
+def test_cards_validation_rejects_invalid_enum_values() -> None:
+    reset_database()
+    headers = create_user("cards-invalid@example.com", "cards-invalid-user")
+
+    create_response = client.post(
+        "/api/v1/cards",
+        headers=headers,
+        json={
+            "title": "Invalid card payload",
+            "summary": "This should fail validation before the database layer.",
+            "content": "Invalid enum values should trigger a 422 response.",
+            "cardType": "旅行车",
+            "tags": ["FastAPI"],
+            "status": "culpa Lorem dolore sunt",
+            "sourceType": "exercitation in labore amet ea",
+        },
+    )
+    assert create_response.status_code == 422, create_response.text
+
+    list_response = client.get(
+        "/api/v1/cards",
+        headers=headers,
+        params={"status": "culpa Lorem dolore sunt", "card_type": "旅行车"},
+    )
+    assert list_response.status_code == 422, list_response.text
+
+
+def test_cards_list_treats_empty_enum_query_values_as_missing() -> None:
+    reset_database()
+    headers = create_user("cards-empty-query@example.com", "cards-empty-query-user")
+
+    create_response = client.post(
+        "/api/v1/cards",
+        headers=headers,
+        json={
+            "title": "Empty query filter card",
+            "summary": "Used to verify empty enum query params are ignored.",
+            "content": "The list endpoint should treat empty enum params as missing values.",
+            "cardType": "concept",
+            "tags": ["FastAPI"],
+            "status": "active",
+            "sourceType": "manual",
+        },
+    )
+    assert create_response.status_code == 201, create_response.text
+
+    list_response = client.get(
+        "/api/v1/cards",
+        headers=headers,
+        params={"status": "", "card_type": ""},
+    )
+    assert list_response.status_code == 200, list_response.text
+    assert list_response.json()["pagination"]["total"] == 1
+
+
 def test_chats_crud_flow() -> None:
     reset_database()
     headers = create_user("chats@example.com", "chats-user")
@@ -398,7 +453,6 @@ def test_chat_message_creation_stream_and_history(monkeypatch) -> None:
     assert len(history_items) == 2
     assert history_items[0]["role"] == "user"
     assert history_items[1]["role"] == "assistant"
-    assert history_items[1]["streamUrl"].endswith(f"/messages/{assistant_message_id}/stream")
 
     with client.stream(
         "GET",
@@ -483,6 +537,57 @@ def test_chat_message_stream_can_resume_from_last_event_id(monkeypatch) -> None:
     assert resumed_events
     assert resumed_events[0]["id"] != first_event_id
     assert resumed_events[-1]["event"] == "message.done"
+    dispatcher.wait_for_idle()
+
+
+def test_chat_message_stream_treats_empty_last_event_id_as_replay_from_start(monkeypatch) -> None:
+    reset_database()
+    dispatcher = install_runtime_test_doubles(monkeypatch)
+    headers = create_user("empty-last-event@example.com", "empty-last-event-user")
+    chat_id = create_chat(headers, "Empty cursor chat")
+
+    card_response = client.post(
+        "/api/v1/cards",
+        headers=headers,
+        json={
+            "title": "Cursor normalization card",
+            "summary": "Empty lastEventId should behave like a full replay.",
+            "content": "Stream resume should not fail when the cursor query parameter is empty.",
+            "cardType": "concept",
+            "tags": ["Streaming"],
+            "status": "active",
+            "sourceType": "manual",
+        },
+    )
+    assert card_response.status_code == 201, card_response.text
+    card_id = card_response.json()["id"]
+    _patch_chat_agent(
+        monkeypatch,
+        card_id=card_id,
+        content="An empty lastEventId query value should fall back to replaying from the start.",
+    )
+
+    create_response = client.post(
+        f"/api/v1/chats/{chat_id}/messages",
+        headers=headers,
+        json={
+            "content": "Explain the empty lastEventId behavior.",
+            "options": {"useKnowledge": True, "useWebSearch": False},
+        },
+    )
+    assistant_message_id = create_response.json()["assistantMessageId"]
+
+    with client.stream(
+        "GET",
+        f"/api/v1/chats/{chat_id}/messages/{assistant_message_id}/stream?lastEventId=",
+        headers=headers,
+    ) as response:
+        payload = "".join(response.iter_text())
+
+    events = _parse_sse_events(payload)
+    assert response.status_code == 200
+    assert events[0]["event"] == "message.start"
+    assert events[-1]["event"] == "message.done"
     dispatcher.wait_for_idle()
 
 

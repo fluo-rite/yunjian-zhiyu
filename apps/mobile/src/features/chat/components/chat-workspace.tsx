@@ -55,7 +55,6 @@ function buildOptimisticUserMessage(params: {
     status: "done",
     content: params.content,
     errorMessage: null,
-    streamUrl: null,
     createdAt: new Date().toISOString(),
     metadata: {
       requestedUseKnowledge: params.useKnowledge,
@@ -97,7 +96,6 @@ function applyStreamEvent(messages: Message[], event: AgentStreamEvent): Message
           status: "streaming",
           content: "",
           errorMessage: null,
-          streamUrl: null,
           createdAt: new Date().toISOString(),
           metadata: { streaming: true },
         },
@@ -215,7 +213,6 @@ export function ChatWorkspace() {
     async (params: {
       chatId: string;
       assistantMessageId: string;
-      streamUrl: string;
       initialMessages: Message[];
     }) => {
       if (!accessToken) {
@@ -236,7 +233,8 @@ export function ChatWorkspace() {
 
       try {
         await chatStream({
-          streamUrl: params.streamUrl,
+          chatId: params.chatId,
+          assistantMessageId: params.assistantMessageId,
           accessToken,
           lastEventId,
           signal: abortController.signal,
@@ -304,16 +302,15 @@ export function ChatWorkspace() {
     }
 
     const streamingMessage = messagesQuery.data.items.find(
-      (message) => message.role === "assistant" && message.status === "streaming" && message.streamUrl,
+      (message) => message.role === "assistant" && message.status === "streaming",
     );
-    if (!streamingMessage?.streamUrl) {
+    if (!streamingMessage) {
       return;
     }
 
     void consumeStream({
       chatId: selectedChatId,
       assistantMessageId: streamingMessage.id,
-      streamUrl: streamingMessage.streamUrl,
       initialMessages: messagesQuery.data.items,
     });
   }, [accessToken, activeStreamMessageId, consumeStream, isStreaming, messagesQuery.data, selectedChatId]);
@@ -383,7 +380,6 @@ export function ChatWorkspace() {
       await consumeStream({
         chatId,
         assistantMessageId: createResponse.assistantMessageId,
-        streamUrl: createResponse.streamUrl,
         initialMessages: [...initialMessages, { ...optimisticUserMessage, id: createResponse.userMessageId }],
       });
     } catch (error) {

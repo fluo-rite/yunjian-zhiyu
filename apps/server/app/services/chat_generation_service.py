@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from functools import lru_cache
 
 from arq.connections import RedisSettings, create_pool
@@ -46,7 +46,7 @@ class ArqTaskDispatcher(ChatTaskDispatcher):
         try:
             await redis_pool.enqueue_job(
                 "run_chat_generation_job",
-                job=job.__dict__,
+                job=asdict(job),
                 _queue_name=settings.arq_queue_name,
             )
         finally:

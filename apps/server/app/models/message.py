@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Index, Integer, String, Text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -10,6 +10,14 @@ class Message(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         Index("ix_messages_chat_role_status", "chat_id", "role", "status"),
         Index("ix_messages_chat_created_at", "chat_id", "created_at"),
+        CheckConstraint(
+            "role IN ('user', 'assistant')",
+            name="ck_messages_role",
+        ),
+        CheckConstraint(
+            "status IN ('streaming', 'done', 'failed', 'aborted')",
+            name="ck_messages_status",
+        ),
     )
 
     chat_id: Mapped[str] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"), index=True)

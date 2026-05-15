@@ -1,12 +1,19 @@
 from __future__ import annotations
+# ruff: noqa: E402
 
-import os
 from logging.config import fileConfig
+from pathlib import Path
+import sys
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+SERVER_ROOT = Path(__file__).resolve().parents[1]
+if str(SERVER_ROOT) not in sys.path:
+    sys.path.insert(0, str(SERVER_ROOT))
+
 from app import models  # noqa: F401
+from app.core.config import get_settings
 from app.core.db import Base
 
 
@@ -15,9 +22,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-database_url = os.environ.get("DATABASE_URL", "").strip()
-if not database_url:
-    raise RuntimeError("DATABASE_URL is required for Alembic migrations.")
+settings = get_settings()
+database_url = settings.database_url
 
 config.set_main_option("sqlalchemy.url", database_url)
 target_metadata = Base.metadata

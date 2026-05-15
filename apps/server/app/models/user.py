@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import CheckConstraint, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -6,6 +6,12 @@ from app.core.db import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint(
+            "auth_provider IN ('local', 'oauth')",
+            name="ck_users_auth_provider",
+        ),
+    )
 
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     username: Mapped[str | None] = mapped_column(String(50), unique=True, index=True, nullable=True)

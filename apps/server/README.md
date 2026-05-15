@@ -51,7 +51,7 @@ LLM_MODEL=gpt-4.1-mini
 Initialize the schema with Alembic before running the app:
 
 ```bash
-uv run --project apps/server alembic upgrade head
+uv run --project apps/server alembic -c apps/server/alembic.ini upgrade head
 ```
 
 Run an ARQ worker in a separate terminal:
@@ -59,6 +59,8 @@ Run an ARQ worker in a separate terminal:
 ```bash
 uv run --project apps/server arq app.workers.arq_worker.WorkerSettings
 ```
+
+Both Alembic and the ARQ worker now load `DATABASE_URL` and `REDIS_URL` automatically from `apps/server/.env` through the shared settings module, so you do not need to export those variables manually in PowerShell first.
 
 ## Streaming Message Flow
 

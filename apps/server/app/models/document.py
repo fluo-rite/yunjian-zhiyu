@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import CheckConstraint, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -6,6 +6,12 @@ from app.core.db import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 class Document(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "documents"
+    __table_args__ = (
+        CheckConstraint(
+            "parse_status IN ('pending', 'processing', 'success', 'failed')",
+            name="ck_documents_parse_status",
+        ),
+    )
 
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     filename: Mapped[str] = mapped_column(String(255))

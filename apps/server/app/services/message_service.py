@@ -13,10 +13,6 @@ from app.schemas.message import CitationRead, MessageCreate, MessageRead
 
 class MessageService:
     @staticmethod
-    def build_stream_url(*, chat_id: str, assistant_message_id: str) -> str:
-        return f"/api/v1/chats/{chat_id}/messages/{assistant_message_id}/stream"
-
-    @staticmethod
     def create_streaming_turn(
         db: Session,
         chat: Chat,
@@ -39,10 +35,6 @@ class MessageService:
                     "message": "当前会话正在生成回复。",
                     "activeMessage": {
                         "id": active_message.id,
-                        "streamUrl": MessageService.build_stream_url(
-                            chat_id=chat.id,
-                            assistant_message_id=active_message.id,
-                        ),
                     },
                 },
             )
@@ -126,12 +118,6 @@ class MessageService:
 
     @staticmethod
     def to_read(message: Message) -> MessageRead:
-        stream_url = None
-        if message.role == "assistant" and message.status == "streaming":
-            stream_url = MessageService.build_stream_url(
-                chat_id=message.chat_id,
-                assistant_message_id=message.id,
-            )
         return MessageRead(
             id=message.id,
             chat_id=message.chat_id,
@@ -140,7 +126,6 @@ class MessageService:
             content=message.content,
             error_message=message.error_message,
             metadata=message.message_metadata,
-            stream_url=stream_url,
             created_at=message.created_at,
         )
 

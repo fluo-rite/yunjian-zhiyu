@@ -1,8 +1,11 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import EmailStr, Field
 
 from app.schemas.common import CamelModel
+
+AuthProvider = Literal["local", "oauth"]
 
 
 class RegisterRequest(CamelModel):
@@ -22,7 +25,7 @@ class UserRead(CamelModel):
     email: EmailStr
     username: str | None = None
     nickname: str | None = None
-    auth_provider: str
+    auth_provider: AuthProvider
     created_at: datetime
     updated_at: datetime
 

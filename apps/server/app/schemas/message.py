@@ -16,7 +16,6 @@ class MessageRead(CamelModel):
     content: str
     error_message: str | None = None
     metadata: dict[str, Any] | None = None
-    stream_url: str | None = None
     created_at: datetime
 
 
@@ -46,7 +45,6 @@ class MessageCreateResponse(CamelModel):
 class CreateChatMessageResponse(CamelModel):
     user_message_id: str
     assistant_message_id: str
-    stream_url: str
 
 
 class ChatMessageListResponse(CamelModel):
@@ -60,7 +58,6 @@ class AbortChatMessageResponse(CamelModel):
 
 class ActiveMessageInfo(CamelModel):
     id: str
-    stream_url: str
 
 
 class ChatGenerationConflictResponse(CamelModel):

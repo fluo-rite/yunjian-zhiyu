@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.card import KnowledgeCard
 from app.models.user import User
-from app.schemas.card import CardCreate, CardListResponse, CardRead, CardUpdate
+from app.schemas.card import CardCreate, CardListResponse, CardRead, CardStatus, CardType, CardUpdate
 from app.schemas.common import PaginationMeta
 
 
@@ -34,8 +34,8 @@ class CardService:
         *,
         page: int,
         page_size: int,
-        status: str | None,
-        card_type: str | None,
+        status: CardStatus | None,
+        card_type: CardType | None,
         keyword: str | None,
         tag: str | None,
     ) -> CardListResponse:

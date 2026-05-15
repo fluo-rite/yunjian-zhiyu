@@ -59,12 +59,17 @@ export type AgentStreamEvent =
   | ErrorStreamEvent;
 
 type ChatStreamParams = {
-  streamUrl: string;
+  chatId: string;
+  assistantMessageId: string;
   accessToken: string;
   lastEventId?: string;
   signal?: AbortSignal;
   onEvent: (event: AgentStreamEvent) => void;
 };
+
+export function buildChatMessageStreamUrl(chatId: string, assistantMessageId: string) {
+  return `/api/v1/chats/${chatId}/messages/${assistantMessageId}/stream`;
+}
 
 function buildStreamCursorKey(messageId: string) {
   return `${streamCursorStoragePrefix}:${messageId}`;
@@ -137,7 +142,10 @@ async function extractErrorMessage(response: Response) {
 }
 
 export async function chatStream(params: ChatStreamParams) {
-  const streamUrl = new URL(params.streamUrl, API_BASE_URL);
+  const streamUrl = new URL(
+    buildChatMessageStreamUrl(params.chatId, params.assistantMessageId),
+    API_BASE_URL,
+  );
   streamUrl.searchParams.set("lastEventId", params.lastEventId || "0-0");
 
   const response = await fetch(streamUrl.toString(), {

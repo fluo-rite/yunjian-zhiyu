@@ -62,7 +62,6 @@ export type Message = {
   content: string;
   errorMessage?: string | null;
   metadata?: MessageMetadata | null;
-  streamUrl?: string | null;
   createdAt: string;
 };
 
@@ -138,7 +137,6 @@ export type CreateChatMessageRequest = {
 export type CreateChatMessageResponse = {
   userMessageId: string;
   assistantMessageId: string;
-  streamUrl: string;
 };
 
 export type ChatMessageListResponse = {
