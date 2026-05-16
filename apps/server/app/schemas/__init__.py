@@ -1,14 +1,25 @@
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest, TokenPair, UserRead
-from app.schemas.card import (
-    BatchConfirmCardsRequest,
-    BatchConfirmCardsResponse,
-    CardCreate,
-    CardListResponse,
-    CardRead,
-    CardUpdate,
+from app.schemas.card import ArchiveCardResponse, CardListResponse, CardRead, ConfirmCardResponse
+from app.schemas.card import ConfirmCardsRequest, ConfirmCardsResponse
+from app.schemas.card_group import (
+    AddCardToGroupRequest,
+    CardGroupCardsResponse,
+    CardGroupListResponse,
+    CardGroupRead,
+    CreateCardGroupRequest,
+    UpdateCardGroupRequest,
 )
 from app.schemas.chat import ChatCreate, ChatListResponse, ChatRead
-from app.schemas.document import DocumentRead
+from app.schemas.knowledge_source import (
+    CreateKnowledgeSourceFromMessagesRequest,
+    CreateKnowledgeSourceFromTextRequest,
+    DeleteKnowledgeSourceRequest,
+    KnowledgeSourceCardsResponse,
+    KnowledgeSourceDetailRead,
+    KnowledgeSourceDeletePreviewResponse,
+    KnowledgeSourceListResponse,
+    KnowledgeSourceRead,
+)
 from app.schemas.message import (
     AbortChatMessageResponse,
     ActiveMessageInfo,
@@ -34,13 +45,14 @@ __all__ = [
     "AgentStreamEvent",
     "AbortChatMessageResponse",
     "ActiveMessageInfo",
+    "AddCardToGroupRequest",
+    "ArchiveCardResponse",
     "AuthResponse",
-    "BatchConfirmCardsRequest",
-    "BatchConfirmCardsResponse",
-    "CardCreate",
+    "CardGroupCardsResponse",
+    "CardGroupListResponse",
+    "CardGroupRead",
     "CardListResponse",
     "CardRead",
-    "CardUpdate",
     "CitationRead",
     "ChatCreate",
     "ChatListResponse",
@@ -50,7 +62,13 @@ __all__ = [
     "ErrorEventData",
     "LoginRequest",
     "CreateChatMessageResponse",
-    "DocumentRead",
+    "CreateCardGroupRequest",
+    "CreateKnowledgeSourceFromMessagesRequest",
+    "CreateKnowledgeSourceFromTextRequest",
+    "DeleteKnowledgeSourceRequest",
+    "ConfirmCardResponse",
+    "ConfirmCardsRequest",
+    "ConfirmCardsResponse",
     "MessageAbortedEventData",
     "MessageCreate",
     "MessageCreateResponse",
@@ -59,7 +77,13 @@ __all__ = [
     "MessageOptions",
     "MessageRead",
     "MessageStartEventData",
+    "KnowledgeSourceCardsResponse",
+    "KnowledgeSourceDetailRead",
+    "KnowledgeSourceDeletePreviewResponse",
+    "KnowledgeSourceListResponse",
+    "KnowledgeSourceRead",
     "RegisterRequest",
     "TokenPair",
+    "UpdateCardGroupRequest",
     "UserRead",
 ]

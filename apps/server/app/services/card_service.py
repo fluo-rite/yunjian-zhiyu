@@ -4,29 +4,20 @@ from sqlalchemy import Select, String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.card import KnowledgeCard
+from app.models.card_group import CardGroup
+from app.models.card_group_item import CardGroupItem
 from app.models.user import User
-from app.schemas.card import CardCreate, CardListResponse, CardRead, CardStatus, CardType, CardUpdate
+from app.schemas.card import (
+    ArchiveCardResponse,
+    CardListResponse,
+    CardRead,
+    ConfirmCardResponse,
+    ConfirmCardsResponse,
+)
 from app.schemas.common import PaginationMeta
 
 
 class CardService:
-    @staticmethod
-    def create(db: Session, user: User, payload: CardCreate) -> CardRead:
-        card = KnowledgeCard(
-            user_id=user.id,
-            title=payload.title,
-            summary=payload.summary,
-            content=payload.content,
-            card_type=payload.card_type,
-            tags=payload.tags,
-            status=payload.status,
-            source_type=payload.source_type,
-        )
-        db.add(card)
-        db.commit()
-        db.refresh(card)
-        return CardRead.model_validate(card)
-
     @staticmethod
     def list(
         db: Session,
@@ -34,30 +25,35 @@ class CardService:
         *,
         page: int,
         page_size: int,
-        status: CardStatus | None,
-        card_type: CardType | None,
+        status: str | None,
+        source_type: str | None,
+        source_id: str | None,
+        group_id: str | None,
         keyword: str | None,
-        tag: str | None,
     ) -> CardListResponse:
         statement: Select[tuple[KnowledgeCard]] = select(KnowledgeCard).where(
             KnowledgeCard.user_id == user.id
         )
-
         if status:
             statement = statement.where(KnowledgeCard.status == status)
-        if card_type:
-            statement = statement.where(KnowledgeCard.card_type == card_type)
+        if source_type:
+            statement = statement.where(KnowledgeCard.source_type == source_type)
+        if source_id:
+            statement = statement.where(KnowledgeCard.source_id == source_id)
+        if group_id:
+            statement = statement.join(CardGroupItem).join(CardGroup).where(
+                CardGroup.id == group_id,
+                CardGroup.user_id == user.id,
+            )
         if keyword:
             pattern = f"%{keyword}%"
             statement = statement.where(
                 or_(
                     KnowledgeCard.title.ilike(pattern),
-                    KnowledgeCard.summary.ilike(pattern),
                     KnowledgeCard.content.ilike(pattern),
+                    cast(KnowledgeCard.tags, String).ilike(pattern),
                 )
             )
-        if tag:
-            statement = statement.where(cast(KnowledgeCard.tags, String).ilike(f'%"{tag}"%'))
 
         total = db.scalar(select(func.count()).select_from(statement.subquery())) or 0
         cards = (
@@ -89,29 +85,49 @@ class CardService:
         ).scalar_one_or_none()
 
     @staticmethod
-    def list_active_cards(db: Session, user: User) -> list[KnowledgeCard]:
-        return (
+    def delete(db: Session, card: KnowledgeCard) -> None:
+        db.delete(card)
+        db.commit()
+
+    @staticmethod
+    def confirm(db: Session, card: KnowledgeCard) -> ConfirmCardResponse:
+        card.status = "active"
+        db.add(card)
+        db.commit()
+        db.refresh(card)
+        return ConfirmCardResponse.model_validate(card)
+
+    @staticmethod
+    def list_by_ids(db: Session, user: User, card_ids: list[str]) -> list[KnowledgeCard]:
+        if not card_ids:
+            return []
+        cards = (
             db.execute(
                 select(KnowledgeCard).where(
                     KnowledgeCard.user_id == user.id,
-                    KnowledgeCard.status == "active",
+                    KnowledgeCard.id.in_(card_ids),
                 )
             )
             .scalars()
             .all()
         )
+        card_map = {card.id: card for card in cards}
+        return [card_map[card_id] for card_id in card_ids if card_id in card_map]
 
     @staticmethod
-    def update(db: Session, card: KnowledgeCard, payload: CardUpdate) -> CardRead:
-        updates = payload.model_dump(exclude_none=True)
-        for field, value in updates.items():
-            setattr(card, field, value)
+    def confirm_many(db: Session, cards: list[KnowledgeCard]) -> ConfirmCardsResponse:
+        for card in cards:
+            card.status = "active"
+            db.add(card)
+        db.commit()
+        for card in cards:
+            db.refresh(card)
+        return ConfirmCardsResponse(items=[ConfirmCardResponse.model_validate(card) for card in cards])
+
+    @staticmethod
+    def archive(db: Session, card: KnowledgeCard) -> ArchiveCardResponse:
+        card.status = "archived"
         db.add(card)
         db.commit()
         db.refresh(card)
-        return CardRead.model_validate(card)
-
-    @staticmethod
-    def delete(db: Session, card: KnowledgeCard) -> None:
-        db.delete(card)
-        db.commit()
+        return ArchiveCardResponse.model_validate(card)

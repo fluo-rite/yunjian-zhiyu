@@ -12,7 +12,7 @@ def build_citations(
 ) -> list[CitationRead]:
     citations: list[CitationRead] = []
     for card in retrieved_cards:
-        source_text = (card.summary or card.content).replace("\n", " ").strip()
+        source_text = card.content.replace("\n", " ").strip()
         snippet = source_text[:140]
         if len(source_text) > 140:
             snippet = f"{snippet}..."

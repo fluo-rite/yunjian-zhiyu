@@ -6,9 +6,15 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from app.core.db import Base, engine
+from app.core.db import Base, SessionLocal, engine
 from app.main import app
+from app.models.card import KnowledgeCard
 from app.schemas.message import CitationRead
+from app.services.card_generation_service import (
+    GeneratedKnowledgeCard,
+    GeneratedKnowledgeCardBatch,
+    process_knowledge_source_sync,
+)
 from app.services.chat_generation_service import ChatTaskDispatcher, run_chat_generation
 from app.services.stream_store_service import StreamRecord
 
@@ -156,6 +162,63 @@ class FakeThreadTaskDispatcher(ChatTaskDispatcher):
         self._threads = [thread for thread in self._threads if thread.is_alive()]
 
 
+class FakeSourceTaskDispatcher:
+    def __init__(self) -> None:
+        self._threads: list[threading.Thread] = []
+
+    async def enqueue_processing(self, source_id: str) -> None:
+        thread = threading.Thread(
+            target=lambda: process_knowledge_source_sync(source_id),
+            daemon=True,
+        )
+        self._threads.append(thread)
+        thread.start()
+
+    def wait_for_idle(self, timeout: float = 5.0) -> None:
+        deadline = time.monotonic() + timeout
+        for thread in self._threads:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            thread.join(remaining)
+        self._threads = [thread for thread in self._threads if thread.is_alive()]
+
+
+class FakeCardGenerationService:
+    def generate_cards(self, *, source_name: str, source_type: str, raw_content: str) -> GeneratedKnowledgeCardBatch:
+        _ = source_name
+        return GeneratedKnowledgeCardBatch(
+            cards=[
+                GeneratedKnowledgeCard(
+                    title=f"{source_type} 核心知识 1",
+                    content=raw_content.strip(),
+                    tags=["backend", "test"],
+                ),
+                GeneratedKnowledgeCard(
+                    title=f"{source_type} 核心知识 2",
+                    content=f"补充知识：{raw_content.strip()}",
+                    tags=["followup"],
+                ),
+            ]
+        )
+
+    @staticmethod
+    def content_hash(content: str) -> str:
+        return f"fake-hash-{len(content.strip())}"
+
+
+class FakeEmbeddingService:
+    model_name = "fake-embedding-model"
+
+    def embed_content(self, content: str) -> list[float]:
+        size = float(len(content.strip()) or 1)
+        return [size, size / 10, size / 100]
+
+    def embed_query(self, query: str) -> list[float]:
+        size = float(len(query.strip()) or 1)
+        return [size, size / 10, size / 100]
+
+
 def reset_database() -> None:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
@@ -182,7 +245,36 @@ def create_chat(headers: dict[str, str], title: str) -> str:
     return response.json()["id"]
 
 
-def install_runtime_test_doubles(monkeypatch) -> FakeThreadTaskDispatcher:
+def insert_card(
+    *,
+    user_id: str,
+    title: str,
+    content: str,
+    status: str = "active",
+    source_id: str | None = None,
+    source_type: str = "manual_text",
+    tags: list[str] | None = None,
+) -> str:
+    with SessionLocal() as db:
+        card = KnowledgeCard(
+            user_id=user_id,
+            title=title,
+            content=content,
+            tags=tags or [],
+            status=status,
+            source_id=source_id,
+            source_type=source_type,
+            embedding=[1.0, 0.5, 0.25],
+            embedding_model="fake",
+            content_hash=f"hash-{title}",
+        )
+        db.add(card)
+        db.commit()
+        db.refresh(card)
+        return card.id
+
+
+def install_chat_runtime_test_doubles(monkeypatch) -> FakeThreadTaskDispatcher:
     stream_store = FakeStreamStore()
     dispatcher = FakeThreadTaskDispatcher()
 
@@ -190,6 +282,23 @@ def install_runtime_test_doubles(monkeypatch) -> FakeThreadTaskDispatcher:
     monkeypatch.setattr("app.api.routes.chats.get_chat_task_dispatcher", lambda: dispatcher)
     monkeypatch.setattr("app.services.chat_generation_service.get_stream_store", lambda: stream_store)
 
+    return dispatcher
+
+
+def install_source_runtime_test_doubles(monkeypatch) -> FakeSourceTaskDispatcher:
+    dispatcher = FakeSourceTaskDispatcher()
+    monkeypatch.setattr(
+        "app.services.knowledge_source_service.get_knowledge_source_task_dispatcher",
+        lambda: dispatcher,
+    )
+    monkeypatch.setattr(
+        "app.services.card_generation_service.get_card_generation_service",
+        lambda: FakeCardGenerationService(),
+    )
+    monkeypatch.setattr(
+        "app.services.card_generation_service.get_embedding_service",
+        lambda: FakeEmbeddingService(),
+    )
     return dispatcher
 
 
@@ -297,97 +406,182 @@ def test_auth_register_login_and_me() -> None:
     assert login_response.json()["user"]["username"] == "alice"
 
 
-def test_cards_crud_flow() -> None:
+def test_knowledge_source_from_text_generates_pending_cards(monkeypatch) -> None:
     reset_database()
-    headers = create_user("cards@example.com", "cards-user")
+    dispatcher = install_source_runtime_test_doubles(monkeypatch)
+    headers = create_user("source@example.com", "source-user")
 
     create_response = client.post(
-        "/api/v1/cards",
+        "/api/v1/knowledge-sources/from-text",
         headers=headers,
         json={
-            "title": "FastAPI Routing",
-            "summary": "Routes with decorators",
-            "content": "Detailed notes",
-            "cardType": "concept",
-            "tags": ["FastAPI", "Backend"],
-            "status": "active",
-            "sourceType": "manual",
+            "name": "FastAPI 学习摘录",
+            "content": "FastAPI 使用 APIRouter 管理路由，并配合依赖注入组织接口逻辑。",
         },
     )
-    assert create_response.status_code == 201, create_response.text
-    card_id = create_response.json()["id"]
+    assert create_response.status_code == 202, create_response.text
+    source_id = create_response.json()["id"]
+    dispatcher.wait_for_idle()
 
-    list_response = client.get("/api/v1/cards", headers=headers)
+    detail_response = client.get(f"/api/v1/knowledge-sources/{source_id}", headers=headers)
+    assert detail_response.status_code == 200
+    assert detail_response.json()["status"] == "ready"
+
+    cards_response = client.get(f"/api/v1/knowledge-sources/{source_id}/cards", headers=headers)
+    assert cards_response.status_code == 200
+    items = cards_response.json()["items"]
+    assert len(items) == 2
+    assert all(item["status"] == "pending" for item in items)
+
+    list_response = client.get("/api/v1/cards", headers=headers, params={"status": "pending"})
     assert list_response.status_code == 200
-    assert list_response.json()["pagination"]["total"] == 1
-    assert list_response.json()["items"][0]["title"] == "FastAPI Routing"
+    assert list_response.json()["pagination"]["total"] == 2
 
-    update_response = client.patch(
-        f"/api/v1/cards/{card_id}",
+
+def test_knowledge_source_delete_preview_and_keep_cards(monkeypatch) -> None:
+    reset_database()
+    dispatcher = install_source_runtime_test_doubles(monkeypatch)
+    headers = create_user("delete-source@example.com", "delete-source-user")
+
+    create_response = client.post(
+        "/api/v1/knowledge-sources/from-text",
         headers=headers,
-        json={"status": "archived", "tags": ["FastAPI"]},
+        json={"name": "待删除来源", "content": "删除来源时卡片可以保留。"},
     )
-    assert update_response.status_code == 200, update_response.text
-    assert update_response.json()["status"] == "archived"
-    assert update_response.json()["tags"] == ["FastAPI"]
+    source_id = create_response.json()["id"]
+    dispatcher.wait_for_idle()
 
-    delete_response = client.delete(f"/api/v1/cards/{card_id}", headers=headers)
+    cards_response = client.get(f"/api/v1/knowledge-sources/{source_id}/cards", headers=headers)
+    card_id = cards_response.json()["items"][0]["id"]
+    confirm_response = client.post(f"/api/v1/cards/{card_id}/confirm", headers=headers)
+    assert confirm_response.status_code == 200
+    assert confirm_response.json()["status"] == "active"
+
+    preview_response = client.get(
+        f"/api/v1/knowledge-sources/{source_id}/delete-preview",
+        headers=headers,
+    )
+    assert preview_response.status_code == 200
+    assert len(preview_response.json()["linkedCards"]) == 2
+
+    delete_response = client.request(
+        "DELETE",
+        f"/api/v1/knowledge-sources/{source_id}",
+        headers=headers,
+        json={"deleteCards": False},
+    )
     assert delete_response.status_code == 204
 
+    card_response = client.get(f"/api/v1/cards/{card_id}", headers=headers)
+    assert card_response.status_code == 200
+    assert card_response.json()["sourceId"] is None
+    assert card_response.json()["status"] == "active"
 
-def test_cards_validation_rejects_invalid_enum_values() -> None:
+
+def test_card_confirm_archive_and_group_flow(monkeypatch) -> None:
     reset_database()
-    headers = create_user("cards-invalid@example.com", "cards-invalid-user")
+    dispatcher = install_source_runtime_test_doubles(monkeypatch)
+    headers = create_user("group@example.com", "group-user")
 
-    create_response = client.post(
-        "/api/v1/cards",
+    source_response = client.post(
+        "/api/v1/knowledge-sources/from-text",
         headers=headers,
-        json={
-            "title": "Invalid card payload",
-            "summary": "This should fail validation before the database layer.",
-            "content": "Invalid enum values should trigger a 422 response.",
-            "cardType": "旅行车",
-            "tags": ["FastAPI"],
-            "status": "culpa Lorem dolore sunt",
-            "sourceType": "exercitation in labore amet ea",
-        },
+        json={"name": "待分组知识", "content": "卡片需要被确认、归档并加入分组。"},
     )
-    assert create_response.status_code == 422, create_response.text
+    source_id = source_response.json()["id"]
+    dispatcher.wait_for_idle()
 
-    list_response = client.get(
-        "/api/v1/cards",
+    source_cards = client.get(f"/api/v1/knowledge-sources/{source_id}/cards", headers=headers)
+    card_id = source_cards.json()["items"][0]["id"]
+
+    confirm_response = client.post(f"/api/v1/cards/{card_id}/confirm", headers=headers)
+    assert confirm_response.status_code == 200
+    assert confirm_response.json()["status"] == "active"
+
+    group_response = client.post(
+        "/api/v1/card-groups",
         headers=headers,
-        params={"status": "culpa Lorem dolore sunt", "card_type": "旅行车"},
+        json={"name": "后端专题"},
     )
-    assert list_response.status_code == 422, list_response.text
+    assert group_response.status_code == 201, group_response.text
+    group_id = group_response.json()["id"]
+
+    add_response = client.post(
+        f"/api/v1/card-groups/{group_id}/cards",
+        headers=headers,
+        json={"cardId": card_id},
+    )
+    assert add_response.status_code == 204
+
+    group_cards_response = client.get(f"/api/v1/card-groups/{group_id}/cards", headers=headers)
+    assert group_cards_response.status_code == 200
+    assert group_cards_response.json()["items"][0]["id"] == card_id
+
+    archive_response = client.post(f"/api/v1/cards/{card_id}/archive", headers=headers)
+    assert archive_response.status_code == 200
+    assert archive_response.json()["status"] == "archived"
+
+    remove_response = client.delete(
+        f"/api/v1/card-groups/{group_id}/cards/{card_id}",
+        headers=headers,
+    )
+    assert remove_response.status_code == 204
+
+    group_cards_after_remove = client.get(f"/api/v1/card-groups/{group_id}/cards", headers=headers)
+    assert group_cards_after_remove.status_code == 200
+    assert group_cards_after_remove.json()["items"] == []
 
 
-def test_cards_list_treats_empty_enum_query_values_as_missing() -> None:
+def test_confirm_cards_confirms_multiple_pending_cards(monkeypatch) -> None:
     reset_database()
-    headers = create_user("cards-empty-query@example.com", "cards-empty-query-user")
+    dispatcher = install_source_runtime_test_doubles(monkeypatch)
+    headers = create_user("batch-confirm@example.com", "batch-confirm-user")
 
-    create_response = client.post(
-        "/api/v1/cards",
+    source_response = client.post(
+        "/api/v1/knowledge-sources/from-text",
         headers=headers,
-        json={
-            "title": "Empty query filter card",
-            "summary": "Used to verify empty enum query params are ignored.",
-            "content": "The list endpoint should treat empty enum params as missing values.",
-            "cardType": "concept",
-            "tags": ["FastAPI"],
-            "status": "active",
-            "sourceType": "manual",
-        },
+        json={"name": "批量确认来源", "content": "需要批量确认的卡片。"},
     )
-    assert create_response.status_code == 201, create_response.text
+    source_id = source_response.json()["id"]
+    dispatcher.wait_for_idle()
 
-    list_response = client.get(
-        "/api/v1/cards",
+    source_cards = client.get(f"/api/v1/knowledge-sources/{source_id}/cards", headers=headers)
+    items = source_cards.json()["items"]
+    card_ids = [item["id"] for item in items]
+
+    confirm_response = client.post(
+        "/api/v1/cards/confirm",
         headers=headers,
-        params={"status": "", "card_type": ""},
+        json={"cardIds": card_ids},
     )
-    assert list_response.status_code == 200, list_response.text
-    assert list_response.json()["pagination"]["total"] == 1
+    assert confirm_response.status_code == 200, confirm_response.text
+    assert len(confirm_response.json()["items"]) == len(card_ids)
+    assert all(item["status"] == "active" for item in confirm_response.json()["items"])
+
+    active_cards = client.get("/api/v1/cards", headers=headers, params={"status": "active"})
+    assert active_cards.status_code == 200
+    assert active_cards.json()["pagination"]["total"] == len(card_ids)
+
+
+def test_knowledge_source_from_document_accepts_upload(monkeypatch) -> None:
+    reset_database()
+    dispatcher = install_source_runtime_test_doubles(monkeypatch)
+    headers = create_user("document@example.com", "document-user")
+
+    response = client.post(
+        "/api/v1/knowledge-sources/from-document",
+        headers=headers,
+        data={"name": "FastAPI 文档"},
+        files={"file": ("fastapi.txt", "FastAPI 的响应模型用于约束输出。", "text/plain")},
+    )
+    assert response.status_code == 202, response.text
+    source_id = response.json()["id"]
+    dispatcher.wait_for_idle()
+
+    detail_response = client.get(f"/api/v1/knowledge-sources/{source_id}", headers=headers)
+    assert detail_response.status_code == 200
+    assert detail_response.json()["sourceType"] == "document"
+    assert "FastAPI 的响应模型" in detail_response.json()["rawContent"]
 
 
 def test_chats_crud_flow() -> None:
@@ -409,25 +603,18 @@ def test_chats_crud_flow() -> None:
 
 def test_chat_message_creation_stream_and_history(monkeypatch) -> None:
     reset_database()
-    dispatcher = install_runtime_test_doubles(monkeypatch)
+    dispatcher = install_chat_runtime_test_doubles(monkeypatch)
     headers = create_user("messages@example.com", "messages-user")
     chat_id = create_chat(headers, "FastAPI chat")
+    me_response = client.get("/api/v1/auth/me", headers=headers)
+    user_id = me_response.json()["id"]
 
-    card_response = client.post(
-        "/api/v1/cards",
-        headers=headers,
-        json={
-            "title": "FastAPI routing basics",
-            "summary": "Routes are usually declared with decorators and APIRouter.",
-            "content": "Dependency injection and response models keep handlers clear and consistent.",
-            "cardType": "concept",
-            "tags": ["FastAPI", "Routing"],
-            "status": "active",
-            "sourceType": "manual",
-        },
+    card_id = insert_card(
+        user_id=user_id,
+        title="FastAPI routing basics",
+        content="Dependency injection and response models keep handlers clear and consistent.",
+        tags=["FastAPI", "Routing"],
     )
-    assert card_response.status_code == 201, card_response.text
-    card_id = card_response.json()["id"]
     _patch_chat_agent(
         monkeypatch,
         card_id=card_id,
@@ -444,8 +631,7 @@ def test_chat_message_creation_stream_and_history(monkeypatch) -> None:
         },
     )
     assert create_response.status_code == 200, create_response.text
-    created_payload = create_response.json()
-    assistant_message_id = created_payload["assistantMessageId"]
+    assistant_message_id = create_response.json()["assistantMessageId"]
 
     history_response = client.get(f"/api/v1/chats/{chat_id}/messages", headers=headers)
     assert history_response.status_code == 200, history_response.text
@@ -480,25 +666,17 @@ def test_chat_message_creation_stream_and_history(monkeypatch) -> None:
 
 def test_chat_message_stream_can_resume_from_last_event_id(monkeypatch) -> None:
     reset_database()
-    dispatcher = install_runtime_test_doubles(monkeypatch)
+    dispatcher = install_chat_runtime_test_doubles(monkeypatch)
     headers = create_user("resume@example.com", "resume-user")
     chat_id = create_chat(headers, "Resume chat")
+    user_id = client.get("/api/v1/auth/me", headers=headers).json()["id"]
 
-    card_response = client.post(
-        "/api/v1/cards",
-        headers=headers,
-        json={
-            "title": "LangGraph streaming basics",
-            "summary": "A graph node can emit custom streaming chunks.",
-            "content": "The server can adapt those chunks into business SSE events for the client.",
-            "cardType": "concept",
-            "tags": ["LangGraph", "Streaming"],
-            "status": "active",
-            "sourceType": "manual",
-        },
+    card_id = insert_card(
+        user_id=user_id,
+        title="LangGraph streaming basics",
+        content="The server can adapt raw internal graph events into business SSE events.",
+        tags=["LangGraph", "Streaming"],
     )
-    assert card_response.status_code == 201, card_response.text
-    card_id = card_response.json()["id"]
     _patch_chat_agent(
         monkeypatch,
         card_id=card_id,
@@ -542,25 +720,17 @@ def test_chat_message_stream_can_resume_from_last_event_id(monkeypatch) -> None:
 
 def test_chat_message_stream_treats_empty_last_event_id_as_replay_from_start(monkeypatch) -> None:
     reset_database()
-    dispatcher = install_runtime_test_doubles(monkeypatch)
+    dispatcher = install_chat_runtime_test_doubles(monkeypatch)
     headers = create_user("empty-last-event@example.com", "empty-last-event-user")
     chat_id = create_chat(headers, "Empty cursor chat")
+    user_id = client.get("/api/v1/auth/me", headers=headers).json()["id"]
 
-    card_response = client.post(
-        "/api/v1/cards",
-        headers=headers,
-        json={
-            "title": "Cursor normalization card",
-            "summary": "Empty lastEventId should behave like a full replay.",
-            "content": "Stream resume should not fail when the cursor query parameter is empty.",
-            "cardType": "concept",
-            "tags": ["Streaming"],
-            "status": "active",
-            "sourceType": "manual",
-        },
+    card_id = insert_card(
+        user_id=user_id,
+        title="Cursor normalization card",
+        content="Stream resume should not fail when the cursor query parameter is empty.",
+        tags=["Streaming"],
     )
-    assert card_response.status_code == 201, card_response.text
-    card_id = card_response.json()["id"]
     _patch_chat_agent(
         monkeypatch,
         card_id=card_id,
@@ -593,25 +763,17 @@ def test_chat_message_stream_treats_empty_last_event_id_as_replay_from_start(mon
 
 def test_chat_message_conflict_returns_active_stream(monkeypatch) -> None:
     reset_database()
-    dispatcher = install_runtime_test_doubles(monkeypatch)
+    dispatcher = install_chat_runtime_test_doubles(monkeypatch)
     headers = create_user("conflict@example.com", "conflict-user")
     chat_id = create_chat(headers, "Conflict chat")
+    user_id = client.get("/api/v1/auth/me", headers=headers).json()["id"]
 
-    card_response = client.post(
-        "/api/v1/cards",
-        headers=headers,
-        json={
-            "title": "Slow streaming card",
-            "summary": "Slow streaming summary",
-            "content": "Slow streaming details",
-            "cardType": "concept",
-            "tags": ["Slow"],
-            "status": "active",
-            "sourceType": "manual",
-        },
+    card_id = insert_card(
+        user_id=user_id,
+        title="Slow streaming card",
+        content="Slow streaming details",
+        tags=["Slow"],
     )
-    assert card_response.status_code == 201, card_response.text
-    card_id = card_response.json()["id"]
     _patch_chat_agent(
         monkeypatch,
         card_id=card_id,
@@ -657,25 +819,17 @@ def test_chat_message_conflict_returns_active_stream(monkeypatch) -> None:
 
 def test_chat_message_abort_preserves_partial_content(monkeypatch) -> None:
     reset_database()
-    dispatcher = install_runtime_test_doubles(monkeypatch)
+    dispatcher = install_chat_runtime_test_doubles(monkeypatch)
     headers = create_user("abort@example.com", "abort-user")
     chat_id = create_chat(headers, "Abort chat")
+    user_id = client.get("/api/v1/auth/me", headers=headers).json()["id"]
 
-    card_response = client.post(
-        "/api/v1/cards",
-        headers=headers,
-        json={
-            "title": "Abort card",
-            "summary": "Abort summary",
-            "content": "Abort details",
-            "cardType": "concept",
-            "tags": ["Abort"],
-            "status": "active",
-            "sourceType": "manual",
-        },
+    card_id = insert_card(
+        user_id=user_id,
+        title="Abort card",
+        content="Abort details",
+        tags=["Abort"],
     )
-    assert card_response.status_code == 201, card_response.text
-    card_id = card_response.json()["id"]
     _patch_chat_agent(
         monkeypatch,
         card_id=card_id,

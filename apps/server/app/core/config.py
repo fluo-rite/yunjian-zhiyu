@@ -52,6 +52,14 @@ class Settings(BaseSettings):
     llm_api_key: str | None = None
     llm_model: str | None = None
     llm_timeout_seconds: float = 30.0
+    embedding_base_url: str | None = None
+    embedding_api_key: str | None = None
+    embedding_model: str | None = None
+    rerank_base_url: str | None = None
+    rerank_api_key: str | None = None
+    rerank_model: str | None = None
+    web_search_url: str | None = None
+    web_search_key: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
@@ -85,6 +93,28 @@ class Settings(BaseSettings):
             "llmTimeoutSeconds": self.llm_timeout_seconds,
             "llmConfigured": bool(
                 self.llm_base_url and self.llm_api_key and self.llm_model
+            ),
+            "embeddingBaseUrl": self.embedding_base_url,
+            "embeddingApiKey": _mask_secret(self.embedding_api_key),
+            "embeddingModel": self.embedding_model,
+            "embeddingConfigured": bool(
+                self.embedding_base_url
+                and self.embedding_api_key
+                and self.embedding_model
+            ),
+            "rerankBaseUrl": self.rerank_base_url,
+            "rerankApiKey": _mask_secret(self.rerank_api_key),
+            "rerankModel": self.rerank_model,
+            "rerankConfigured": bool(
+                self.rerank_base_url
+                and self.rerank_api_key
+                and self.rerank_model
+            ),
+            "webSearchUrl": self.web_search_url,
+            "webSearchKey": _mask_secret(self.web_search_key),
+            "webSearchConfigured": bool(
+                self.web_search_url
+                and self.web_search_key
             ),
         }
 

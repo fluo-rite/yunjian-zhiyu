@@ -5,39 +5,18 @@ from pydantic import Field
 
 from app.schemas.common import CamelModel, PaginationMeta
 
-CardType = Literal["concept", "method", "summary", "example", "correction"]
-CardStatus = Literal["draft", "active", "archived"]
-CardSourceType = Literal["manual", "document", "chat", "ai"]
-
-
-class CardCreate(CamelModel):
-    title: str = Field(min_length=1, max_length=200)
-    summary: str | None = None
-    content: str = Field(min_length=1)
-    card_type: CardType
-    tags: list[str] = Field(default_factory=list)
-    status: CardStatus = "active"
-    source_type: CardSourceType = "manual"
-
-
-class CardUpdate(CamelModel):
-    title: str | None = Field(default=None, min_length=1, max_length=200)
-    summary: str | None = None
-    content: str | None = Field(default=None, min_length=1)
-    card_type: CardType | None = None
-    tags: list[str] | None = None
-    status: CardStatus | None = None
+CardStatus = Literal["pending", "active", "archived"]
+SourceType = Literal["manual_text", "document", "messages"]
 
 
 class CardRead(CamelModel):
     id: str
     title: str
-    summary: str | None = None
     content: str
-    card_type: CardType
     tags: list[str]
     status: CardStatus
-    source_type: CardSourceType
+    source_type: SourceType
+    source_id: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -47,9 +26,17 @@ class CardListResponse(CamelModel):
     pagination: PaginationMeta
 
 
-class BatchConfirmCardsRequest(CamelModel):
-    card_ids: list[str] = Field(min_length=1)
+class ConfirmCardResponse(CardRead):
+    pass
 
 
-class BatchConfirmCardsResponse(CamelModel):
-    updated_count: int
+class ConfirmCardsRequest(CamelModel):
+    card_ids: list[str] = Field(min_length=1, max_length=100)
+
+
+class ConfirmCardsResponse(CamelModel):
+    items: list[ConfirmCardResponse]
+
+
+class ArchiveCardResponse(CardRead):
+    pass

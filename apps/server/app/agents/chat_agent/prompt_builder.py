@@ -100,9 +100,8 @@ class ChatPromptBuilder:
         sections: list[str] = []
         for index, card in enumerate(retrieved_cards, start=1):
             parts = [f"[{index}] {card.title}"]
-            summary = (card.summary or "").strip()
-            if summary:
-                parts.append(summary)
+            if card.tags:
+                parts.append(f"标签：{', '.join(card.tags)}")
             parts.append(card.content.strip())
             sections.append("\n".join(parts))
         return "\n\n".join(sections)
