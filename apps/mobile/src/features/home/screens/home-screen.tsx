@@ -1,107 +1,38 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AuthPanel, type AuthMode } from "@/features/auth/components/auth-panel";
-import { ChatWorkspace } from "@/features/chat/components/chat-workspace";
-import { LibraryPanel } from "@/features/home/components/library-panel";
-import { saveSession, setAccessToken, type AuthResponse } from "@/lib/api";
-import { selectAccessToken, selectHydrated, setSession } from "@/store/auth-slice";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { homeScreenStyles as styles } from "./home-screen.styles";
 
+const preservedDirectories = [
+  "src/app",
+  "src/features",
+  "src/components",
+  "src/lib",
+  "src/store",
+  "src/theme",
+  "src/assets",
+];
+
 export function HomeScreen() {
-  const dispatch = useAppDispatch();
-  const queryClient = useQueryClient();
-  const accessToken = useAppSelector(selectAccessToken);
-  const hydrated = useAppSelector(selectHydrated);
-
-  const [mode, setMode] = useState<AuthMode>("login");
-  const [workspace, setWorkspace] = useState<"chat" | "library">("chat");
-
-  const handleAuthenticated = async (result: AuthResponse) => {
-    await saveSession(result.tokens);
-    setAccessToken(result.tokens.accessToken);
-    dispatch(setSession(result.tokens));
-    await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-    await queryClient.invalidateQueries({ queryKey: ["cards", "list"] });
-    await queryClient.invalidateQueries({ queryKey: ["chats", "list"] });
-  };
-
-  if (!hydrated) {
-    return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.centerState}>
-          <ActivityIndicator color="#163d33" size="large" />
-          <Text style={styles.centerStateText}>正在初始化应用...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.screen}>
-      <KeyboardAvoidingView
-        behavior={Platform.select({ ios: "padding", android: undefined })}
-        style={styles.screen}
-      >
-        {accessToken ? (
-          <View style={styles.screen}>
-            <View style={styles.workspaceSwitcher}>
-              <Text style={styles.workspaceTitle}>学习工作台</Text>
-              <View style={styles.workspaceToggleBar}>
-                <Pressable
-                  onPress={() => setWorkspace("chat")}
-                  style={[
-                    styles.workspaceButton,
-                    workspace === "chat" && styles.workspaceButtonActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.workspaceButtonLabel,
-                      workspace === "chat" && styles.workspaceButtonLabelActive,
-                    ]}
-                  >
-                    AI 对话
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setWorkspace("library")}
-                  style={[
-                    styles.workspaceButton,
-                    workspace === "library" && styles.workspaceButtonActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.workspaceButtonLabel,
-                      workspace === "library" && styles.workspaceButtonLabelActive,
-                    ]}
-                  >
-                    知识库
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-            {workspace === "chat" ? <ChatWorkspace /> : <LibraryPanel />}
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.hero}>
+          <Text style={styles.eyebrow}>React Native CLI</Text>
+          <Text style={styles.title}>移动端原生工程骨架已接入。</Text>
+          <Text style={styles.description}>
+            当前已经脱离 Expo，保留原有 `src` 目录组织，并接入原生 React Native
+            工程目录，后续可以直接按 RN 方式继续开发。
+          </Text>
+          <View style={styles.list}>
+            {preservedDirectories.map((item) => (
+              <Text key={item} style={styles.listItem}>
+                • {item}
+              </Text>
+            ))}
           </View>
-        ) : (
-          <ScrollView contentContainerStyle={styles.authContainer}>
-            <AuthPanel mode={mode} onAuthenticated={handleAuthenticated} onModeChange={setMode} />
-          </ScrollView>
-        )}
-      </KeyboardAvoidingView>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

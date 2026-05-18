@@ -1,56 +1,45 @@
-# Mobile App
+# React Native Mobile App
 
-React Native mobile client built with Expo and Expo Router.
+`apps/mobile` 现在已经从 Expo 骨架切换为纯 React Native CLI 工程。
 
-## Tech Stack
+## 当前状态
 
-- React Native
-- Expo
-- Expo Router
-- TypeScript
-- Redux Toolkit
-- React Redux
+- 原生工程目录已接入：`android/`、`ios/`
+- 业务页面仍沿用当前 `src/` 目录组织
+- 目前保留的是最小移动端骨架，便于后续直接按 React Native 方式继续开发
 
-## Development
+## 启动
 
-From the repository root:
+在仓库根目录执行：
 
 ```bash
 pnpm install
-pnpm dev:mobile
+pnpm --dir apps/mobile start
 ```
 
-Or from this directory:
+Android：
 
 ```bash
-pnpm install
-pnpm start
+pnpm --dir apps/mobile android
 ```
 
-## Environment Variables
+iOS：
 
-Copy `.env.example` to `.env` and adjust the API base URL if needed.
-
-```env
-EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
+```bash
+pnpm --dir apps/mobile ios
 ```
 
-## Current Structure
+## 目录说明
 
-- `src/app/`: Expo Router routes
-- `src/features/`: business-domain screens and modules
-- `src/components/`: shared UI building blocks
-- `src/lib/`: API helpers and utilities
-- `src/store/`: Redux Toolkit store and slices
-- `src/theme/`: shared design tokens
-- `src/assets/`: images and app assets
+- `src/app/`: 当前保留的页面入口占位
+- `src/features/`: 业务模块占位
+- `src/components/`: 基础 UI 组件
+- `src/lib/`: 后续 API / 工具层入口
+- `src/store/`: 后续状态管理入口
+- `src/theme/`: 基础设计 token
 
-## Import Alias
+## 后续建议
 
-- Use `@/` as the `src` root alias, for example `@/features/home/screens/home-screen`
-
-## Next Recommended Steps
-
-- Add `services/` or `api/` for HTTP clients and request wrappers
-- Add `features/` for business-domain screens and logic
-- Keep shared client state in Redux Toolkit slices and server state in TanStack Query
+- 先确定导航方案，再恢复多页面结构
+- 再逐步接回 API、状态管理与业务流
+- 优先按 RN CLI 原生工程规范维护 Android 和 iOS 配置

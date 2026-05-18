@@ -1,40 +1,25 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radii, shadows } from "@/theme/tokens";
+import { colors, radii, shadows } from "../../../theme/tokens";
 
 export const authPanelStyles = StyleSheet.create({
-  authCard: {
-    backgroundColor: colors.panelBackground,
-    borderRadius: radii.hero,
-    padding: 20,
-    gap: 14,
+  panel: {
+    gap: 10,
+    padding: 18,
     borderWidth: 1,
-    borderColor: colors.panelBorder,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
     ...shadows.card,
   },
-  heroRow: {
-    gap: 8,
-  },
-  heroEyebrow: {
-    color: colors.textAccent,
-    fontSize: 13,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  heroTitle: {
+  title: {
     color: colors.textPrimary,
-    fontSize: 28,
-    fontWeight: "800",
-    lineHeight: 34,
+    fontSize: 20,
+    fontWeight: "700",
   },
-  heroSubtitle: {
+  description: {
     color: colors.textSecondary,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  segmentRow: {
-    flexDirection: "row",
-    gap: 12,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

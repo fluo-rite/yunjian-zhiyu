@@ -1,19 +1,24 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radii } from "@/theme/tokens";
+import { colors, radii } from "../../../theme/tokens";
 
 export const cardComposerStyles = StyleSheet.create({
-  cardComposer: {
-    backgroundColor: colors.panelBackground,
-    borderRadius: radii.hero,
-    padding: 18,
-    gap: 12,
+  panel: {
+    gap: 10,
+    padding: 16,
     borderWidth: 1,
-    borderColor: colors.panelBorder,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
   },
-  sectionTitle: {
+  title: {
     color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  description: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
