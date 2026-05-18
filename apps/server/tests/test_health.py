@@ -17,6 +17,7 @@ from app.services.card_generation_service import (
     process_knowledge_source_sync,
 )
 from app.services.chat_generation_service import ChatTaskDispatcher, run_chat_generation
+from app.services.stream_adapter_service import StreamAdapterService
 from app.services.stream_store_service import StreamRecord
 from app.services.web_search_service import WebSearchService
 
@@ -395,6 +396,23 @@ def test_web_search_service_extracts_pages_from_json_text_payload() -> None:
     assert len(items) == 1
     assert items[0]["title"] == "FastAPI 路由指南"
     assert items[0]["url"] == "https://example.com/fastapi-routing"
+
+
+def test_stream_adapter_maps_status_raw_event() -> None:
+    event = StreamAdapterService.adapt_graph_chunk(
+        chat_id="chat-1",
+        assistant_message_id="assistant-1",
+        event={
+            "type": "status",
+            "phase": "retrieving_knowledge",
+            "label": "正在检索知识库",
+        },
+    )
+
+    assert event is not None
+    assert event.event == "status"
+    assert event.data["phase"] == "retrieving_knowledge"
+    assert event.data["label"] == "正在检索知识库"
 
 
 def test_policy_marks_fresh_queries_and_search_fallback() -> None:

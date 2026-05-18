@@ -4,7 +4,22 @@ from app.schemas.common import CamelModel
 from app.schemas.message import MessageRead
 
 
-AgentStreamEventType = Literal["message.start", "message.delta", "message.done", "error", "message.aborted"]
+StatusPhase = Literal["retrieving_knowledge", "searching_web", "assembling_answer"]
+
+
+AgentStreamEventType = Literal[
+    "status",
+    "message.start",
+    "message.delta",
+    "message.done",
+    "error",
+    "message.aborted",
+]
+
+
+class StatusEventData(CamelModel):
+    phase: StatusPhase
+    label: str
 
 
 class MessageStartEventData(CamelModel):

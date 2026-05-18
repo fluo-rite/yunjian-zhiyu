@@ -72,3 +72,6 @@ This repository now provides:
 - project-level documentation for onboarding
 
 Recommended next step: begin replacing starter screens and add the first real API router and feature module.
+
+yunjian-zhiyu\apps\server> uv run arq app.workers.arq_worker.WorkerSettings
+yunjian-zhiyu> pnpm dev:server

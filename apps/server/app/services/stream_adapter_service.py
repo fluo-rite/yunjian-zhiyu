@@ -12,6 +12,7 @@ from app.schemas.stream import (
     MessageDeltaEventData,
     MessageDoneEventData,
     MessageStartEventData,
+    StatusEventData,
 )
 from app.services.stream_store_service import StreamRecord
 
@@ -27,6 +28,16 @@ class AggregatedStreamResult:
 
 
 class StreamAdapterService:
+    @staticmethod
+    def build_status_event(*, phase: str, label: str) -> AgentStreamEvent:
+        return AgentStreamEvent(
+            event="status",
+            data=StatusEventData(
+                phase=phase,
+                label=label,
+            ).model_dump(mode="json", by_alias=True),
+        )
+
     @staticmethod
     def build_start_event(*, chat_id: str, assistant_message_id: str) -> AgentStreamEvent:
         return AgentStreamEvent(
@@ -54,6 +65,12 @@ class StreamAdapterService:
         assistant_message_id: str,
         event: ChatAgentRawEvent,
     ) -> AgentStreamEvent | None:
+        if event["type"] == "status":
+            return StreamAdapterService.build_status_event(
+                phase=event["phase"],
+                label=event["label"],
+            )
+
         if event["type"] == "message_delta":
             return StreamAdapterService.build_delta_event(
                 assistant_message_id=assistant_message_id,

@@ -21,6 +21,12 @@ class MessageStartRawEvent(TypedDict):
     type: Literal["message_start"]
 
 
+class StatusRawEvent(TypedDict):
+    type: Literal["status"]
+    phase: Literal["retrieving_knowledge", "searching_web", "assembling_answer"]
+    label: str
+
+
 class MessageDeltaRawEvent(TypedDict):
     type: Literal["message_delta"]
     delta: str
@@ -40,7 +46,7 @@ class ErrorRawEvent(TypedDict):
 
 
 ChatAgentRawEvent = (
-    MessageStartRawEvent | MessageDeltaRawEvent | MessageCompleteRawEvent | ErrorRawEvent
+    StatusRawEvent | MessageStartRawEvent | MessageDeltaRawEvent | MessageCompleteRawEvent | ErrorRawEvent
 )
 
 
@@ -126,6 +132,14 @@ class ChatAgent:
         if not state.get("use_knowledge"):
             return {"retrieved_cards": []}
 
+        writer = get_stream_writer()
+        writer(
+            {
+                "type": "status",
+                "phase": "retrieving_knowledge",
+                "label": "正在检索知识库",
+            }
+        )
         cards = get_retrieval_service().retrieve_knowledge_cards(
             user_id=state["user_id"],
             query=state["original_user_message"],
@@ -140,6 +154,14 @@ class ChatAgent:
         if not self._should_search_web(state):
             return {"searched_contexts": [], "used_web_search": False}
 
+        writer = get_stream_writer()
+        writer(
+            {
+                "type": "status",
+                "phase": "searching_web",
+                "label": "正在联网搜索",
+            }
+        )
         payload = await get_web_search_service().search(state["original_user_message"])
         searched_contexts: list[WebContext] = []
         for item in payload.get("items", []):
@@ -173,6 +195,14 @@ class ChatAgent:
         return decision.should_search_web
 
     def _assemble_context_node(self, state: ChatAgentState) -> ChatAgentState:
+        writer = get_stream_writer()
+        writer(
+            {
+                "type": "status",
+                "phase": "assembling_answer",
+                "label": "正在整理答案",
+            }
+        )
         reply_prompt = ChatPromptBuilder.build_reply_prompt(
             history_messages=state.get("pre_conversation_messages", []),
             user_message=state["original_user_message"],
