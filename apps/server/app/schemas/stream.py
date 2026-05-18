@@ -1,7 +1,7 @@
 from typing import Any, Literal
 
 from app.schemas.common import CamelModel
-from app.schemas.message import CitationRead, MessageRead
+from app.schemas.message import MessageRead
 
 
 AgentStreamEventType = Literal["message.start", "message.delta", "message.done", "error", "message.aborted"]
@@ -20,7 +20,6 @@ class MessageDeltaEventData(CamelModel):
 
 class MessageDoneEventData(CamelModel):
     message: MessageRead
-    citations: list[CitationRead]
 
 
 class MessageAbortedEventData(CamelModel):

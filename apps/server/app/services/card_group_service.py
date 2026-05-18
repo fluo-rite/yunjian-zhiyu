@@ -68,32 +68,47 @@ class CardGroupService:
         return [CardRead.model_validate(card) for card in cards]
 
     @staticmethod
-    def add_card(db: Session, user: User, *, group: CardGroup, card_id: str) -> None:
-        card = db.execute(
-            select(KnowledgeCard).where(KnowledgeCard.id == card_id, KnowledgeCard.user_id == user.id)
-        ).scalar_one_or_none()
-        if card is None:
+    def add_cards(db: Session, user: User, *, group: CardGroup, card_ids: list[str]) -> None:
+        cards = (
+            db.execute(
+                select(KnowledgeCard).where(
+                    KnowledgeCard.user_id == user.id,
+                    KnowledgeCard.id.in_(card_ids),
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if len(cards) != len(set(card_ids)):
             raise ValueError("Card not found.")
 
-        existing = db.execute(
-            select(CardGroupItem).where(
-                CardGroupItem.group_id == group.id,
-                CardGroupItem.card_id == card.id,
+        existing_ids = set(
+            db.execute(
+                select(CardGroupItem.card_id).where(
+                    CardGroupItem.group_id == group.id,
+                    CardGroupItem.card_id.in_(card_ids),
+                )
             )
-        ).scalar_one_or_none()
-        if existing is None:
-            db.add(CardGroupItem(group_id=group.id, card_id=card.id))
-            db.commit()
+            .scalars()
+            .all()
+        )
+        for card_id in card_ids:
+            if card_id not in existing_ids:
+                db.add(CardGroupItem(group_id=group.id, card_id=card_id))
+        db.commit()
 
     @staticmethod
-    def remove_card(db: Session, *, group: CardGroup, card_id: str) -> None:
-        item = db.execute(
-            select(CardGroupItem).where(
-                CardGroupItem.group_id == group.id,
-                CardGroupItem.card_id == card_id,
+    def remove_cards(db: Session, *, group: CardGroup, card_ids: list[str]) -> None:
+        items = (
+            db.execute(
+                select(CardGroupItem).where(
+                    CardGroupItem.group_id == group.id,
+                    CardGroupItem.card_id.in_(card_ids),
+                )
             )
-        ).scalar_one_or_none()
-        if item is None:
-            return
-        db.delete(item)
+            .scalars()
+            .all()
+        )
+        for item in items:
+            db.delete(item)
         db.commit()

@@ -5,11 +5,11 @@ from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.user import User
 from app.schemas.card_group import (
-    AddCardToGroupRequest,
     CardGroupCardsResponse,
     CardGroupListResponse,
     CardGroupRead,
     CreateCardGroupRequest,
+    UpdateGroupCardsRequest,
     UpdateCardGroupRequest,
 )
 from app.services.card_group_service import CardGroupService
@@ -87,7 +87,7 @@ def delete_card_group(
 @router.post("/{group_id}/cards", status_code=status.HTTP_204_NO_CONTENT)
 def add_card_to_group(
     group_id: str,
-    payload: AddCardToGroupRequest,
+    payload: UpdateGroupCardsRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
@@ -95,21 +95,25 @@ def add_card_to_group(
     if group is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card group not found.")
     try:
-        CardGroupService.add_card(db, current_user, group=group, card_id=payload.card_id)
+        CardGroupService.add_cards(db, current_user, group=group, card_ids=payload.card_ids)
     except ValueError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found.") from None
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.delete("/{group_id}/cards/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_card_from_group(
+@router.api_route(
+    "/{group_id}/cards",
+    methods=["DELETE"],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def remove_cards_from_group(
     group_id: str,
-    card_id: str,
+    payload: UpdateGroupCardsRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
     group = CardGroupService.get_or_none(db, current_user, group_id)
     if group is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card group not found.")
-    CardGroupService.remove_card(db, group=group, card_id=card_id)
+    CardGroupService.remove_cards(db, group=group, card_ids=payload.card_ids)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

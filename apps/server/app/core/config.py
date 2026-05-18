@@ -52,7 +52,6 @@ class Settings(BaseSettings):
     llm_api_key: str | None = None
     llm_model: str | None = None
     llm_timeout_seconds: float = 30.0
-    embedding_base_url: str | None = None
     embedding_api_key: str | None = None
     embedding_model: str | None = None
     rerank_base_url: str | None = None
@@ -65,6 +64,7 @@ class Settings(BaseSettings):
         env_file=BASE_DIR / ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     @field_validator("database_url", "redis_url", mode="before")
@@ -94,12 +94,10 @@ class Settings(BaseSettings):
             "llmConfigured": bool(
                 self.llm_base_url and self.llm_api_key and self.llm_model
             ),
-            "embeddingBaseUrl": self.embedding_base_url,
             "embeddingApiKey": _mask_secret(self.embedding_api_key),
             "embeddingModel": self.embedding_model,
             "embeddingConfigured": bool(
-                self.embedding_base_url
-                and self.embedding_api_key
+                self.embedding_api_key
                 and self.embedding_model
             ),
             "rerankBaseUrl": self.rerank_base_url,

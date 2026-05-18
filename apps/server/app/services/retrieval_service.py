@@ -165,7 +165,7 @@ class RetrievalService:
             f"用户查询：{query.strip()}\n\n候选卡片：\n{options}"
         )
         if not response.card_ids:
-            return candidates[:limit]
+            return []
 
         candidate_map = {candidate.card.id: candidate for candidate in candidates}
         reranked = [candidate_map[card_id] for card_id in response.card_ids if card_id in candidate_map]

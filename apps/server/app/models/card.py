@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 from pgvector.sqlalchemy import Vector
 
+from app.core.constants import EMBEDDING_VECTOR_DIMENSION
 from app.core.db import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
@@ -22,7 +23,7 @@ class KnowledgeCard(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ),
     )
 
-    _embedding_type = Vector(1536).with_variant(JSON(), "sqlite")
+    _embedding_type = Vector(EMBEDDING_VECTOR_DIMENSION).with_variant(JSON(), "sqlite")
 
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     source_id: Mapped[str | None] = mapped_column(

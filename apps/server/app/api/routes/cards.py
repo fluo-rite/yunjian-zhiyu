@@ -8,7 +8,6 @@ from app.schemas.card import (
     ArchiveCardResponse,
     CardListResponse,
     CardRead,
-    ConfirmCardResponse,
     ConfirmCardsRequest,
     ConfirmCardsResponse,
 )
@@ -52,18 +51,6 @@ def get_card(
     if card is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found.")
     return CardRead.model_validate(card)
-
-
-@router.post("/{card_id}/confirm", response_model=ConfirmCardResponse)
-def confirm_card(
-    card_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> ConfirmCardResponse:
-    card = CardService.get_or_none(db, current_user, card_id)
-    if card is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found.")
-    return CardService.confirm(db, card)
 
 
 @router.post("/confirm", response_model=ConfirmCardsResponse)

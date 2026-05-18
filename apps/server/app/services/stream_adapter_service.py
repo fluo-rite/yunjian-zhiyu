@@ -66,11 +66,10 @@ class StreamAdapterService:
     def build_done_event(
         *,
         message: MessageRead,
-        citations: list[CitationRead],
     ) -> AgentStreamEvent:
         return AgentStreamEvent(
             event="message.done",
-            data=MessageDoneEventData(message=message, citations=citations).model_dump(
+            data=MessageDoneEventData(message=message).model_dump(
                 mode="json",
                 by_alias=True,
             ),
@@ -143,13 +142,13 @@ class StreamAdapterService:
                     content_parts.append(delta)
             elif record.event == "message.done":
                 terminal_event = record.event
-                citations = [
-                    CitationRead.model_validate(item)
-                    for item in payload.get("citations", [])
-                    if isinstance(item, dict)
-                ]
                 message_payload = payload.get("message", {})
                 metadata = message_payload.get("metadata", {})
+                citations = [
+                    CitationRead.model_validate(item)
+                    for item in metadata.get("citations", [])
+                    if isinstance(item, dict)
+                ]
                 used_knowledge = bool(metadata.get("usedKnowledge"))
                 used_web_search = bool(metadata.get("usedWebSearch"))
             elif record.event == "error":

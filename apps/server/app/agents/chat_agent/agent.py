@@ -3,19 +3,18 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Literal, TypedDict
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
-from langgraph.prebuilt import ToolNode, tools_condition
 
 from app.agents.chat_agent.output import build_citations
+from app.agents.chat_agent.policy import WebSearchDecision, build_web_search_decision_prompt
 from app.agents.chat_agent.prompt_builder import ChatPromptBuilder
 from app.agents.chat_agent.state import ChatAgentState, WebContext
-from app.agents.chat_agent.tools.retrieval_knowledge_cards import retrieval_knowledge_cards_tool
-from app.agents.chat_agent.tools.web_search import web_search_tool
-from app.schemas.card import CardRead
 from app.schemas.message import CitationRead, MessageRead
+from app.services.retrieval_service import get_retrieval_service
+from app.services.web_search_service import get_web_search_service
 
 
 class MessageStartRawEvent(TypedDict):
@@ -58,15 +57,14 @@ class ChatAgent:
         base_url: str,
         timeout_seconds: float,
     ) -> None:
-        self._tools = [retrieval_knowledge_cards_tool, web_search_tool]
-        self._decision_model = ChatOpenAI(
+        self._web_search_decision_model = ChatOpenAI(
             model=model_name,
             api_key=api_key,
             base_url=base_url,
             temperature=0,
             timeout=timeout_seconds,
             max_retries=2,
-        ).bind_tools(self._tools)
+        ).with_structured_output(WebSearchDecision)
         self._reply_model = ChatOpenAI(
             model=model_name,
             api_key=api_key,
@@ -113,77 +111,66 @@ class ChatAgent:
         use_knowledge: bool,
         use_web_search: bool,
     ) -> ChatAgentState:
-        history_messages = self._to_history_messages(pre_messages)
         return {
             "user_id": user_id,
             "original_user_message": user_message.strip(),
             "use_knowledge": use_knowledge,
             "use_web_search": use_web_search,
-            "pre_conversation_messages": history_messages,
-            "messages": ChatPromptBuilder.build_tool_decision_messages(
-                history_messages=history_messages,
-                user_message=user_message,
-                use_knowledge=use_knowledge,
-                use_web_search=use_web_search,
-            ),
-            "executed_tools": [],
+            "pre_conversation_messages": self._to_history_messages(pre_messages),
             "retrieved_cards": [],
             "searched_contexts": [],
             "used_web_search": False,
         }
 
-    def _decide_tools_node(self, state: ChatAgentState) -> ChatAgentState:
-        response = self._decision_model.invoke(state["messages"])
-        return {"messages": [response]}
+    def _retrieve_knowledge_node(self, state: ChatAgentState) -> ChatAgentState:
+        if not state.get("use_knowledge"):
+            return {"retrieved_cards": []}
 
-    def _collect_tool_results_node(self, state: ChatAgentState) -> ChatAgentState:
-        retrieved_cards = list(state.get("retrieved_cards", []))
-        searched_contexts = list(state.get("searched_contexts", []))
-        executed_tools = list(state.get("executed_tools", []))
+        cards = get_retrieval_service().retrieve_knowledge_cards(
+            user_id=state["user_id"],
+            query=state["original_user_message"],
+            limit=5,
+        )
+        return {"retrieved_cards": cards}
 
-        for message in state.get("messages", []):
-            if not isinstance(message, ToolMessage):
+    async def _search_web_node(self, state: ChatAgentState) -> ChatAgentState:
+        if not state.get("use_web_search", False):
+            return {"searched_contexts": [], "used_web_search": False}
+
+        if not self._should_search_web(state):
+            return {"searched_contexts": [], "used_web_search": False}
+
+        payload = await get_web_search_service().search(state["original_user_message"])
+        searched_contexts: list[WebContext] = []
+        for item in payload.get("items", []):
+            title = item.get("title")
+            url = item.get("url")
+            snippet = item.get("snippet")
+            content = item.get("content")
+            if not all(isinstance(value, str) for value in (title, url, snippet, content)):
                 continue
-            payload = self._parse_tool_payload(message.content)
-            payload_type = payload.get("type")
-            if payload_type == "knowledge_retrieval":
-                if "knowledge_retrieval" not in executed_tools:
-                    executed_tools.append("knowledge_retrieval")
-                for item in payload.get("items", []):
-                    title = item.get("title")
-                    content = item.get("content")
-                    card_id = item.get("id")
-                    if not all(isinstance(value, str) for value in (title, content, card_id)):
-                        continue
-                    candidate = CardRead.model_validate(item)
-                    if candidate.id in {card.id for card in retrieved_cards}:
-                        continue
-                    retrieved_cards.append(candidate)
-            elif payload_type == "web_search":
-                if "web_search" not in executed_tools:
-                    executed_tools.append("web_search")
-                for item in payload.get("items", []):
-                    title = item.get("title")
-                    url = item.get("url")
-                    snippet = item.get("snippet")
-                    content = item.get("content")
-                    if not all(isinstance(value, str) for value in (title, url, snippet, content)):
-                        continue
-                    searched_contexts.append(
-                        WebContext(
-                            title=title,
-                            url=url,
-                            snippet=snippet,
-                            content=content,
-                        )
-                    )
+            searched_contexts.append(
+                WebContext(
+                    title=title,
+                    url=url,
+                    snippet=snippet,
+                    content=content,
+                )
+            )
 
         return {
-            "executed_tools": executed_tools,
-            "retrieved_cards": retrieved_cards,
             "searched_contexts": searched_contexts,
             "used_web_search": bool(searched_contexts),
         }
+
+    def _should_search_web(self, state: ChatAgentState) -> bool:
+        decision = self._web_search_decision_model.invoke(
+            build_web_search_decision_prompt(
+                query=state["original_user_message"],
+                retrieved_cards=state.get("retrieved_cards", []),
+            )
+        )
+        return decision.should_search_web
 
     def _assemble_context_node(self, state: ChatAgentState) -> ChatAgentState:
         reply_prompt = ChatPromptBuilder.build_reply_prompt(
@@ -229,23 +216,14 @@ class ChatAgent:
 
     def _build_graph(self):
         workflow = StateGraph(ChatAgentState)
-        workflow.add_node("decide_tools", self._decide_tools_node)
-        workflow.add_node("tools", ToolNode(tools=self._tools))
-        workflow.add_node("collect_tool_results", self._collect_tool_results_node)
+        workflow.add_node("retrieve_knowledge", self._retrieve_knowledge_node)
+        workflow.add_node("search_web", self._search_web_node)
         workflow.add_node("assemble_context", self._assemble_context_node)
         workflow.add_node("stream_reply", self._stream_reply_node)
 
-        workflow.add_edge(START, "decide_tools")
-        workflow.add_conditional_edges(
-            "decide_tools",
-            tools_condition,
-            {
-                "tools": "tools",
-                END: "assemble_context",
-            },
-        )
-        workflow.add_edge("tools", "collect_tool_results")
-        workflow.add_edge("collect_tool_results", "assemble_context")
+        workflow.add_edge(START, "retrieve_knowledge")
+        workflow.add_edge("retrieve_knowledge", "search_web")
+        workflow.add_edge("search_web", "assemble_context")
         workflow.add_edge("assemble_context", "stream_reply")
         workflow.add_edge("stream_reply", END)
         return workflow.compile()
@@ -262,12 +240,6 @@ class ChatAgent:
             elif message.role == "assistant":
                 history_messages.append(AIMessage(content=content))
         return history_messages
-
-    @staticmethod
-    def _parse_tool_payload(content: str | list[str | dict] | dict | object) -> dict:
-        if isinstance(content, dict):
-            return content
-        return {}
 
     @staticmethod
     def _extract_text(content: str | list[str | dict] | object) -> str:

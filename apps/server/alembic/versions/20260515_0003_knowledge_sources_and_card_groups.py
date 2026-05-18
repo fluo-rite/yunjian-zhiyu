@@ -46,7 +46,7 @@ def upgrade() -> None:
         batch_op.drop_constraint("ck_knowledge_cards_status", type_="check")
         batch_op.drop_constraint("ck_knowledge_cards_source_type", type_="check")
         batch_op.add_column(sa.Column("source_id", sa.String(length=36), nullable=True))
-        batch_op.add_column(sa.Column("embedding", Vector(1536), nullable=True))
+        batch_op.add_column(sa.Column("embedding", Vector(768), nullable=True))
         batch_op.add_column(sa.Column("embedding_model", sa.String(length=100), nullable=True))
         batch_op.add_column(sa.Column("embedding_updated_at", sa.DateTime(timezone=True), nullable=True))
         batch_op.add_column(sa.Column("content_hash", sa.String(length=64), nullable=True))

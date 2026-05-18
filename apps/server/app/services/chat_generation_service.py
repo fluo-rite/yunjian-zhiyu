@@ -241,7 +241,6 @@ async def _finalize_done(
     )
     done_event = StreamAdapterService.build_done_event(
         message=MessageService.to_read(updated_message),
-        citations=citations,
     )
     await stream_store.append_event(stream_key, **StreamAdapterService.to_redis_record(done_event))
     await stream_store.set_ttl(stream_key, ttl_seconds)

@@ -1,13 +1,13 @@
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest, TokenPair, UserRead
-from app.schemas.card import ArchiveCardResponse, CardListResponse, CardRead, ConfirmCardResponse
+from app.schemas.card import ArchiveCardResponse, CardListResponse, CardRead
 from app.schemas.card import ConfirmCardsRequest, ConfirmCardsResponse
 from app.schemas.card_group import (
-    AddCardToGroupRequest,
     CardGroupCardsResponse,
     CardGroupListResponse,
     CardGroupRead,
     CreateCardGroupRequest,
     UpdateCardGroupRequest,
+    UpdateGroupCardsRequest,
 )
 from app.schemas.chat import ChatCreate, ChatListResponse, ChatRead
 from app.schemas.knowledge_source import (
@@ -45,7 +45,6 @@ __all__ = [
     "AgentStreamEvent",
     "AbortChatMessageResponse",
     "ActiveMessageInfo",
-    "AddCardToGroupRequest",
     "ArchiveCardResponse",
     "AuthResponse",
     "CardGroupCardsResponse",
@@ -66,7 +65,6 @@ __all__ = [
     "CreateKnowledgeSourceFromMessagesRequest",
     "CreateKnowledgeSourceFromTextRequest",
     "DeleteKnowledgeSourceRequest",
-    "ConfirmCardResponse",
     "ConfirmCardsRequest",
     "ConfirmCardsResponse",
     "MessageAbortedEventData",
@@ -85,5 +83,6 @@ __all__ = [
     "RegisterRequest",
     "TokenPair",
     "UpdateCardGroupRequest",
+    "UpdateGroupCardsRequest",
     "UserRead",
 ]

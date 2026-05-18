@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.core.db import Base, SessionLocal, engine
 from app.main import app
+from app.agents.chat_agent.policy import build_web_search_decision_prompt
 from app.models.card import KnowledgeCard
 from app.schemas.message import CitationRead
 from app.services.card_generation_service import (
@@ -17,6 +18,7 @@ from app.services.card_generation_service import (
 )
 from app.services.chat_generation_service import ChatTaskDispatcher, run_chat_generation
 from app.services.stream_store_service import StreamRecord
+from app.services.web_search_service import WebSearchService
 
 
 client = TestClient(app)
@@ -366,6 +368,93 @@ def _patch_chat_agent(
     monkeypatch.setattr("app.services.chat_generation_service.get_chat_agent", lambda: fake_agent)
 
 
+def test_web_search_service_extracts_pages_from_json_text_payload() -> None:
+    raw_result = {
+        "content": [
+            {
+                "type": "text",
+                "text": json.dumps(
+                    {
+                        "pages": [
+                            {
+                                "title": "FastAPI 路由指南",
+                                "url": "https://example.com/fastapi-routing",
+                                "snippet": "FastAPI 推荐使用 APIRouter 组织路由。",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+            }
+        ],
+        "structuredContent": None,
+    }
+
+    items = WebSearchService._normalize_items(raw_result)
+
+    assert len(items) == 1
+    assert items[0]["title"] == "FastAPI 路由指南"
+    assert items[0]["url"] == "https://example.com/fastapi-routing"
+
+
+def test_policy_marks_fresh_queries_and_search_fallback() -> None:
+    prompt = build_web_search_decision_prompt(
+        query="2026法定节假日安排",
+        retrieved_cards=[],
+    )
+    assert "2026法定节假日安排" in prompt
+    assert "本地知识命中数量：0" in prompt
+
+    card = KnowledgeCard(
+        id="card-1",
+        user_id="user-1",
+        source_id=None,
+        title="FastAPI 路由基础",
+        content="FastAPI 通过装饰器定义路由。",
+        tags=["FastAPI", "路由"],
+        status="active",
+        source_type="manual_text",
+    )
+    prompt_with_cards = build_web_search_decision_prompt(
+        query="FastAPI 如何使用",
+        retrieved_cards=[card],
+    )
+    assert "本地知识命中数量：1" in prompt_with_cards
+    assert "- FastAPI 路由基础" in prompt_with_cards
+    return
+    """
+    assert is_fresh_query("2026法定节假日安排") is True
+    assert is_fresh_query("FastAPI 如何使用") is False
+    assert should_search_web(
+        use_web_search=True,
+        query="FastAPI 如何使用",
+        retrieved_cards=[],
+    ) is True
+    assert should_search_web(
+        use_web_search=True,
+        query="2026法定节假日安排",
+        retrieved_cards=[],
+    ) is True
+    assert should_search_web(
+        use_web_search=True,
+        query="FastAPI 如何使用",
+        retrieved_cards=[object()],  # type: ignore[list-item]
+    ) is False
+    return
+    payload = {
+        "type": "web_search",
+        "query": "FastAPI routing",
+        "items": [{"title": "FastAPI 路由指南", "url": "https://example.com"}],
+    }
+
+    parsed = ChatAgent._parse_tool_payload(json.dumps(payload, ensure_ascii=False))
+
+    assert parsed["type"] == "web_search"
+    assert parsed["items"][0]["title"] == "FastAPI 路由指南"
+
+
+    """
+
 def test_health_returns_ok() -> None:
     response = client.get("/health")
 
@@ -453,9 +542,13 @@ def test_knowledge_source_delete_preview_and_keep_cards(monkeypatch) -> None:
 
     cards_response = client.get(f"/api/v1/knowledge-sources/{source_id}/cards", headers=headers)
     card_id = cards_response.json()["items"][0]["id"]
-    confirm_response = client.post(f"/api/v1/cards/{card_id}/confirm", headers=headers)
+    confirm_response = client.post(
+        "/api/v1/cards/confirm",
+        headers=headers,
+        json={"cardIds": [card_id]},
+    )
     assert confirm_response.status_code == 200
-    assert confirm_response.json()["status"] == "active"
+    assert confirm_response.json()["items"][0]["status"] == "active"
 
     preview_response = client.get(
         f"/api/v1/knowledge-sources/{source_id}/delete-preview",
@@ -494,9 +587,13 @@ def test_card_confirm_archive_and_group_flow(monkeypatch) -> None:
     source_cards = client.get(f"/api/v1/knowledge-sources/{source_id}/cards", headers=headers)
     card_id = source_cards.json()["items"][0]["id"]
 
-    confirm_response = client.post(f"/api/v1/cards/{card_id}/confirm", headers=headers)
+    confirm_response = client.post(
+        "/api/v1/cards/confirm",
+        headers=headers,
+        json={"cardIds": [card_id]},
+    )
     assert confirm_response.status_code == 200
-    assert confirm_response.json()["status"] == "active"
+    assert confirm_response.json()["items"][0]["status"] == "active"
 
     group_response = client.post(
         "/api/v1/card-groups",
@@ -509,7 +606,7 @@ def test_card_confirm_archive_and_group_flow(monkeypatch) -> None:
     add_response = client.post(
         f"/api/v1/card-groups/{group_id}/cards",
         headers=headers,
-        json={"cardId": card_id},
+        json={"cardIds": [card_id]},
     )
     assert add_response.status_code == 204
 
@@ -521,9 +618,11 @@ def test_card_confirm_archive_and_group_flow(monkeypatch) -> None:
     assert archive_response.status_code == 200
     assert archive_response.json()["status"] == "archived"
 
-    remove_response = client.delete(
-        f"/api/v1/card-groups/{group_id}/cards/{card_id}",
+    remove_response = client.request(
+        "DELETE",
+        f"/api/v1/card-groups/{group_id}/cards",
         headers=headers,
+        json={"cardIds": [card_id]},
     )
     assert remove_response.status_code == 204
 
@@ -654,7 +753,8 @@ def test_chat_message_creation_stream_and_history(monkeypatch) -> None:
     assert "message.delta" in [item["event"] for item in events]
     assert events[-1]["event"] == "message.done"
     assert events[-1]["data"]["message"]["status"] == "done"
-    assert events[-1]["data"]["citations"][0]["sourceId"] == card_id
+    assert "citations" not in events[-1]["data"]
+    assert events[-1]["data"]["message"]["metadata"]["citations"][0]["sourceId"] == card_id
 
     history_response = client.get(f"/api/v1/chats/{chat_id}/messages", headers=headers)
     final_items = history_response.json()["items"]

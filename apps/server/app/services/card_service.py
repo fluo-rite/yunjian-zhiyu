@@ -11,7 +11,6 @@ from app.schemas.card import (
     ArchiveCardResponse,
     CardListResponse,
     CardRead,
-    ConfirmCardResponse,
     ConfirmCardsResponse,
 )
 from app.schemas.common import PaginationMeta
@@ -90,14 +89,6 @@ class CardService:
         db.commit()
 
     @staticmethod
-    def confirm(db: Session, card: KnowledgeCard) -> ConfirmCardResponse:
-        card.status = "active"
-        db.add(card)
-        db.commit()
-        db.refresh(card)
-        return ConfirmCardResponse.model_validate(card)
-
-    @staticmethod
     def list_by_ids(db: Session, user: User, card_ids: list[str]) -> list[KnowledgeCard]:
         if not card_ids:
             return []
@@ -122,7 +113,7 @@ class CardService:
         db.commit()
         for card in cards:
             db.refresh(card)
-        return ConfirmCardsResponse(items=[ConfirmCardResponse.model_validate(card) for card in cards])
+        return ConfirmCardsResponse(items=[CardRead.model_validate(card) for card in cards])
 
     @staticmethod
     def archive(db: Session, card: KnowledgeCard) -> ArchiveCardResponse:

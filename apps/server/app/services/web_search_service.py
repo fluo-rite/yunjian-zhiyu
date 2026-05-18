@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from importlib import import_module
+import json
 from typing import Any
 
 from app.core.config import get_settings
@@ -85,6 +86,8 @@ class WebSearchService:
 
         items = WebSearchService._extract_structured_items(structured)
         if not items:
+            items = WebSearchService._extract_items_from_content_entries(content_entries)
+        if not items:
             text_blob = WebSearchService._extract_text_blob(content_entries)
             if text_blob:
                 items = [
@@ -104,7 +107,7 @@ class WebSearchService:
         if isinstance(structured, list):
             candidate_list = structured
         elif isinstance(structured, dict):
-            for key in ("items", "results", "data", "records", "hits"):
+            for key in ("pages", "items", "results", "data", "records", "hits"):
                 value = structured.get(key)
                 if isinstance(value, list):
                     candidate_list = value
@@ -134,6 +137,35 @@ class WebSearchService:
         return normalized_items
 
     @staticmethod
+    def _extract_items_from_content_entries(content_entries: Any) -> list[dict[str, str]]:
+        if not isinstance(content_entries, list):
+            return []
+
+        for entry in content_entries:
+            text = None
+            if isinstance(entry, str):
+                text = entry
+            elif isinstance(entry, dict) and isinstance(entry.get("text"), str):
+                text = entry["text"]
+            else:
+                entry_text = getattr(entry, "text", None)
+                if isinstance(entry_text, str):
+                    text = entry_text
+
+            if not text:
+                continue
+
+            parsed = WebSearchService._safe_json_loads(text)
+            if parsed is None:
+                continue
+
+            items = WebSearchService._extract_structured_items(parsed)
+            if items:
+                return items
+
+        return []
+
+    @staticmethod
     def _extract_text_blob(content_entries: Any) -> str:
         if not isinstance(content_entries, list):
             return ""
@@ -149,6 +181,16 @@ class WebSearchService:
             if isinstance(entry, dict) and isinstance(entry.get("text"), str):
                 chunks.append(entry["text"])
         return "\n\n".join(chunk.strip() for chunk in chunks if chunk.strip()).strip()
+
+    @staticmethod
+    def _safe_json_loads(value: str) -> dict[str, Any] | list[Any] | None:
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return None
+        if isinstance(parsed, (dict, list)):
+            return parsed
+        return None
 
     @staticmethod
     def _pick_str(item: dict[str, Any], *keys: str) -> str | None:
