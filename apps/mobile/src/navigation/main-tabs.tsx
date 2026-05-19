@@ -8,7 +8,7 @@ import { type MainTabParamList } from "./types";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-export function MainTabNavigator(props: { onLogout: () => void }) {
+export function MainTabNavigator() {
   return (
     <Tab.Navigator
       initialRouteName="SessionsStack"
@@ -54,9 +54,11 @@ export function MainTabNavigator(props: { onLogout: () => void }) {
         name="LibraryStack"
         options={{ title: "知识库", tabBarLabel: "知识库" }}
       />
-      <Tab.Screen name="ProfileStack" options={{ title: "我", tabBarLabel: "我" }}>
-        {() => <ProfileStackNavigator onLogout={props.onLogout} />}
-      </Tab.Screen>
+      <Tab.Screen
+        component={ProfileStackNavigator}
+        name="ProfileStack"
+        options={{ title: "我", tabBarLabel: "我" }}
+      />
     </Tab.Navigator>
   );
 }

@@ -15,6 +15,8 @@ export const profileScreenStyles = StyleSheet.create({
     gap: spacing.xl,
   },
   profileCard: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.borderSoft,
@@ -22,6 +24,10 @@ export const profileScreenStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: spacing.xl,
     ...shadows.card,
+  },
+  profileCopy: {
+    flex: 1,
+    gap: spacing.xs,
   },
   avatar: {
     width: 64,
@@ -46,13 +52,27 @@ export const profileScreenStyles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 22,
   },
+  caption: {
+    color: colors.accentPressed,
+    fontSize: typography.caption,
+    fontWeight: "600",
+  },
   sectionCard: {
-    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
     padding: spacing.xl,
+  },
+  rowButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  rowCopy: {
+    flex: 1,
+    gap: spacing.sm,
   },
   sectionTitle: {
     color: colors.textPrimary,
@@ -63,5 +83,10 @@ export const profileScreenStyles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.body,
     lineHeight: 22,
+  },
+  rowAction: {
+    color: colors.accentPressed,
+    fontSize: typography.caption,
+    fontWeight: "600",
   },
 });

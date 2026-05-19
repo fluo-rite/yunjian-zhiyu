@@ -1,18 +1,76 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import {
+  clearAuthError,
+  registerThunk,
+  selectAuthErrorMessage,
+  selectIsSubmittingAuth,
+} from "../../../store/auth-slice";
+import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import { Field } from "../../../components/ui/field";
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { loginScreenStyles as styles } from "./login-screen.styles";
 
-export function RegisterScreen(props: {
-  onRegister: () => void;
-  onBackToLogin: () => void;
-}) {
+export function RegisterScreen(props: { onBackToLogin: () => void }) {
+  const dispatch = useAppDispatch();
+  const errorMessage = useAppSelector(selectAuthErrorMessage);
+  const isSubmitting = useAppSelector(selectIsSubmittingAuth);
+
   const [nickname, setNickname] = useState("");
-  const [account, setAccount] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const isFormValid = useMemo(() => {
+    return (
+      nickname.trim().length > 0 &&
+      (username.trim().length === 0 || username.trim().length >= 3) &&
+      email.trim().length > 0 &&
+      password.trim().length >= 8 &&
+      password === confirmPassword
+    );
+  }, [confirmPassword, email, nickname, password, username]);
+
+  const helperText =
+    errorMessage ??
+    (submitAttempted && !isFormValid
+      ? "请补全信息，用户名可留空或至少 3 位，密码至少 8 位，并确保两次输入一致。"
+      : "注册成功后会直接进入主页面，并自动保存当前会话。");
+
+  useEffect(() => {
+    return () => {
+      dispatch(clearAuthError());
+    };
+  }, [dispatch]);
+
+  function handleFieldChange(setter: (value: string) => void, value: string) {
+    if (errorMessage) {
+      dispatch(clearAuthError());
+    }
+
+    setter(value);
+  }
+
+  function handleRegister() {
+    setSubmitAttempted(true);
+
+    if (!isFormValid || isSubmitting) {
+      return;
+    }
+
+    dispatch(
+      registerThunk({
+        email: email.trim(),
+        password,
+        nickname: nickname.trim(),
+        username: username.trim() || undefined,
+      }),
+    );
+  }
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
@@ -25,7 +83,7 @@ export function RegisterScreen(props: {
           <View style={styles.heading}>
             <Text style={styles.title}>创建你的知识空间。</Text>
             <Text style={styles.description}>
-              这是一版注册页占位骨架，结构已经接入标准导航，后面可以继续扩成真实注册流程。
+              注册页现在会提交到真实后端，成功后自动建立登录态，不再只是静态跳转。
             </Text>
           </View>
 
@@ -33,29 +91,52 @@ export function RegisterScreen(props: {
             <View style={styles.fieldGroup}>
               <Field
                 label="昵称"
-                onChangeText={setNickname}
+                onChangeText={(value) => handleFieldChange(setNickname, value)}
                 placeholder="输入你的昵称"
                 value={nickname}
               />
               <Field
                 autoCapitalize="none"
+                label="用户名（选填）"
+                onChangeText={(value) => handleFieldChange(setUsername, value)}
+                placeholder="输入用户名，至少 3 位"
+                value={username}
+              />
+              <Field
+                autoCapitalize="none"
                 keyboardType="email-address"
-                label="账号"
-                onChangeText={setAccount}
-                placeholder="输入邮箱或账号"
-                value={account}
+                label="邮箱"
+                onChangeText={(value) => handleFieldChange(setEmail, value)}
+                placeholder="输入常用邮箱"
+                value={email}
               />
               <Field
                 autoCapitalize="none"
                 label="密码"
-                onChangeText={setPassword}
+                onChangeText={(value) => handleFieldChange(setPassword, value)}
                 placeholder="设置密码"
                 secureTextEntry
                 value={password}
               />
+              <Field
+                autoCapitalize="none"
+                label="确认密码"
+                onChangeText={(value) => handleFieldChange(setConfirmPassword, value)}
+                placeholder="再次输入密码"
+                secureTextEntry
+                value={confirmPassword}
+              />
             </View>
 
-            <PrimaryButton label="注册并进入" onPress={props.onRegister} />
+            <View style={styles.helperRow}>
+              <Text style={styles.helperText}>{helperText}</Text>
+            </View>
+
+            <PrimaryButton
+              disabled={!isFormValid || isSubmitting}
+              label={isSubmitting ? "注册中..." : "注册并进入"}
+              onPress={handleRegister}
+            />
             <PrimaryButton
               label="返回登录"
               onPress={props.onBackToLogin}

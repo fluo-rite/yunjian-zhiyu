@@ -1,4 +1,12 @@
-export const placeholderStore = {};
+import { configureStore } from "@reduxjs/toolkit";
 
-export type RootState = Record<string, never>;
-export type AppDispatch = () => void;
+import { authReducer } from "./auth-slice";
+
+export const store = configureStore({
+  reducer: {
+    auth: authReducer,
+  },
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;

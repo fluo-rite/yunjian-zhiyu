@@ -1,14 +1,73 @@
-import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import {
+  clearAuthError,
+  loginThunk,
+  selectAuthErrorMessage,
+  selectIsSubmittingAuth,
+} from "../../../store/auth-slice";
+import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import { Field } from "../../../components/ui/field";
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { loginScreenStyles as styles } from "./login-screen.styles";
 
-export function LoginScreen(props: { onLogin: () => void; onGoToRegister: () => void }) {
+export function LoginScreen(props: { onGoToRegister: () => void }) {
+  const dispatch = useAppDispatch();
+  const errorMessage = useAppSelector(selectAuthErrorMessage);
+  const isSubmitting = useAppSelector(selectIsSubmittingAuth);
+
   const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const isFormValid = useMemo(() => {
+    return account.trim().length > 0 && password.trim().length >= 8;
+  }, [account, password]);
+
+  const helperText =
+    errorMessage ??
+    (submitAttempted && !isFormValid
+      ? "请输入账号，并确保密码至少 8 位。"
+      : "使用真实账号登录后，会自动进入主页面并保存本地会话。");
+
+  useEffect(() => {
+    return () => {
+      dispatch(clearAuthError());
+    };
+  }, [dispatch]);
+
+  function handleAccountChange(text: string) {
+    if (errorMessage) {
+      dispatch(clearAuthError());
+    }
+
+    setAccount(text);
+  }
+
+  function handlePasswordChange(text: string) {
+    if (errorMessage) {
+      dispatch(clearAuthError());
+    }
+
+    setPassword(text);
+  }
+
+  function handleLogin() {
+    setSubmitAttempted(true);
+
+    if (!isFormValid || isSubmitting) {
+      return;
+    }
+
+    dispatch(
+      loginThunk({
+        account: account.trim(),
+        password,
+      }),
+    );
+  }
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
@@ -21,7 +80,7 @@ export function LoginScreen(props: { onLogin: () => void; onGoToRegister: () => 
           <View style={styles.heading}>
             <Text style={styles.title}>欢迎回来，继续整理你的知识。</Text>
             <Text style={styles.description}>
-              先把登录页和主导航骨架搭起来，后续我们再继续补注册、会话详情和知识库二级页面。
+              这一版已经接入真实鉴权。登录成功后会保存本地会话，并在下次启动时自动恢复。
             </Text>
           </View>
 
@@ -31,14 +90,14 @@ export function LoginScreen(props: { onLogin: () => void; onGoToRegister: () => 
                 autoCapitalize="none"
                 keyboardType="email-address"
                 label="账号"
-                onChangeText={setAccount}
+                onChangeText={handleAccountChange}
                 placeholder="输入邮箱或账号"
                 value={account}
               />
               <Field
                 autoCapitalize="none"
                 label="密码"
-                onChangeText={setPassword}
+                onChangeText={handlePasswordChange}
                 placeholder="输入密码"
                 secureTextEntry
                 value={password}
@@ -46,21 +105,30 @@ export function LoginScreen(props: { onLogin: () => void; onGoToRegister: () => 
             </View>
 
             <View style={styles.helperRow}>
-              <Text style={styles.helperText}>当前为静态登录页骨架，稍后接入真实鉴权。</Text>
+              <Text style={styles.helperText}>{helperText}</Text>
+              <Pressable onPress={() => {}}>
+                <Text style={styles.helperAction}>忘记密码</Text>
+              </Pressable>
             </View>
 
-            <PrimaryButton label="登录" onPress={props.onLogin} />
             <PrimaryButton
-              label="去注册"
-              onPress={props.onGoToRegister}
-              variant="secondary"
+              disabled={!isFormValid || isSubmitting}
+              label={isSubmitting ? "登录中..." : "登录"}
+              onPress={handleLogin}
             />
+
+            <View style={styles.switchRow}>
+              <Text style={styles.switchText}>还没有账号？</Text>
+              <Pressable onPress={props.onGoToRegister}>
+                <Text style={styles.switchAction}>去注册</Text>
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerTitle}>下一步预留</Text>
+            <Text style={styles.footerTitle}>当前能力</Text>
             <Text style={styles.footerText}>
-              注册页、验证码登录、忘记密码、用户协议入口都可以沿着这套结构继续补。
+              登录、注册、恢复登录态、退出登录已经接入真实 store 和接口链路。
             </Text>
           </View>
         </View>

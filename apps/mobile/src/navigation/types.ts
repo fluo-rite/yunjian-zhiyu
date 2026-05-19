@@ -16,6 +16,11 @@ export type MainTabParamList = {
 
 export type SessionsStackParamList = {
   SessionList: undefined;
+  Chat: {
+    chatId: string;
+    title: string;
+    isNew?: boolean;
+  };
 };
 
 export type LibraryStackParamList = {
@@ -24,4 +29,6 @@ export type LibraryStackParamList = {
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
+  Account: undefined;
+  Settings: undefined;
 };

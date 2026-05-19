@@ -6,24 +6,14 @@ import { type AuthStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
-export function AuthStackNavigator(props: { onLogin: () => void }) {
+export function AuthStackNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login">
-        {({ navigation }) => (
-          <LoginScreen
-            onGoToRegister={() => navigation.navigate("Register")}
-            onLogin={props.onLogin}
-          />
-        )}
+        {({ navigation }) => <LoginScreen onGoToRegister={() => navigation.navigate("Register")} />}
       </Stack.Screen>
       <Stack.Screen name="Register">
-        {({ navigation }) => (
-          <RegisterScreen
-            onBackToLogin={() => navigation.goBack()}
-            onRegister={props.onLogin}
-          />
-        )}
+        {({ navigation }) => <RegisterScreen onBackToLogin={() => navigation.goBack()} />}
       </Stack.Screen>
     </Stack.Navigator>
   );

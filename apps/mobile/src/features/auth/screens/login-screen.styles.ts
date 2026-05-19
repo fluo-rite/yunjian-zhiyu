@@ -63,6 +63,27 @@ export const loginScreenStyles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.caption,
     lineHeight: 18,
+    flex: 1,
+  },
+  helperAction: {
+    color: colors.accentPressed,
+    fontSize: typography.caption,
+    fontWeight: "600",
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+  },
+  switchText: {
+    color: colors.textSecondary,
+    fontSize: typography.caption,
+  },
+  switchAction: {
+    color: colors.accentPressed,
+    fontSize: typography.caption,
+    fontWeight: "600",
   },
   footer: {
     gap: spacing.sm,

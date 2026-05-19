@@ -13,7 +13,11 @@ export const sessionListScreenStyles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
   },
-  hero: {
+  header: {
+    gap: spacing.lg,
+    marginBottom: spacing.xxl,
+  },
+  headerCopy: {
     gap: spacing.lg,
   },
   eyebrow: {
@@ -31,6 +35,9 @@ export const sessionListScreenStyles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 24,
   },
+  section: {
+    gap: spacing.lg,
+  },
   card: {
     gap: spacing.sm,
     borderWidth: 1,
@@ -40,10 +47,25 @@ export const sessionListScreenStyles = StyleSheet.create({
     padding: spacing.xl,
     ...shadows.card,
   },
+  cardPressed: {
+    opacity: 0.94,
+    transform: [{ scale: 0.992 }],
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
   cardTitle: {
     color: colors.textPrimary,
     fontSize: typography.section,
     fontWeight: "600",
+    flex: 1,
+  },
+  cardTime: {
+    color: colors.textTertiary,
+    fontSize: typography.meta,
   },
   cardText: {
     color: colors.textSecondary,

@@ -1,31 +1,52 @@
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { PrimaryButton } from "../../../components/ui/primary-button";
+import { type ProfileStackParamList } from "../../../navigation/types";
+import { selectAuthUser } from "../../../store/auth-slice";
+import { useAppSelector } from "../../../store/hooks";
 import { profileScreenStyles as styles } from "./profile-screen.styles";
 
-export function ProfileScreen(props: { onLogout: () => void }) {
+export function ProfileScreen({
+  navigation,
+}: NativeStackScreenProps<ProfileStackParamList, "ProfileHome">) {
+  const user = useAppSelector(selectAuthUser);
+
+  const displayName = user?.nickname || user?.username || "未命名用户";
+  const avatarText = displayName.slice(0, 1) || "我";
+
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.profileCard}>
+        <Pressable onPress={() => navigation.navigate("Account")} style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>云</Text>
+            <Text style={styles.avatarText}>{avatarText}</Text>
           </View>
-          <Text style={styles.title}>我的</Text>
-          <Text style={styles.description}>
-            这里后续会放头像、昵称、简介、设置入口，以及单独的个人资料和设置二级页面。
-          </Text>
+          <View style={styles.profileCopy}>
+            <Text style={styles.title}>{displayName}</Text>
+            <Text style={styles.description}>
+              {user?.email ?? "当前还没有可展示的账号信息。"}
+            </Text>
+            <Text style={styles.caption}>点击查看账号信息</Text>
+          </View>
+        </Pressable>
+
+        <View style={styles.sectionCard}>
+          <Pressable onPress={() => navigation.navigate("Settings")} style={styles.rowButton}>
+            <View style={styles.rowCopy}>
+              <Text style={styles.sectionTitle}>设置</Text>
+              <Text style={styles.sectionText}>管理登录状态和退出当前账号</Text>
+            </View>
+            <Text style={styles.rowAction}>进入</Text>
+          </Pressable>
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>当前占位内容</Text>
+          <Text style={styles.sectionTitle}>当前鉴权状态</Text>
           <Text style={styles.sectionText}>
-            下一步会补“个人资料页”和“设置页”，并让它们在进入后隐藏底栏。
+            当前账号已接入真实登录、注册、本地会话恢复和退出登录。后续可以继续补资料编辑接口。
           </Text>
         </View>
-
-        <PrimaryButton label="退出登录（占位）" onPress={props.onLogout} variant="secondary" />
       </ScrollView>
     </SafeAreaView>
   );
