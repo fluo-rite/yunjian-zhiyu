@@ -1,5 +1,5 @@
-import { HomeScreen } from '../features/home/screens/home-screen';
+import { RootNavigator } from "../navigation/root-navigator";
 
 export default function IndexScreen() {
-  return <HomeScreen />;
+  return <RootNavigator />;
 }
