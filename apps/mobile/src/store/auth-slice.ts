@@ -1,24 +1,15 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-import {
-  fetchCurrentUser,
-  login,
-  register,
-  type AuthResponse,
-  type AuthUser,
-  type LoginPayload,
-  type RegisterPayload,
-  type TokenPair,
-} from "../lib/api";
+import { type AuthResponse, type AuthUser, type TokenPair } from "../lib/api";
+import { type PersistedSession } from "../features/auth/services/auth-session";
 import type { RootState } from "./index";
-
-const AUTH_STORAGE_KEY = "yunjian.auth.session";
-
-type PersistedSession = {
-  tokens: TokenPair;
-  user: AuthUser;
-};
+import {
+  expireAuthSessionThunk,
+  hydrateAuthSession,
+  loginThunk,
+  logoutThunk,
+  registerThunk,
+} from "./auth-thunks";
 
 type AuthState = {
   user: AuthUser | null;
@@ -39,75 +30,6 @@ const initialState: AuthState = {
   isLoggingOut: false,
   errorMessage: null,
 };
-
-async function persistSession(payload: PersistedSession) {
-  await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
-}
-
-async function clearPersistedSession() {
-  await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
-}
-
-export const hydrateAuthSession = createAsyncThunk(
-  "auth/hydrateAuthSession",
-  async (_, { rejectWithValue }) => {
-    try {
-      const raw = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
-
-      if (!raw) {
-        return null;
-      }
-
-      const session = JSON.parse(raw) as PersistedSession;
-      const user = await fetchCurrentUser(session.tokens.accessToken);
-      const normalized = {
-        tokens: session.tokens,
-        user,
-      };
-
-      await persistSession(normalized);
-
-      return normalized;
-    } catch {
-      await clearPersistedSession();
-      return rejectWithValue("登录状态已失效，请重新登录。");
-    }
-  },
-);
-
-export const loginThunk = createAsyncThunk(
-  "auth/login",
-  async (payload: LoginPayload, { rejectWithValue }) => {
-    try {
-      const response = await login(payload);
-      await persistSession(response);
-      return response;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "登录失败，请稍后再试。",
-      );
-    }
-  },
-);
-
-export const registerThunk = createAsyncThunk(
-  "auth/register",
-  async (payload: RegisterPayload, { rejectWithValue }) => {
-    try {
-      const response = await register(payload);
-      await persistSession(response);
-      return response;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "注册失败，请稍后再试。",
-      );
-    }
-  },
-);
-
-export const logoutThunk = createAsyncThunk("auth/logout", async () => {
-  await clearPersistedSession();
-});
 
 function applyAuthSuccess(state: AuthState, payload: AuthResponse | PersistedSession) {
   state.user = payload.user;
@@ -198,6 +120,14 @@ const authSlice = createSlice({
           typeof action.error.message === "string"
             ? action.error.message
             : "退出登录失败，请稍后再试。";
+      })
+      .addCase(expireAuthSessionThunk.fulfilled, (state, action) => {
+        state.user = null;
+        state.tokens = null;
+        state.isAuthenticated = false;
+        state.isSubmitting = false;
+        state.isLoggingOut = false;
+        state.errorMessage = action.payload;
       });
   },
 });
@@ -205,6 +135,13 @@ const authSlice = createSlice({
 export const { clearAuthError } = authSlice.actions;
 
 export const authReducer = authSlice.reducer;
+export {
+  expireAuthSessionThunk,
+  hydrateAuthSession,
+  loginThunk,
+  logoutThunk,
+  registerThunk,
+};
 
 export function selectAuthUser(state: RootState) {
   return state.auth.user;
