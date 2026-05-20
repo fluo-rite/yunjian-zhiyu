@@ -2,52 +2,52 @@ import { StyleSheet } from "react-native";
 
 import { colors, radii, shadows, spacing, typography } from "../../../theme/tokens";
 
-export const libraryScreenStyles = StyleSheet.create({
+export const groupCardPickerScreenStyles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
+  body: {
+    flex: 1,
   },
-  hero: {
+  headerContent: {
     gap: spacing.lg,
   },
-  eyebrow: {
-    color: colors.accentPressed,
-    fontSize: typography.meta,
-    fontWeight: "700",
+  heroCard: {
+    gap: spacing.sm,
+    borderRadius: radii.xxl,
+    backgroundColor: colors.surface,
+    padding: spacing.xl,
+    ...shadows.card,
   },
-  title: {
+  heroTitle: {
     color: colors.textPrimary,
     fontSize: typography.title,
     fontWeight: "700",
   },
-  description: {
+  heroText: {
     color: colors.textSecondary,
     fontSize: typography.body,
-    lineHeight: 24,
+    lineHeight: 22,
   },
-  card: {
-    gap: spacing.sm,
+  resultMeta: {
+    color: colors.textTertiary,
+    fontSize: typography.meta,
+  },
+  filterCard: {
+    gap: spacing.lg,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
     padding: spacing.xl,
-    ...shadows.card,
   },
-  cardTitle: {
-    color: colors.textPrimary,
-    fontSize: typography.section,
-    fontWeight: "600",
+  filterSection: {
+    gap: spacing.sm,
   },
-  cardText: {
+  filterLabel: {
     color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 22,
+    fontSize: typography.caption,
+    fontWeight: "700",
   },
 });

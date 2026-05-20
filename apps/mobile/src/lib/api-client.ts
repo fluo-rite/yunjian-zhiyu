@@ -118,6 +118,11 @@ export const apiClient = {
     const response = await axiosInstance.post<T>(path, body, requestConfig);
     return response.data;
   },
+  async patch<T>(path: string, config: Omit<ApiRequestConfig, "method" | "url"> = {}) {
+    const { body, ...requestConfig } = config;
+    const response = await axiosInstance.patch<T>(path, body, requestConfig);
+    return response.data;
+  },
   async delete<T>(path: string, config: Omit<ApiRequestConfig, "method" | "url"> = {}) {
     const { body, ...requestConfig } = config;
     const response = await axiosInstance.delete<T>(path, {

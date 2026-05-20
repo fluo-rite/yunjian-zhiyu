@@ -12,12 +12,16 @@ export function ScreenHeader(props: {
 }) {
   return (
     <View style={styles.header}>
-      <PrimaryButton
-        label="返回"
-        onPress={props.onBack}
-        style={styles.sideButton}
-        variant="secondary"
-      />
+      {props.onBack ? (
+        <PrimaryButton
+          label="返回"
+          onPress={props.onBack}
+          style={styles.sideButton}
+          variant="secondary"
+        />
+      ) : (
+        <View style={styles.sidePlaceholder} />
+      )}
 
       <View style={styles.center}>
         {props.subtitle ? <Text style={styles.subtitle}>{props.subtitle}</Text> : null}
