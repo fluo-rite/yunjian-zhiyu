@@ -21,7 +21,7 @@ const sourceStatusItems: ReadonlyArray<FilterChipItem<SourceStatusFilterKey>> = 
   { key: "all", label: "全部状态" },
   { key: "processing", label: "处理中" },
   { key: "ready", label: "已完成" },
-  { key: "failed", label: "处理失败" },
+  { key: "failed", label: "失败" },
 ];
 
 const sourceTypeItems: ReadonlyArray<FilterChipItem<SourceTypeFilterKey>> = [
@@ -66,20 +66,18 @@ export function SourceListScreen({
     () => (
       <View style={styles.headerContent}>
         <View style={styles.heroCard}>
-          <Text style={styles.heroTitle}>从来源追溯卡片生成过程</Text>
-          <Text style={styles.heroText}>
-            这里会显示文本、文档或消息来源的处理状态。进入详情后可以查看原始内容、生成卡片和待确认卡片。
-          </Text>
+          <Text style={styles.heroTitle}>全部知识来源</Text>
+          <Text style={styles.heroText}>查看不同资料的整理结果，并继续处理生成的卡片。</Text>
           {sourcesQuery.data?.pagination ? (
             <Text style={styles.resultMeta}>
-              当前结果 {sources.length} 条，共 {sourcesQuery.data.pagination.total} 条
+              共 {sourcesQuery.data.pagination.total} 条来源
             </Text>
           ) : null}
         </View>
 
         <View style={styles.filterCard}>
           <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>按处理状态筛选</Text>
+            <Text style={styles.filterLabel}>状态</Text>
             <FilterChipRow
               items={sourceStatusItems}
               onSelect={setStatusFilter}
@@ -88,7 +86,7 @@ export function SourceListScreen({
           </View>
 
           <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>按来源类型筛选</Text>
+            <Text style={styles.filterLabel}>类型</Text>
             <FilterChipRow
               items={sourceTypeItems}
               onSelect={setSourceTypeFilter}
@@ -98,7 +96,7 @@ export function SourceListScreen({
         </View>
       </View>
     ),
-    [sourceTypeFilter, sources.length, sourcesQuery.data?.pagination, statusFilter],
+    [sourcesQuery.data?.pagination, statusFilter, sourceTypeFilter],
   );
 
   const listEmptyComponent = useMemo(() => {
@@ -115,9 +113,7 @@ export function SourceListScreen({
       return (
         <ErrorState
           description={
-            sourcesQuery.error instanceof Error
-              ? sourcesQuery.error.message
-              : libraryCopy.loadFailed
+            sourcesQuery.error instanceof Error ? sourcesQuery.error.message : libraryCopy.loadFailed
           }
           onRetry={() => sourcesQuery.refetch()}
           retryLabel={libraryCopy.retry}
@@ -128,17 +124,13 @@ export function SourceListScreen({
 
     return (
       <EmptyState
-        actionLabel={
-          hasFilters ? libraryCopy.cardList.clearLocalFilters : libraryCopy.sourceList.importTextAction
-        }
+        actionLabel={hasFilters ? libraryCopy.cardList.clearLocalFilters : libraryCopy.sourceList.importTextAction}
         description={
           hasFilters
             ? libraryCopy.sourceList.emptyFilteredDescription
             : libraryCopy.sourceList.emptyDefaultDescription
         }
-        onActionPress={
-          hasFilters ? handleResetFilters : () => navigation.navigate("CreateSourceText")
-        }
+        onActionPress={hasFilters ? handleResetFilters : () => navigation.navigate("CreateSourceText")}
         title={libraryCopy.sourceList.emptyTitle}
       />
     );
@@ -150,7 +142,7 @@ export function SourceListScreen({
         onBack={() => navigation.goBack()}
         onRightPress={() => navigation.navigate("CreateSourceText")}
         rightLabel={libraryCopy.sourceList.importTextAction}
-        subtitle="来源追溯"
+        subtitle="资料来源"
         title="知识来源"
       />
 
@@ -162,7 +154,7 @@ export function SourceListScreen({
         ListHeaderComponent={listHeaderComponent}
         onRefresh={() => sourcesQuery.refetch()}
         refreshing={sourcesQuery.isRefetching}
-        renderItem={({ item }: { item: KnowledgeSource }) => (
+        renderItem={({ item }) => (
           <SourceListItem
             onPress={() =>
               navigation.navigate("SourceDetail", {

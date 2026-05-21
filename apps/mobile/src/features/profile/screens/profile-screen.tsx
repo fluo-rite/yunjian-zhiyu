@@ -1,6 +1,6 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { type NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { type RootStackParamList } from "../../../navigation/types";
@@ -24,9 +24,7 @@ export function ProfileScreen() {
           </View>
           <View style={styles.profileCopy}>
             <Text style={styles.title}>{displayName}</Text>
-            <Text style={styles.description}>
-              {user?.email ?? "当前还没有可展示的账号信息。"}
-            </Text>
+            <Text style={styles.description}>{user?.email ?? "当前还没有可展示的账号信息。"}</Text>
             <Text style={styles.caption}>点击查看账号信息</Text>
           </View>
         </Pressable>
@@ -35,17 +33,10 @@ export function ProfileScreen() {
           <Pressable onPress={() => navigation.navigate("Settings")} style={styles.rowButton}>
             <View style={styles.rowCopy}>
               <Text style={styles.sectionTitle}>设置</Text>
-              <Text style={styles.sectionText}>管理登录状态和退出当前账号</Text>
+              <Text style={styles.sectionText}>管理登录状态与当前账号。</Text>
             </View>
             <Text style={styles.rowAction}>进入</Text>
           </Pressable>
-        </View>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>当前鉴权状态</Text>
-          <Text style={styles.sectionText}>
-            当前账号已接入真实登录、注册、本地会话恢复和退出登录。后续可以继续补资料编辑接口。
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

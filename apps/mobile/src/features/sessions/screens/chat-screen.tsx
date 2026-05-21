@@ -7,11 +7,11 @@ import { Field } from "../../../components/ui/field";
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { type RootStackParamList } from "../../../navigation/types";
 import {
+  type Message,
   useAbortChatMessageMutation,
   useChatMessagesQuery,
   useCreateChatMutation,
   useSendChatMessageMutation,
-  type Message,
 } from "../api";
 import { useAssistantMessageStream } from "../hooks/use-assistant-message-stream";
 import { chatScreenStyles as styles } from "./chat-screen.styles";
@@ -34,9 +34,7 @@ export function ChatScreen({
   route,
 }: NativeStackScreenProps<RootStackParamList, "Chat">) {
   const [draft, setDraft] = useState("");
-  const [chatId, setChatId] = useState<string | null>(
-    route.params.isNew ? null : route.params.chatId,
-  );
+  const [chatId, setChatId] = useState<string | null>(route.params.isNew ? null : route.params.chatId);
   const [chatTitle, setChatTitle] = useState(route.params.title);
   const [streamAssistantMessageId, setStreamAssistantMessageId] = useState<string | null>(null);
 
@@ -62,37 +60,33 @@ export function ChatScreen({
     }
   }, [messages, stream.isStreaming, streamAssistantMessageId]);
 
-  const displayMessages = useMemo(() => {
-    return messages.map((message) => {
-      if (message.id !== streamAssistantMessageId) {
-        return message;
-      }
+  const displayMessages = useMemo(
+    () =>
+      messages.map((message) => {
+        if (message.id !== streamAssistantMessageId) {
+          return message;
+        }
 
-      if (stream.terminalMessage) {
-        return stream.terminalMessage;
-      }
+        if (stream.terminalMessage) {
+          return stream.terminalMessage;
+        }
 
-      return {
-        ...message,
-        content: stream.streamedContent || message.content,
-      };
-    });
-  }, [messages, stream.streamedContent, stream.terminalMessage, streamAssistantMessageId]);
+        return {
+          ...message,
+          content: stream.streamedContent || message.content,
+        };
+      }),
+    [messages, stream.streamedContent, stream.terminalMessage, streamAssistantMessageId],
+  );
 
-  const screenSubtitle = useMemo(() => {
-    return chatId ? "会话详情" : "新的会话草稿";
-  }, [chatId]);
+  const screenSubtitle = useMemo(() => (chatId ? "会话详情" : "新会话"), [chatId]);
 
   const latestAssistantCitations = useMemo(() => {
-    const lastAssistantMessage = [...displayMessages]
-      .reverse()
-      .find((message) => message.role === "assistant");
-
+    const lastAssistantMessage = [...displayMessages].reverse().find((message) => message.role === "assistant");
     return lastAssistantMessage?.metadata?.citations ?? [];
   }, [displayMessages]);
 
-  const isSending =
-    createChatMutation.isPending || sendChatMessageMutation.isPending || stream.isConnecting;
+  const isSending = createChatMutation.isPending || sendChatMessageMutation.isPending || stream.isConnecting;
   const isStreaming = stream.isStreaming || abortChatMessageMutation.isPending;
 
   useEffect(() => {
@@ -108,7 +102,7 @@ export function ChatScreen({
       return;
     }
 
-    Alert.alert("消息流中断", stream.errorMessage);
+    Alert.alert("消息中断", stream.errorMessage);
   }, [stream.errorMessage]);
 
   async function ensureChatCreated(content: string) {
@@ -150,10 +144,7 @@ export function ChatScreen({
       await messagesQuery.refetch();
     } catch (error) {
       setDraft(content);
-      Alert.alert(
-        "发送失败",
-        error instanceof Error ? error.message : "这条消息暂时没有发送成功，请稍后再试。",
-      );
+      Alert.alert("发送失败", error instanceof Error ? error.message : "这条消息暂时没有发送成功，请稍后再试。");
     }
   }
 
@@ -168,10 +159,7 @@ export function ChatScreen({
         assistantMessageId: streamAssistantMessageId,
       });
     } catch (error) {
-      Alert.alert(
-        "停止失败",
-        error instanceof Error ? error.message : "暂时无法停止这次生成，请稍后再试。",
-      );
+      Alert.alert("停止失败", error instanceof Error ? error.message : "暂时无法停止这次生成，请稍后再试。");
     }
   }
 
@@ -183,47 +171,31 @@ export function ChatScreen({
     });
   }
 
-  const showWelcomeCard =
-    !chatId &&
-    displayMessages.length === 0 &&
-    !messagesQuery.isLoading &&
-    !createChatMutation.isPending;
+  const showWelcomeCard = !chatId && displayMessages.length === 0 && !messagesQuery.isLoading && !createChatMutation.isPending;
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
       <View style={styles.header}>
-        <PrimaryButton
-          label="返回"
-          onPress={() => navigation.goBack()}
-          style={styles.headerButton}
-          variant="secondary"
-        />
+        <PrimaryButton label="返回" onPress={() => navigation.goBack()} style={styles.headerButton} variant="secondary" />
         <View style={styles.headerCenter}>
           <Text style={styles.headerEyebrow}>{screenSubtitle}</Text>
           <Text style={styles.headerTitle}>{chatTitle}</Text>
         </View>
-        <PrimaryButton
-          label="新会话"
-          onPress={handleNewChat}
-          style={styles.headerButton}
-          variant="secondary"
-        />
+        <PrimaryButton label="新会话" onPress={handleNewChat} style={styles.headerButton} variant="secondary" />
       </View>
 
       <ScrollView contentContainerStyle={styles.messages}>
         {showWelcomeCard ? (
           <View style={styles.welcomeCard}>
-            <Text style={styles.welcomeTitle}>开始新的思路整理</Text>
-            <Text style={styles.welcomeText}>
-              发出第一条消息后会自动创建会话，并开始订阅服务端流式回复。
-            </Text>
+            <Text style={styles.welcomeTitle}>开始新的对话</Text>
+            <Text style={styles.welcomeText}>输入你的问题、想法或要整理的内容。</Text>
           </View>
         ) : null}
 
         {messagesQuery.isLoading && chatId ? (
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>正在加载消息历史</Text>
-            <Text style={styles.infoText}>稍等一下，正在从服务端同步当前会话内容。</Text>
+            <Text style={styles.infoTitle}>正在加载会话</Text>
+            <Text style={styles.infoText}>请稍候，我们正在同步当前对话内容。</Text>
           </View>
         ) : null}
 
@@ -231,16 +203,14 @@ export function ChatScreen({
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>消息加载失败</Text>
             <Text style={styles.infoText}>
-              {messagesQuery.error instanceof Error
-                ? messagesQuery.error.message
-                : "请稍后再试。"}
+              {messagesQuery.error instanceof Error ? messagesQuery.error.message : "请稍后再试。"}
             </Text>
           </View>
         ) : null}
 
         {stream.phaseLabel ? (
           <View style={styles.statusCard}>
-            <Text style={styles.statusLabel}>当前阶段</Text>
+            <Text style={styles.statusLabel}>当前状态</Text>
             <Text style={styles.statusText}>{stream.phaseLabel}</Text>
           </View>
         ) : null}
@@ -250,24 +220,17 @@ export function ChatScreen({
           const citations = message.metadata?.citations ?? [];
 
           return (
-            <View
-              key={message.id}
-              style={[styles.bubbleRow, isUser ? styles.bubbleRight : styles.bubbleLeft]}
-            >
+            <View key={message.id} style={[styles.bubbleRow, isUser ? styles.bubbleRight : styles.bubbleLeft]}>
               <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
                 <Text style={styles.bubbleRole}>{isUser ? "你" : "AI 助手"}</Text>
                 <Text style={styles.bubbleText}>
                   {message.content || (message.status === "streaming" ? "正在生成回复…" : "")}
                 </Text>
-                {!isUser && citations.length > 0 ? (
-                  <Text style={styles.citationText}>引用 {citations.length} 条来源</Text>
-                ) : null}
+                {!isUser && citations.length > 0 ? <Text style={styles.citationText}>引用 {citations.length} 条来源</Text> : null}
                 {!isUser && message.status === "failed" && message.errorMessage ? (
                   <Text style={styles.errorText}>{message.errorMessage}</Text>
                 ) : null}
-                {!isUser && message.status === "aborted" ? (
-                  <Text style={styles.metaText}>本次生成已停止</Text>
-                ) : null}
+                {!isUser && message.status === "aborted" ? <Text style={styles.metaText}>本次生成已停止</Text> : null}
               </View>
             </View>
           );
@@ -275,7 +238,7 @@ export function ChatScreen({
 
         {latestAssistantCitations.length > 0 ? (
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>最近一次回答引用</Text>
+            <Text style={styles.infoTitle}>最近一次回答的来源</Text>
             {latestAssistantCitations.slice(0, 3).map((citation, index) => (
               <Text key={`${citation.title}-${index}`} style={styles.infoText}>
                 {index + 1}. {citation.title}
@@ -291,20 +254,20 @@ export function ChatScreen({
             label="输入内容"
             multiline
             onChangeText={setDraft}
-            placeholder="输入你想继续讨论的问题或整理目标"
+            placeholder="输入你的问题或想整理的内容"
             value={draft}
           />
           <View style={styles.actions}>
             {isStreaming ? (
               <PrimaryButton
-                label={abortChatMessageMutation.isPending ? "停止中..." : "停止生成"}
+                label={abortChatMessageMutation.isPending ? "停止中…" : "停止生成"}
                 onPress={handleAbort}
                 variant="secondary"
               />
             ) : null}
             <PrimaryButton
               disabled={!draft.trim() || isSending || isStreaming}
-              label={isSending ? "发送中..." : "发送"}
+              label={isSending ? "发送中…" : "发送"}
               onPress={handleSend}
             />
           </View>

@@ -26,9 +26,7 @@ export function SourceListItem(props: {
         </View>
         <SourceStatusBadge status={props.source.status} />
       </View>
-      <Text style={styles.description}>
-        进入来源详情后可以查看原始内容、生成卡片以及待确认卡片的处理进度。
-      </Text>
+      <Text style={styles.description}>打开后可查看原文、卡片结果与当前整理状态。</Text>
     </Pressable>
   );
 }

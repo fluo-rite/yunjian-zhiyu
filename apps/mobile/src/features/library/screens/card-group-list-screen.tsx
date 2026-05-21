@@ -37,10 +37,7 @@ export function CardGroupListScreen({
         groupName: created.name,
       });
     } catch (error) {
-      Alert.alert(
-        "创建失败",
-        error instanceof Error ? error.message : "暂时无法创建分组，请稍后再试。",
-      );
+      Alert.alert("创建失败", error instanceof Error ? error.message : "暂时无法创建分组，请稍后再试。");
     }
   }
 
@@ -48,11 +45,9 @@ export function CardGroupListScreen({
     () => (
       <View style={styles.headerContent}>
         <View style={styles.heroCard}>
-          <Text style={styles.heroTitle}>按主题组织你的知识卡片</Text>
-          <Text style={styles.heroText}>
-            分组页负责承接“专题整理”这条链路。你可以先创建一个主题分组，再从全量卡片中把相关卡片加入进去。
-          </Text>
-          <Text style={styles.resultMeta}>当前共有 {groups.length} 个分组</Text>
+          <Text style={styles.heroTitle}>卡片分组</Text>
+          <Text style={styles.heroText}>按主题管理你的卡片，整理出更清晰的结构。</Text>
+          <Text style={styles.resultMeta}>共 {groups.length} 个分组</Text>
         </View>
 
         <View style={styles.formCard}>
@@ -64,7 +59,7 @@ export function CardGroupListScreen({
           />
           <PrimaryButton
             disabled={!draftName.trim() || createGroupMutation.isPending}
-            label={createGroupMutation.isPending ? "创建中..." : "创建分组"}
+            label={createGroupMutation.isPending ? "创建中…" : "创建分组"}
             onPress={handleCreateGroup}
           />
         </View>
@@ -75,40 +70,26 @@ export function CardGroupListScreen({
 
   const listEmptyComponent = useMemo(() => {
     if (groupsQuery.isLoading) {
-      return (
-        <EmptyState
-          description="正在从服务端读取卡片分组列表，请稍等片刻。"
-          title="正在加载卡片分组"
-        />
-      );
+      return <EmptyState description="请稍候，我们正在同步你的分组列表。" title="正在加载分组" />;
     }
 
     if (groupsQuery.isError) {
       return (
         <ErrorState
-          description={
-            groupsQuery.error instanceof Error
-              ? groupsQuery.error.message
-              : "暂时无法读取卡片分组，请稍后再试。"
-          }
+          description={groupsQuery.error instanceof Error ? groupsQuery.error.message : "暂时无法读取分组，请稍后再试。"}
           onRetry={() => groupsQuery.refetch()}
           retryLabel="重新加载"
-          title="分组列表加载失败"
+          title="分组加载失败"
         />
       );
     }
 
-    return (
-      <EmptyState
-        description="现在还没有卡片分组。先创建一个主题分组，后续再把卡片逐步归拢进来。"
-        title="暂时没有卡片分组"
-      />
-    );
+    return <EmptyState description="先创建一个分组，开始整理你的卡片。" title="暂无分组" />;
   }, [groupsQuery]);
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
-      <ScreenHeader onBack={() => navigation.goBack()} subtitle="主题组织" title="卡片分组" />
+      <ScreenHeader onBack={() => navigation.goBack()} subtitle="主题整理" title="卡片分组" />
 
       <FlatList
         contentContainerStyle={styles.content}

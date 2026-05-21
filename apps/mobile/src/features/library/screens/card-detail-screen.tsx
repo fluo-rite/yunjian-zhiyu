@@ -6,11 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { ScreenHeader } from "../../../components/ui/screen-header";
 import { type RootStackParamList } from "../../../navigation/types";
-import {
-  useArchiveCardMutation,
-  useCardDetailQuery,
-  useDeleteCardMutation,
-} from "../api";
+import { useArchiveCardMutation, useCardDetailQuery, useDeleteCardMutation } from "../api";
 import { CardStatusBadge } from "../components/card-status-badge";
 import { EmptyState } from "../components/empty-state";
 import { ErrorState } from "../components/error-state";
@@ -50,34 +46,30 @@ export function CardDetailScreen({
       return;
     }
 
-    Alert.alert(
-      libraryCopy.cardDetail.deleteConfirmTitle,
-      libraryCopy.cardDetail.deleteConfirmDescription,
-      [
-        { text: libraryCopy.cancel, style: "cancel" },
-        {
-          text: libraryCopy.deleteConfirm,
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteCardMutation.mutateAsync(card.id);
+    Alert.alert(libraryCopy.cardDetail.deleteConfirmTitle, libraryCopy.cardDetail.deleteConfirmDescription, [
+      { text: libraryCopy.cancel, style: "cancel" },
+      {
+        text: libraryCopy.deleteConfirm,
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteCardMutation.mutateAsync(card.id);
 
-              if (navigation.canGoBack()) {
-                navigation.goBack();
-                return;
-              }
-
-              navigation.replace("CardList");
-            } catch (error) {
-              Alert.alert(
-                libraryCopy.cardDetail.deleteFailureTitle,
-                error instanceof Error ? error.message : libraryCopy.loadFailed,
-              );
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+              return;
             }
-          },
+
+            navigation.replace("CardList");
+          } catch (error) {
+            Alert.alert(
+              libraryCopy.cardDetail.deleteFailureTitle,
+              error instanceof Error ? error.message : libraryCopy.loadFailed,
+            );
+          }
         },
-      ],
-    );
+      },
+    ]);
   }
 
   return (
@@ -99,21 +91,14 @@ export function CardDetailScreen({
 
       {cardQuery.isLoading ? (
         <View style={styles.stateWrap}>
-          <EmptyState
-            description={libraryCopy.cardDetail.loadingDescription}
-            title={libraryCopy.cardDetail.loadingTitle}
-          />
+          <EmptyState description={libraryCopy.cardDetail.loadingDescription} title={libraryCopy.cardDetail.loadingTitle} />
         </View>
       ) : null}
 
       {cardQuery.isError ? (
         <View style={styles.stateWrap}>
           <ErrorState
-            description={
-              cardQuery.error instanceof Error
-                ? cardQuery.error.message
-                : libraryCopy.cardDetail.errorDescription
-            }
+            description={cardQuery.error instanceof Error ? cardQuery.error.message : libraryCopy.cardDetail.errorDescription}
             onRetry={() => cardQuery.refetch()}
             retryLabel={libraryCopy.retry}
             title={libraryCopy.cardDetail.errorTitle}
@@ -155,7 +140,7 @@ export function CardDetailScreen({
             <Text style={styles.infoLabel}>来源类型</Text>
             <Text style={styles.infoValue}>{getSourceTypeLabel(card.sourceType)}</Text>
             <Text style={styles.infoLabel}>来源 ID</Text>
-            <Text style={styles.infoValue}>{card.sourceId ?? "这张卡片暂时没有来源 ID"}</Text>
+            <Text style={styles.infoValue}>{card.sourceId ?? "暂无来源 ID"}</Text>
             <Text style={styles.infoLabel}>创建时间</Text>
             <Text style={styles.infoValue}>{formatDateTimeLabel(card.createdAt)}</Text>
             <Text style={styles.infoLabel}>更新时间</Text>
@@ -182,32 +167,19 @@ export function CardDetailScreen({
               {card.status === "active" ? (
                 <PrimaryButton
                   disabled={archiveCardMutation.isPending}
-                  label={
-                    archiveCardMutation.isPending
-                      ? libraryCopy.cardDetail.archivePendingAction
-                      : libraryCopy.cardDetail.archiveAction
-                  }
+                  label={archiveCardMutation.isPending ? libraryCopy.cardDetail.archivePendingAction : libraryCopy.cardDetail.archiveAction}
                   iconName="archive-outline"
                   onPress={handleArchiveCard}
                 />
               ) : null}
 
               {card.status === "archived" ? (
-                <PrimaryButton
-                  disabled
-                  label={libraryCopy.cardDetail.archivedAction}
-                  iconName="archive"
-                  variant="secondary"
-                />
+                <PrimaryButton disabled label={libraryCopy.cardDetail.archivedAction} iconName="archive" variant="secondary" />
               ) : null}
 
               <PrimaryButton
                 disabled={deleteCardMutation.isPending}
-                label={
-                  deleteCardMutation.isPending
-                    ? libraryCopy.cardDetail.deletePendingAction
-                    : libraryCopy.cardDetail.deleteAction
-                }
+                label={deleteCardMutation.isPending ? libraryCopy.cardDetail.deletePendingAction : libraryCopy.cardDetail.deleteAction}
                 iconName="trash-outline"
                 onPress={handleDeleteCard}
                 variant="secondary"

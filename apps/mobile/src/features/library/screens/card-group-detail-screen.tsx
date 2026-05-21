@@ -82,10 +82,7 @@ export function CardGroupDetailScreen({
       setNameDraft(renamed.name);
       navigation.setParams({ groupName: renamed.name });
     } catch (error) {
-      Alert.alert(
-        "重命名失败",
-        error instanceof Error ? error.message : "暂时无法修改分组名称，请稍后再试。",
-      );
+      Alert.alert("重命名失败", error instanceof Error ? error.message : "暂时无法修改分组名称，请稍后再试。");
     }
   }
 
@@ -103,10 +100,7 @@ export function CardGroupDetailScreen({
       exitSelectionMode();
       Alert.alert("移除完成", `已从当前分组中移除 ${removedCount} 张卡片。`);
     } catch (error) {
-      Alert.alert(
-        "移除失败",
-        error instanceof Error ? error.message : "暂时无法移除这些卡片，请稍后再试。",
-      );
+      Alert.alert("移除失败", error instanceof Error ? error.message : "暂时无法移除这些卡片，请稍后再试。");
     }
   }
 
@@ -130,10 +124,7 @@ export function CardGroupDetailScreen({
               await deleteGroupMutation.mutateAsync(route.params.groupId);
               navigation.replace("CardGroupList");
             } catch (error) {
-              Alert.alert(
-                "删除失败",
-                error instanceof Error ? error.message : "暂时无法删除这个分组，请稍后再试。",
-              );
+              Alert.alert("删除失败", error instanceof Error ? error.message : "暂时无法删除这个分组，请稍后再试。");
             }
           },
         },
@@ -150,9 +141,7 @@ export function CardGroupDetailScreen({
       <View style={styles.headerContent}>
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>{group.name}</Text>
-          <Text style={styles.heroText}>
-            这个分组下已经组织了 {cards.length} 张卡片。你可以继续向分组中添加卡片、批量移除卡片，或修改分组名称。
-          </Text>
+          <Text style={styles.heroText}>在这里管理分组名称、添加卡片，或整理组内内容。</Text>
           <Text style={styles.heroMeta}>最近更新 {formatDateTimeLabel(group.updatedAt)}</Text>
         </View>
 
@@ -165,18 +154,12 @@ export function CardGroupDetailScreen({
             value={nameDraft}
           />
           <PrimaryButton
-            disabled={
-              !nameDraft.trim() ||
-              nameDraft.trim() === group.name ||
-              renameGroupMutation.isPending
-            }
-            label={renameGroupMutation.isPending ? "保存中..." : "保存名称"}
-            iconName="save-outline"
+            disabled={!nameDraft.trim() || nameDraft.trim() === group.name || renameGroupMutation.isPending}
+            label={renameGroupMutation.isPending ? "保存中…" : "保存名称"}
             onPress={handleRenameGroup}
           />
           <PrimaryButton
-            label={deleteGroupMutation.isPending ? "删除中..." : "删除分组"}
-            iconName="trash-outline"
+            label={deleteGroupMutation.isPending ? "删除中…" : "删除分组"}
             onPress={handleDeleteGroup}
             variant="secondary"
           />
@@ -218,10 +201,8 @@ export function CardGroupDetailScreen({
 
         {isSelectionMode ? (
           <View style={styles.selectionHintCard}>
-            <Text style={styles.selectionHintTitle}>正在选择要移除的卡片</Text>
-            <Text style={styles.selectionHintText}>
-              点按组内卡片可以加入或取消选择，确认后只会把卡片移出当前分组，不会删除卡片本身。
-            </Text>
+            <Text style={styles.selectionHintTitle}>选择要移出的卡片</Text>
+            <Text style={styles.selectionHintText}>移除操作只会解除当前分组关系，不会删除卡片本身。</Text>
           </View>
         ) : null}
       </View>
@@ -240,12 +221,7 @@ export function CardGroupDetailScreen({
 
   const listEmptyComponent = useMemo(() => {
     if (groupQuery.isLoading || groupCardsQuery.isLoading) {
-      return (
-        <EmptyState
-          description="正在读取分组详情和组内卡片，请稍等片刻。"
-          title="正在加载分组详情"
-        />
-      );
+      return <EmptyState description="请稍候，我们正在同步分组详情与卡片内容。" title="正在加载分组" />;
     }
 
     if (groupQuery.isError || groupCardsQuery.isError) {
@@ -264,7 +240,7 @@ export function CardGroupDetailScreen({
             groupCardsQuery.refetch();
           }}
           retryLabel="重新加载"
-          title="分组详情加载失败"
+          title="分组加载失败"
         />
       );
     }
@@ -272,7 +248,7 @@ export function CardGroupDetailScreen({
     return (
       <EmptyState
         actionLabel="添加第一张卡片"
-        description="这个分组里还没有卡片，可以先去全量卡片池里挑选相关卡片加入进来。"
+        description="这个分组里还没有卡片。"
         onActionPress={() =>
           navigation.navigate("GroupCardPicker", {
             groupId: route.params.groupId,
@@ -280,18 +256,10 @@ export function CardGroupDetailScreen({
             existingCardIds,
           })
         }
-        title="这个分组还是空的"
+        title="暂无卡片"
       />
     );
-  }, [
-    existingCardIds,
-    group?.name,
-    groupCardsQuery,
-    groupQuery,
-    navigation,
-    route.params.groupId,
-    route.params.groupName,
-  ]);
+  }, [existingCardIds, group?.name, groupCardsQuery, groupQuery, navigation, route.params.groupId, route.params.groupName]);
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
@@ -329,11 +297,7 @@ export function CardGroupDetailScreen({
         {isSelectionMode ? (
           <SelectionFooter
             confirmDisabled={selectedCardIds.length === 0 || removeCardsMutation.isPending}
-            confirmLabel={
-              removeCardsMutation.isPending
-                ? "移除中..."
-                : `移除选中 (${selectedCardIds.length})`
-            }
+            confirmLabel={removeCardsMutation.isPending ? "移除中…" : `移除选中 (${selectedCardIds.length})`}
             onConfirm={handleRemoveSelectedCards}
             onSecondaryPress={exitSelectionMode}
             secondaryLabel="取消"

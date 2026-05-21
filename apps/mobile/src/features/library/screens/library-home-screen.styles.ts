@@ -14,67 +14,6 @@ export const libraryHomeScreenStyles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     gap: spacing.xl,
   },
-  hero: {
-    gap: spacing.lg,
-  },
-  eyebrow: {
-    alignSelf: "flex-start",
-    borderRadius: radii.xl,
-    backgroundColor: colors.accentSoft,
-    color: colors.accentPressed,
-    fontSize: typography.meta,
-    fontWeight: "700",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: typography.display,
-    fontWeight: "700",
-  },
-  description: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 24,
-  },
-  searchCard: {
-    gap: spacing.lg,
-    borderRadius: radii.xxl,
-    backgroundColor: colors.surface,
-    padding: spacing.xl,
-    ...shadows.card,
-  },
-  searchCopy: {
-    gap: spacing.sm,
-  },
-  searchLabel: {
-    color: colors.accentPressed,
-    fontSize: typography.meta,
-    fontWeight: "700",
-  },
-  searchTitle: {
-    color: colors.textPrimary,
-    fontSize: typography.section,
-    fontWeight: "700",
-  },
-  searchDescription: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 22,
-  },
-  section: {
-    gap: spacing.xs,
-  },
-  sectionTitle: {
-    color: colors.textPrimary,
-    fontSize: typography.section,
-    fontWeight: "700",
-  },
-  sectionDescription: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 22,
-  },
   entryList: {
     gap: spacing.lg,
   },

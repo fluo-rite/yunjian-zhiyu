@@ -81,10 +81,7 @@ export function GroupCardPickerScreen({
       Alert.alert("添加完成", `已将 ${addedCount} 张卡片加入当前分组。`);
       navigation.goBack();
     } catch (error) {
-      Alert.alert(
-        "添加失败",
-        error instanceof Error ? error.message : "暂时无法把这些卡片加入分组，请稍后再试。",
-      );
+      Alert.alert("添加失败", error instanceof Error ? error.message : "暂时无法加入分组，请稍后再试。");
     }
   }
 
@@ -93,12 +90,10 @@ export function GroupCardPickerScreen({
       <View style={styles.headerContent}>
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>{route.params.groupName ?? "添加卡片到分组"}</Text>
-          <Text style={styles.heroText}>
-            从全量卡片池中挑选需要的卡片加入当前分组。已经在分组中的卡片会自动从结果里隐藏。
-          </Text>
+          <Text style={styles.heroText}>从卡片库中选择内容，加入当前分组。</Text>
           {cardsQuery.data?.pagination ? (
             <Text style={styles.resultMeta}>
-              当前可加入 {availableCards.length} 张
+              可添加 {availableCards.length} 张
               {hiddenExistingCount > 0 ? `，其中 ${hiddenExistingCount} 张已在分组中` : ""}
             </Text>
           ) : null}
@@ -108,12 +103,12 @@ export function GroupCardPickerScreen({
           <Field
             label="搜索卡片"
             onChangeText={setSearchInput}
-            placeholder="输入标题、正文或标签关键词"
+            placeholder="搜索标题、内容或标签"
             value={searchInput}
           />
 
           <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>按状态筛选</Text>
+            <Text style={styles.filterLabel}>状态</Text>
             <FilterChipRow
               items={statusFilterItems}
               onSelect={setStatusFilter}
@@ -123,37 +118,21 @@ export function GroupCardPickerScreen({
         </View>
       </View>
     ),
-    [
-      availableCards.length,
-      cardsQuery.data?.pagination,
-      hiddenExistingCount,
-      route.params.groupName,
-      searchInput,
-      statusFilter,
-    ],
+    [availableCards.length, cardsQuery.data?.pagination, hiddenExistingCount, route.params.groupName, searchInput, statusFilter],
   );
 
   const listEmptyComponent = useMemo(() => {
     if (cardsQuery.isLoading) {
-      return (
-        <EmptyState
-          description="正在读取可添加的卡片列表，请稍等片刻。"
-          title="正在加载可选卡片"
-        />
-      );
+      return <EmptyState description="请稍候，我们正在同步可选卡片。" title="正在加载卡片" />;
     }
 
     if (cardsQuery.isError) {
       return (
         <ErrorState
-          description={
-            cardsQuery.error instanceof Error
-              ? cardsQuery.error.message
-              : "暂时无法读取可选卡片，请稍后再试。"
-          }
+          description={cardsQuery.error instanceof Error ? cardsQuery.error.message : "暂时无法读取卡片，请稍后再试。"}
           onRetry={() => cardsQuery.refetch()}
           retryLabel="重新加载"
-          title="可选卡片加载失败"
+          title="卡片加载失败"
         />
       );
     }
@@ -163,27 +142,23 @@ export function GroupCardPickerScreen({
         actionLabel={searchInput.trim() || statusFilter !== "all" ? "清空筛选条件" : undefined}
         description={
           searchInput.trim() || statusFilter !== "all"
-            ? "当前筛选条件下没有可加入的卡片，可以放宽条件后再试。"
+            ? "没有找到符合条件的卡片，试试调整筛选条件。"
             : hiddenExistingCount > 0
-              ? "当前能检索到的卡片都已经在这个分组里了，可以换个关键词继续找。"
-              : "现在还没有可加入的卡片，先去知识来源里生成一些卡片再回来。"
+              ? "当前可见的卡片都已经加入这个分组。"
+              : "还没有可加入的卡片。"
         }
         onActionPress={() => {
           setSearchInput("");
           setStatusFilter("all");
         }}
-        title="暂时没有可加入的卡片"
+        title="暂无可添加的卡片"
       />
     );
   }, [cardsQuery, hiddenExistingCount, searchInput, statusFilter]);
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
-      <ScreenHeader
-        onBack={() => navigation.goBack()}
-        subtitle="多选加入"
-        title={route.params.groupName ?? "添加卡片到分组"}
-      />
+      <ScreenHeader onBack={() => navigation.goBack()} subtitle="多选添加" title={route.params.groupName ?? "添加卡片到分组"} />
 
       <View style={styles.body}>
         <CardListView
@@ -200,7 +175,7 @@ export function GroupCardPickerScreen({
 
         <SelectionFooter
           confirmDisabled={selectedIds.length === 0 || addCardsMutation.isPending}
-          confirmLabel={addCardsMutation.isPending ? "添加中..." : `加入分组 (${selectedIds.length})`}
+          confirmLabel={addCardsMutation.isPending ? "添加中…" : `加入分组 (${selectedIds.length})`}
           onConfirm={handleConfirm}
           onSecondaryPress={handleClearSelection}
           secondaryLabel={selectedIds.length > 0 ? "清空选择" : undefined}

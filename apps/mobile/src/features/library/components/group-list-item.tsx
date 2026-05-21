@@ -21,17 +21,13 @@ export function GroupListItem(props: {
       <View style={styles.header}>
         <View style={styles.copy}>
           <Text style={styles.title}>{props.group.name}</Text>
-          <Text style={styles.meta}>
-            最近更新 {formatCompactDateTimeLabel(props.group.updatedAt)}
-          </Text>
+          <Text style={styles.meta}>最近更新 {formatCompactDateTimeLabel(props.group.updatedAt)}</Text>
         </View>
         <View style={styles.badge}>
           <Text style={styles.badgeLabel}>分组</Text>
         </View>
       </View>
-      <Text style={styles.description}>
-        进入详情后可以查看组内卡片，并从全量卡片池里继续把卡片加入这个分组。
-      </Text>
+      <Text style={styles.description}>打开后可查看组内卡片，并继续补充新的内容。</Text>
     </Pressable>
   );
 }

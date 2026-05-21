@@ -4,11 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { ScreenHeader } from "../../../components/ui/screen-header";
-import {
-  logoutThunk,
-  selectAuthUser,
-  selectIsLoggingOut,
-} from "../../../store/auth-slice";
+import { logoutThunk, selectAuthUser, selectIsLoggingOut } from "../../../store/auth-slice";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import { type RootStackParamList } from "../../../navigation/types";
 import { settingsScreenStyles as styles } from "./settings-screen.styles";
@@ -21,7 +17,7 @@ export function SettingsScreen({
   const isLoggingOut = useAppSelector(selectIsLoggingOut);
 
   function handleLogout() {
-    Alert.alert("退出登录", "退出后会清除当前设备上的本地会话，需要重新输入账号密码。", [
+    Alert.alert("退出登录", "退出后需要重新登录才能继续使用当前账号。", [
       { text: "取消", style: "cancel" },
       {
         text: "确认退出",
@@ -47,14 +43,12 @@ export function SettingsScreen({
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>登录与安全</Text>
-          <Text style={styles.sectionText}>
-            当前版本已经支持真实登录、注册和本地会话恢复。退出登录会清除本地 token。
-          </Text>
+          <Text style={styles.sectionText}>你可以在这里安全退出当前账号。</Text>
         </View>
 
         <PrimaryButton
           disabled={isLoggingOut}
-          label={isLoggingOut ? "正在退出..." : "退出登录"}
+          label={isLoggingOut ? "退出中…" : "退出登录"}
           onPress={handleLogout}
           variant="secondary"
         />

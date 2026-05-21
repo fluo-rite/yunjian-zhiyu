@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Field } from "../../../components/ui/field";
+import { PrimaryButton } from "../../../components/ui/primary-button";
 import {
   clearAuthError,
   loginThunk,
@@ -9,8 +11,6 @@ import {
   selectIsSubmittingAuth,
 } from "../../../store/auth-slice";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
-import { Field } from "../../../components/ui/field";
-import { PrimaryButton } from "../../../components/ui/primary-button";
 import { loginScreenStyles as styles } from "./login-screen.styles";
 
 export function LoginScreen(props: { onGoToRegister: () => void }) {
@@ -22,15 +22,13 @@ export function LoginScreen(props: { onGoToRegister: () => void }) {
   const [password, setPassword] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
-  const isFormValid = useMemo(() => {
-    return account.trim().length > 0 && password.trim().length >= 8;
-  }, [account, password]);
+  const isFormValid = useMemo(() => account.trim().length > 0 && password.trim().length >= 8, [account, password]);
 
   const helperText =
     errorMessage ??
     (submitAttempted && !isFormValid
-      ? "请输入账号，并确保密码至少 8 位。"
-      : "使用真实账号登录后，会自动进入主页面并保存本地会话。");
+      ? "请输入账号，并确保密码不少于 8 位。"
+      : "登录后可继续查看你的会话、卡片与资料。");
 
   useEffect(() => {
     return () => {
@@ -42,7 +40,6 @@ export function LoginScreen(props: { onGoToRegister: () => void }) {
     if (errorMessage) {
       dispatch(clearAuthError());
     }
-
     setAccount(text);
   }
 
@@ -50,7 +47,6 @@ export function LoginScreen(props: { onGoToRegister: () => void }) {
     if (errorMessage) {
       dispatch(clearAuthError());
     }
-
     setPassword(text);
   }
 
@@ -78,10 +74,8 @@ export function LoginScreen(props: { onGoToRegister: () => void }) {
           </View>
 
           <View style={styles.heading}>
-            <Text style={styles.title}>欢迎回来，继续整理你的知识。</Text>
-            <Text style={styles.description}>
-              这一版已经接入真实鉴权。登录成功后会保存本地会话，并在下次启动时自动恢复。
-            </Text>
+            <Text style={styles.title}>欢迎回来</Text>
+            <Text style={styles.description}>登录后继续你的整理与记录。</Text>
           </View>
 
           <View style={styles.card}>
@@ -91,7 +85,7 @@ export function LoginScreen(props: { onGoToRegister: () => void }) {
                 keyboardType="email-address"
                 label="账号"
                 onChangeText={handleAccountChange}
-                placeholder="输入邮箱或账号"
+                placeholder="输入邮箱或用户名"
                 value={account}
               />
               <Field
@@ -113,7 +107,7 @@ export function LoginScreen(props: { onGoToRegister: () => void }) {
 
             <PrimaryButton
               disabled={!isFormValid || isSubmitting}
-              label={isSubmitting ? "登录中..." : "登录"}
+              label={isSubmitting ? "登录中…" : "登录"}
               onPress={handleLogin}
             />
 
@@ -123,13 +117,6 @@ export function LoginScreen(props: { onGoToRegister: () => void }) {
                 <Text style={styles.switchAction}>去注册</Text>
               </Pressable>
             </View>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerTitle}>当前能力</Text>
-            <Text style={styles.footerText}>
-              登录、注册、恢复登录态、退出登录已经接入真实 store 和接口链路。
-            </Text>
           </View>
         </View>
       </ScrollView>

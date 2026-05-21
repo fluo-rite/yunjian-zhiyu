@@ -52,9 +52,7 @@ export function AccountScreen({
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>{displayName}</Text>
-          <Text style={styles.heroText}>
-            这里先展示当前登录账号的基础信息。资料编辑能力需要等服务端补充更新接口后再接入。
-          </Text>
+          <Text style={styles.heroText}>查看当前账号的基础资料与登录信息。</Text>
         </View>
 
         <View style={styles.sectionCard}>

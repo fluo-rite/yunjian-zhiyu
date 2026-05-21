@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Field } from "../../../components/ui/field";
+import { PrimaryButton } from "../../../components/ui/primary-button";
 import {
   clearAuthError,
   registerThunk,
@@ -9,8 +11,6 @@ import {
   selectIsSubmittingAuth,
 } from "../../../store/auth-slice";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
-import { Field } from "../../../components/ui/field";
-import { PrimaryButton } from "../../../components/ui/primary-button";
 import { loginScreenStyles as styles } from "./login-screen.styles";
 
 export function RegisterScreen(props: { onBackToLogin: () => void }) {
@@ -25,21 +25,21 @@ export function RegisterScreen(props: { onBackToLogin: () => void }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
-  const isFormValid = useMemo(() => {
-    return (
+  const isFormValid = useMemo(
+    () =>
       nickname.trim().length > 0 &&
       (username.trim().length === 0 || username.trim().length >= 3) &&
       email.trim().length > 0 &&
       password.trim().length >= 8 &&
-      password === confirmPassword
-    );
-  }, [confirmPassword, email, nickname, password, username]);
+      password === confirmPassword,
+    [confirmPassword, email, nickname, password, username],
+  );
 
   const helperText =
     errorMessage ??
     (submitAttempted && !isFormValid
-      ? "请补全信息，用户名可留空或至少 3 位，密码至少 8 位，并确保两次输入一致。"
-      : "注册成功后会直接进入主页面，并自动保存当前会话。");
+      ? "请完善信息：用户名可留空或不少于 3 位，密码不少于 8 位，并确认两次输入一致。"
+      : "创建账号后即可开始整理你的内容。");
 
   useEffect(() => {
     return () => {
@@ -81,10 +81,8 @@ export function RegisterScreen(props: { onBackToLogin: () => void }) {
           </View>
 
           <View style={styles.heading}>
-            <Text style={styles.title}>创建你的知识空间。</Text>
-            <Text style={styles.description}>
-              注册页现在会提交到真实后端，成功后自动建立登录态，不再只是静态跳转。
-            </Text>
+            <Text style={styles.title}>创建你的账号</Text>
+            <Text style={styles.description}>设置基本信息，开始整理你的知识内容。</Text>
           </View>
 
           <View style={styles.card}>
@@ -134,14 +132,10 @@ export function RegisterScreen(props: { onBackToLogin: () => void }) {
 
             <PrimaryButton
               disabled={!isFormValid || isSubmitting}
-              label={isSubmitting ? "注册中..." : "注册并进入"}
+              label={isSubmitting ? "注册中…" : "注册并进入"}
               onPress={handleRegister}
             />
-            <PrimaryButton
-              label="返回登录"
-              onPress={props.onBackToLogin}
-              variant="secondary"
-            />
+            <PrimaryButton label="返回登录" onPress={props.onBackToLogin} variant="secondary" />
           </View>
         </View>
       </ScrollView>

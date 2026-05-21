@@ -16,11 +16,7 @@ import { CardListView } from "../components/card-list-view";
 import { EmptyState } from "../components/empty-state";
 import { ErrorState } from "../components/error-state";
 import { SourceStatusBadge } from "../components/source-status-badge";
-import {
-  countCardsByStatus,
-  formatDateTimeLabel,
-  getSourceTypeLabel,
-} from "../utils/library-formatters";
+import { countCardsByStatus, formatDateTimeLabel, getSourceTypeLabel } from "../utils/library-formatters";
 import { getStableArray, retainExistingIds } from "../utils/library-state";
 import { sourceDetailScreenStyles as styles } from "./source-detail-screen.styles";
 
@@ -66,16 +62,11 @@ export function SourceDetailScreen({
 
     try {
       const confirmedCount = selectedPendingIds.length;
-      await confirmCardsMutation.mutateAsync({
-        cardIds: selectedPendingIds,
-      });
+      await confirmCardsMutation.mutateAsync({ cardIds: selectedPendingIds });
       setSelectedPendingIds([]);
       Alert.alert("确认完成", `已确认 ${confirmedCount} 张卡片。`);
     } catch (error) {
-      Alert.alert(
-        "确认失败",
-        error instanceof Error ? error.message : "暂时无法确认这些卡片，请稍后再试。",
-      );
+      Alert.alert("确认失败", error instanceof Error ? error.message : "暂时无法确认这些卡片，请稍后再试。");
     }
   }
 
@@ -105,10 +96,7 @@ export function SourceDetailScreen({
             });
             navigation.replace("SourceList");
           } catch (error) {
-            Alert.alert(
-              "删除失败",
-              error instanceof Error ? error.message : "暂时无法删除这条来源，请稍后再试。",
-            );
+            Alert.alert("删除失败", error instanceof Error ? error.message : "暂时无法删除这条来源，请稍后再试。");
           }
         },
       },
@@ -132,9 +120,7 @@ export function SourceDetailScreen({
             </View>
             <SourceStatusBadge status={source.status} />
           </View>
-          <Text style={styles.heroText}>
-            这里会展示当前知识来源的原始内容和所有生成卡片。待确认卡片可以直接在这里多选后批量确认。
-          </Text>
+          <Text style={styles.heroText}>查看原始内容、卡片结果，以及当前需要确认的内容。</Text>
         </View>
 
         <View style={styles.statsRow}>
@@ -160,24 +146,22 @@ export function SourceDetailScreen({
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>来源管理</Text>
           <Text style={styles.sectionText}>
-            当前来源关联了 {cards.length} 张卡片。删除来源时可以选择保留卡片，或连同卡片一起删除。
+            当前来源关联 {cards.length} 张卡片。你可以只删除来源，或同时删除相关卡片。
           </Text>
           <View style={styles.actionRow}>
             <PrimaryButton
-              label={deleteSourceMutation.isPending ? "处理中..." : "只删除来源"}
-              iconName="trash-outline"
+              label={deleteSourceMutation.isPending ? "处理中…" : "只删除来源"}
               onPress={() => handleDeleteSource(false)}
               variant="secondary"
             />
             <PrimaryButton
               label={
                 deleteSourceMutation.isPending
-                  ? "处理中..."
+                  ? "处理中…"
                   : cards.length > 0
                     ? "删除来源与卡片"
                     : "删除来源"
               }
-              iconName="trash"
               onPress={() => handleDeleteSource(cards.length > 0)}
             />
           </View>
@@ -185,28 +169,17 @@ export function SourceDetailScreen({
 
         {pendingCards.length > 0 ? (
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>待确认卡片操作</Text>
-            <Text style={styles.sectionText}>
-              待确认卡片点按后会加入选择，已确认或已归档卡片点按后会进入详情页。
-            </Text>
-
+            <Text style={styles.sectionTitle}>待确认卡片</Text>
+            <Text style={styles.sectionText}>选中需要保留的卡片后，可一次性确认加入卡片库。</Text>
             <View style={styles.actionRow}>
               <PrimaryButton
                 label={selectedPendingIds.length === pendingCards.length ? "清空选择" : "全选待确认"}
-                onPress={
-                  selectedPendingIds.length === pendingCards.length
-                    ? handleClearSelection
-                    : handleSelectAllPending
-                }
+                onPress={selectedPendingIds.length === pendingCards.length ? handleClearSelection : handleSelectAllPending}
                 variant="secondary"
               />
               <PrimaryButton
                 disabled={selectedPendingIds.length === 0 || confirmCardsMutation.isPending}
-                label={
-                  confirmCardsMutation.isPending
-                    ? "确认中..."
-                    : `确认选中 (${selectedPendingIds.length})`
-                }
+                label={confirmCardsMutation.isPending ? "确认中…" : `确认选中 (${selectedPendingIds.length})`}
                 onPress={handleConfirmSelected}
               />
             </View>
@@ -214,7 +187,7 @@ export function SourceDetailScreen({
         ) : null}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>生成的卡片</Text>
+          <Text style={styles.sectionTitle}>卡片列表</Text>
           <Text style={styles.sectionCaption}>共 {cards.length} 张</Text>
         </View>
       </View>
@@ -233,12 +206,7 @@ export function SourceDetailScreen({
 
   const listEmptyComponent = useMemo(() => {
     if (sourceQuery.isLoading || sourceCardsQuery.isLoading) {
-      return (
-        <EmptyState
-          description="正在读取来源详情和卡片列表，请稍等片刻。"
-          title="正在加载来源详情"
-        />
-      );
+      return <EmptyState description="请稍候，我们正在同步来源详情与卡片内容。" title="正在加载来源" />;
     }
 
     if (sourceQuery.isError || sourceCardsQuery.isError) {
@@ -247,7 +215,7 @@ export function SourceDetailScreen({
           ? sourceQuery.error.message
           : sourceCardsQuery.error instanceof Error
             ? sourceCardsQuery.error.message
-            : "暂时无法读取当前来源详情，请稍后再试。";
+            : "暂时无法读取当前来源，请稍后再试。";
 
       return (
         <ErrorState
@@ -257,20 +225,20 @@ export function SourceDetailScreen({
             sourceCardsQuery.refetch();
           }}
           retryLabel="重新加载"
-          title="来源详情加载失败"
+          title="来源加载失败"
         />
       );
     }
 
     return (
       <EmptyState
-        actionLabel="刷新状态"
-        description="这个来源还没有生成卡片，可能仍在处理中，也可能需要稍后再次刷新。"
+        actionLabel="刷新"
+        description="这条来源暂时还没有生成卡片。"
         onActionPress={() => {
           sourceQuery.refetch();
           sourceCardsQuery.refetch();
         }}
-        title="暂时没有生成卡片"
+        title="暂无卡片"
       />
     );
   }, [sourceCardsQuery, sourceQuery]);

@@ -36,27 +36,18 @@ export function CreateSourceTextScreen({
         sourceName: created.name,
       });
     } catch (error) {
-      Alert.alert(
-        "创建失败",
-        error instanceof Error ? error.message : "暂时无法创建知识来源，请稍后再试。",
-      );
+      Alert.alert("创建失败", error instanceof Error ? error.message : "暂时无法创建知识来源，请稍后再试。");
     }
   }
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
-      <ScreenHeader
-        onBack={() => navigation.goBack()}
-        subtitle="导入入口"
-        title="文本导入知识来源"
-      />
+      <ScreenHeader onBack={() => navigation.goBack()} subtitle="文本导入" title="新建知识来源" />
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.heroCard}>
-          <Text style={styles.heroTitle}>把一段文本沉淀成待确认卡片</Text>
-          <Text style={styles.heroText}>
-            提交后服务端会异步处理这段文本，并在来源详情页里生成 pending 卡片等待你确认。
-          </Text>
+          <Text style={styles.heroTitle}>添加一段内容</Text>
+          <Text style={styles.heroText}>保存后，系统会根据内容生成可继续整理的卡片。</Text>
         </View>
 
         <View style={styles.formCard}>
@@ -67,15 +58,15 @@ export function CreateSourceTextScreen({
             value={name}
           />
           <Field
-            label="原始文本"
+            label="内容"
             multiline
             onChangeText={setContent}
-            placeholder="粘贴你想沉淀为卡片的学习笔记、聊天整理或资料片段"
+            placeholder="粘贴你想整理的笔记、资料或消息内容"
             value={content}
           />
           <PrimaryButton
             disabled={!name.trim() || !content.trim() || createSourceMutation.isPending}
-            label={createSourceMutation.isPending ? "提交中..." : "开始生成卡片"}
+            label={createSourceMutation.isPending ? "提交中…" : "开始生成卡片"}
             onPress={handleSubmit}
           />
         </View>

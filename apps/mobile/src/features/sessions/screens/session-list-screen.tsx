@@ -32,18 +32,9 @@ export function SessionListScreen() {
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={chatsQuery.isRefetching} onRefresh={chatsQuery.refetch} />
-        }
+        refreshControl={<RefreshControl refreshing={chatsQuery.isRefetching} onRefresh={chatsQuery.refetch} />}
       >
         <View style={styles.header}>
-          <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>会话</Text>
-            <Text style={styles.title}>继续你上一次的整理与提问</Text>
-            <Text style={styles.description}>
-              这里已经接入真实会话列表。你可以继续已有对话，也可以从这里发起一轮新的整理。
-            </Text>
-          </View>
           <PrimaryButton
             label="新会话"
             onPress={() =>
@@ -60,29 +51,24 @@ export function SessionListScreen() {
           {chatsQuery.isLoading ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>正在加载会话</Text>
-              <Text style={styles.emptyText}>稍等一下，正在从服务端读取你的会话列表。</Text>
+              <Text style={styles.emptyText}>请稍候，我们正在同步你的会话列表。</Text>
             </View>
           ) : null}
 
           {chatsQuery.isError ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>会话列表加载失败</Text>
+              <Text style={styles.emptyTitle}>会话加载失败</Text>
               <Text style={styles.emptyText}>
                 {chatsQuery.error instanceof Error ? chatsQuery.error.message : "请稍后再试。"}
               </Text>
-              <PrimaryButton
-                label="重新加载"
-                onPress={() => chatsQuery.refetch()}
-              />
+              <PrimaryButton label="重新加载" onPress={() => chatsQuery.refetch()} />
             </View>
           ) : null}
 
           {!chatsQuery.isLoading && !chatsQuery.isError && chats.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>还没有会话</Text>
-              <Text style={styles.emptyText}>
-                从右上角开始一个新会话，后续这里会沉淀你的历史问答。
-              </Text>
+              <Text style={styles.emptyTitle}>暂无会话</Text>
+              <Text style={styles.emptyText}>从右上角开始一段新的对话吧。</Text>
             </View>
           ) : null}
 
@@ -105,9 +91,7 @@ export function SessionListScreen() {
                     <Text style={styles.cardTitle}>{session.title}</Text>
                     <Text style={styles.cardTime}>{formatUpdatedTime(session.updatedAt)}</Text>
                   </View>
-                  <Text style={styles.cardText}>
-                    进入这场对话，继续查看历史消息、发起追问或沉淀新的知识内容。
-                  </Text>
+                  <Text style={styles.cardText}>进入对话，继续查看消息或发起新的提问。</Text>
                 </Pressable>
               ))
             : null}

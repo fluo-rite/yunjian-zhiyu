@@ -17,24 +17,6 @@ export const sessionListScreenStyles = StyleSheet.create({
     gap: spacing.lg,
     marginBottom: spacing.xxl,
   },
-  headerCopy: {
-    gap: spacing.lg,
-  },
-  eyebrow: {
-    color: colors.accentPressed,
-    fontSize: typography.meta,
-    fontWeight: "700",
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: typography.title,
-    fontWeight: "700",
-  },
-  description: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 24,
-  },
   section: {
     gap: spacing.lg,
   },
