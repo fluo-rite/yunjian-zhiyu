@@ -77,6 +77,10 @@ export const cardDetailScreenStyles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 24,
   },
+  actionRow: {
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
   infoLabel: {
     color: colors.textTertiary,
     fontSize: typography.meta,

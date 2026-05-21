@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 
-import { screenHeaderStyles as styles } from "./screen-header.styles";
 import { PrimaryButton } from "./primary-button";
+import { screenHeaderStyles as styles } from "./screen-header.styles";
 
 export function ScreenHeader(props: {
   title: string;
@@ -15,6 +15,7 @@ export function ScreenHeader(props: {
       {props.onBack ? (
         <PrimaryButton
           label="返回"
+          iconName="chevron-back"
           onPress={props.onBack}
           style={styles.sideButton}
           variant="secondary"

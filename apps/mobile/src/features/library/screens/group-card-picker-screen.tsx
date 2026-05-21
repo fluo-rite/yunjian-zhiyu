@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Field } from "../../../components/ui/field";
 import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type LibraryStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import { type CardStatus, useAddCardsToGroupMutation, useCardsQuery } from "../api";
 import { CardListView } from "../components/card-list-view";
 import { EmptyState } from "../components/empty-state";
@@ -31,7 +31,7 @@ function toStatusFilterValue(filterKey: StatusFilterKey): CardStatus | undefined
 export function GroupCardPickerScreen({
   navigation,
   route,
-}: NativeStackScreenProps<LibraryStackParamList, "GroupCardPicker">) {
+}: NativeStackScreenProps<RootStackParamList, "GroupCardPicker">) {
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);

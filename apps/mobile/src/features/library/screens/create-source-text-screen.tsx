@@ -6,13 +6,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Field } from "../../../components/ui/field";
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type LibraryStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import { useCreateSourceFromTextMutation } from "../api";
 import { createSourceTextScreenStyles as styles } from "./create-source-text-screen.styles";
 
 export function CreateSourceTextScreen({
   navigation,
-}: NativeStackScreenProps<LibraryStackParamList, "CreateSourceText">) {
+}: NativeStackScreenProps<RootStackParamList, "CreateSourceText">) {
   const [name, setName] = useState("");
   const [content, setContent] = useState("");
   const createSourceMutation = useCreateSourceFromTextMutation();

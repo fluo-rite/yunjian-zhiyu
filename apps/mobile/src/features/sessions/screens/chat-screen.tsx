@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Field } from "../../../components/ui/field";
 import { PrimaryButton } from "../../../components/ui/primary-button";
-import { type SessionsStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import {
   useAbortChatMessageMutation,
   useChatMessagesQuery,
@@ -32,7 +32,7 @@ function findLatestStreamingAssistantMessage(messages: Message[]) {
 export function ChatScreen({
   navigation,
   route,
-}: NativeStackScreenProps<SessionsStackParamList, "Chat">) {
+}: NativeStackScreenProps<RootStackParamList, "Chat">) {
   const [draft, setDraft] = useState("");
   const [chatId, setChatId] = useState<string | null>(
     route.params.isNew ? null : route.params.chatId,

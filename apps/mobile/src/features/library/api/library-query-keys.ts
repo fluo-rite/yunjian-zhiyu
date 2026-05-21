@@ -32,6 +32,4 @@ export const libraryQueryKeys = {
   sourceList: (filters: SourceListFilters) => [...libraryQueryKeys.sourceLists(), filters] as const,
   sourceDetail: (sourceId: string) => [...libraryQueryKeys.sources(), sourceId, "detail"] as const,
   sourceCards: (sourceId: string) => [...libraryQueryKeys.sources(), sourceId, "cards"] as const,
-  sourceDeletePreview: (sourceId: string) =>
-    [...libraryQueryKeys.sources(), sourceId, "deletePreview"] as const,
 };

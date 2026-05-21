@@ -4,12 +4,13 @@ import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type LibraryStackParamList } from "../../../navigation/types";
-import { type SourceStatus, type SourceType, useSourcesQuery } from "../api";
+import { type RootStackParamList } from "../../../navigation/types";
+import { type KnowledgeSource, type SourceStatus, type SourceType, useSourcesQuery } from "../api";
 import { EmptyState } from "../components/empty-state";
 import { ErrorState } from "../components/error-state";
 import { FilterChipRow, type FilterChipItem } from "../components/filter-chip-row";
 import { SourceListItem } from "../components/source-list-item";
+import { libraryCopy } from "../utils/library-copy";
 import { getStableArray } from "../utils/library-state";
 import { sourceListScreenStyles as styles } from "./source-list-screen.styles";
 
@@ -41,7 +42,7 @@ function toSourceTypeValue(filterKey: SourceTypeFilterKey): SourceType | undefin
 export function SourceListScreen({
   navigation,
   route,
-}: NativeStackScreenProps<LibraryStackParamList, "SourceList">) {
+}: NativeStackScreenProps<RootStackParamList, "SourceList">) {
   const [statusFilter, setStatusFilter] = useState<SourceStatusFilterKey>(
     route.params?.status ?? "all",
   );
@@ -104,8 +105,8 @@ export function SourceListScreen({
     if (sourcesQuery.isLoading) {
       return (
         <EmptyState
-          description="正在从服务端读取知识来源列表，请稍等片刻。"
-          title="正在加载知识来源"
+          description={libraryCopy.sourceList.loadingDescription}
+          title={libraryCopy.sourceList.loadingTitle}
         />
       );
     }
@@ -116,27 +117,29 @@ export function SourceListScreen({
           description={
             sourcesQuery.error instanceof Error
               ? sourcesQuery.error.message
-              : "暂时无法读取知识来源列表，请稍后再试。"
+              : libraryCopy.loadFailed
           }
           onRetry={() => sourcesQuery.refetch()}
-          retryLabel="重新加载"
-          title="知识来源加载失败"
+          retryLabel={libraryCopy.retry}
+          title={libraryCopy.sourceList.errorTitle}
         />
       );
     }
 
     return (
       <EmptyState
-        actionLabel={hasFilters ? "清空筛选条件" : "文本导入"}
+        actionLabel={
+          hasFilters ? libraryCopy.cardList.clearLocalFilters : libraryCopy.sourceList.importTextAction
+        }
         description={
           hasFilters
-            ? "当前筛选条件下还没有匹配的知识来源，可以放宽筛选条件后再试。"
-            : "还没有知识来源，先导入一段文本，后续系统会为你生成待确认卡片。"
+            ? libraryCopy.sourceList.emptyFilteredDescription
+            : libraryCopy.sourceList.emptyDefaultDescription
         }
         onActionPress={
           hasFilters ? handleResetFilters : () => navigation.navigate("CreateSourceText")
         }
-        title="暂时没有知识来源"
+        title={libraryCopy.sourceList.emptyTitle}
       />
     );
   }, [hasFilters, navigation, sourcesQuery]);
@@ -146,12 +149,12 @@ export function SourceListScreen({
       <ScreenHeader
         onBack={() => navigation.goBack()}
         onRightPress={() => navigation.navigate("CreateSourceText")}
-        rightLabel="文本导入"
+        rightLabel={libraryCopy.sourceList.importTextAction}
         subtitle="来源追溯"
         title="知识来源"
       />
 
-      <FlatList
+      <FlatList<KnowledgeSource>
         contentContainerStyle={styles.content}
         data={sources}
         keyExtractor={(item) => item.id}
@@ -159,7 +162,7 @@ export function SourceListScreen({
         ListHeaderComponent={listHeaderComponent}
         onRefresh={() => sourcesQuery.refetch()}
         refreshing={sourcesQuery.isRefetching}
-        renderItem={({ item }) => (
+        renderItem={({ item }: { item: KnowledgeSource }) => (
           <SourceListItem
             onPress={() =>
               navigation.navigate("SourceDetail", {

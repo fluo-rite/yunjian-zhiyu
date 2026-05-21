@@ -5,12 +5,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type LibraryStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import {
   useConfirmCardsMutation,
   useDeleteSourceMutation,
   useSourceCardsQuery,
-  useSourceDeletePreviewQuery,
   useSourceDetailQuery,
 } from "../api";
 import { CardListView } from "../components/card-list-view";
@@ -20,7 +19,6 @@ import { SourceStatusBadge } from "../components/source-status-badge";
 import {
   countCardsByStatus,
   formatDateTimeLabel,
-  getCardStatusLabel,
   getSourceTypeLabel,
 } from "../utils/library-formatters";
 import { getStableArray, retainExistingIds } from "../utils/library-state";
@@ -29,17 +27,15 @@ import { sourceDetailScreenStyles as styles } from "./source-detail-screen.style
 export function SourceDetailScreen({
   navigation,
   route,
-}: NativeStackScreenProps<LibraryStackParamList, "SourceDetail">) {
+}: NativeStackScreenProps<RootStackParamList, "SourceDetail">) {
   const sourceQuery = useSourceDetailQuery(route.params.sourceId);
   const sourceCardsQuery = useSourceCardsQuery(route.params.sourceId);
-  const deletePreviewQuery = useSourceDeletePreviewQuery(route.params.sourceId);
   const confirmCardsMutation = useConfirmCardsMutation();
   const deleteSourceMutation = useDeleteSourceMutation();
   const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
 
-  const cards = getStableArray(sourceCardsQuery.data?.items);
   const source = sourceQuery.data;
-  const deletePreview = deletePreviewQuery.data;
+  const cards = getStableArray(sourceCardsQuery.data?.items);
   const pendingCards = useMemo(() => cards.filter((card) => card.status === "pending"), [cards]);
   const cardCounts = useMemo(() => countCardsByStatus(cards), [cards]);
   const selectedPendingSet = useMemo(() => new Set(selectedPendingIds), [selectedPendingIds]);
@@ -88,8 +84,8 @@ export function SourceDetailScreen({
       return;
     }
 
-    const linkedCount = deletePreview?.linkedCards.length ?? cards.length;
-    const actionText = deleteCards ? "删除来源和关联卡片" : "只删除来源";
+    const linkedCount = cards.length;
+    const actionText = deleteCards ? "删除来源与卡片" : "只删除来源";
     const description = deleteCards
       ? `删除后会同时移除这条来源及其关联的 ${linkedCount} 张卡片。`
       : linkedCount > 0
@@ -131,8 +127,7 @@ export function SourceDetailScreen({
             <View style={styles.heroCopy}>
               <Text style={styles.heroTitle}>{source.name}</Text>
               <Text style={styles.heroMeta}>
-                {getSourceTypeLabel(source.sourceType)} · 最近更新{" "}
-                {formatDateTimeLabel(source.updatedAt)}
+                {getSourceTypeLabel(source.sourceType)} · 最近更新 {formatDateTimeLabel(source.updatedAt)}
               </Text>
             </View>
             <SourceStatusBadge status={source.status} />
@@ -163,46 +158,29 @@ export function SourceDetailScreen({
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>删除预览</Text>
-          {deletePreviewQuery.isLoading ? (
-            <Text style={styles.sectionText}>正在读取删除预览，请稍等片刻。</Text>
-          ) : null}
-          {deletePreviewQuery.isError ? (
-            <Text style={styles.sectionText}>
-              {deletePreviewQuery.error instanceof Error
-                ? deletePreviewQuery.error.message
-                : "暂时无法读取删除预览，请稍后再试。"}
-            </Text>
-          ) : null}
-          {deletePreview ? (
-            <>
-              <Text style={styles.sectionText}>
-                当前来源关联了 {deletePreview.linkedCards.length} 张卡片。删除来源时可以选择保留卡片，或连同卡片一起删除。
-              </Text>
-              {deletePreview.linkedCards.slice(0, 3).map((card) => (
-                <Text key={card.id} style={styles.previewItem}>
-                  {card.title} · {getCardStatusLabel(card.status)}
-                </Text>
-              ))}
-              <View style={styles.actionRow}>
-                <PrimaryButton
-                  label={deleteSourceMutation.isPending ? "处理中..." : "只删除来源"}
-                  onPress={() => handleDeleteSource(false)}
-                  variant="secondary"
-                />
-                <PrimaryButton
-                  label={
-                    deleteSourceMutation.isPending
-                      ? "处理中..."
-                      : deletePreview.linkedCards.length > 0
-                        ? "删除来源与卡片"
-                        : "删除来源"
-                  }
-                  onPress={() => handleDeleteSource(deletePreview.linkedCards.length > 0)}
-                />
-              </View>
-            </>
-          ) : null}
+          <Text style={styles.sectionTitle}>来源管理</Text>
+          <Text style={styles.sectionText}>
+            当前来源关联了 {cards.length} 张卡片。删除来源时可以选择保留卡片，或连同卡片一起删除。
+          </Text>
+          <View style={styles.actionRow}>
+            <PrimaryButton
+              label={deleteSourceMutation.isPending ? "处理中..." : "只删除来源"}
+              iconName="trash-outline"
+              onPress={() => handleDeleteSource(false)}
+              variant="secondary"
+            />
+            <PrimaryButton
+              label={
+                deleteSourceMutation.isPending
+                  ? "处理中..."
+                  : cards.length > 0
+                    ? "删除来源与卡片"
+                    : "删除来源"
+              }
+              iconName="trash"
+              onPress={() => handleDeleteSource(cards.length > 0)}
+            />
+          </View>
         </View>
 
         {pendingCards.length > 0 ? (
@@ -214,9 +192,7 @@ export function SourceDetailScreen({
 
             <View style={styles.actionRow}>
               <PrimaryButton
-                label={
-                  selectedPendingIds.length === pendingCards.length ? "清空选择" : "全选待确认"
-                }
+                label={selectedPendingIds.length === pendingCards.length ? "清空选择" : "全选待确认"}
                 onPress={
                   selectedPendingIds.length === pendingCards.length
                     ? handleClearSelection
@@ -249,10 +225,6 @@ export function SourceDetailScreen({
     cardCounts.pending,
     cards.length,
     confirmCardsMutation.isPending,
-    deletePreview,
-    deletePreviewQuery.error,
-    deletePreviewQuery.isError,
-    deletePreviewQuery.isLoading,
     deleteSourceMutation.isPending,
     pendingCards.length,
     selectedPendingIds.length,
@@ -283,7 +255,6 @@ export function SourceDetailScreen({
           onRetry={() => {
             sourceQuery.refetch();
             sourceCardsQuery.refetch();
-            deletePreviewQuery.refetch();
           }}
           retryLabel="重新加载"
           title="来源详情加载失败"
@@ -298,12 +269,11 @@ export function SourceDetailScreen({
         onActionPress={() => {
           sourceQuery.refetch();
           sourceCardsQuery.refetch();
-          deletePreviewQuery.refetch();
         }}
         title="暂时没有生成卡片"
       />
     );
-  }, [deletePreviewQuery, sourceCardsQuery, sourceQuery]);
+  }, [sourceCardsQuery, sourceQuery]);
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
@@ -330,14 +300,9 @@ export function SourceDetailScreen({
         onRefresh={() => {
           sourceQuery.refetch();
           sourceCardsQuery.refetch();
-          deletePreviewQuery.refetch();
         }}
         onToggleSelect={(card) => handleToggleSelect(card.id)}
-        refreshing={
-          sourceQuery.isRefetching ||
-          sourceCardsQuery.isRefetching ||
-          deletePreviewQuery.isRefetching
-        }
+        refreshing={sourceQuery.isRefetching || sourceCardsQuery.isRefetching}
         selectedIds={selectedPendingSet}
       />
     </SafeAreaView>

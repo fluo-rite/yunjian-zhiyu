@@ -1,15 +1,20 @@
 import { useMemo } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type LibraryStackParamList } from "../../../navigation/types";
-import { useCardDetailQuery } from "../api";
+import { type RootStackParamList } from "../../../navigation/types";
+import {
+  useArchiveCardMutation,
+  useCardDetailQuery,
+  useDeleteCardMutation,
+} from "../api";
 import { CardStatusBadge } from "../components/card-status-badge";
 import { EmptyState } from "../components/empty-state";
 import { ErrorState } from "../components/error-state";
+import { libraryCopy } from "../utils/library-copy";
 import { formatDateTimeLabel, getSourceTypeLabel } from "../utils/library-formatters";
 import { getStableArray } from "../utils/library-state";
 import { cardDetailScreenStyles as styles } from "./card-detail-screen.styles";
@@ -17,10 +22,63 @@ import { cardDetailScreenStyles as styles } from "./card-detail-screen.styles";
 export function CardDetailScreen({
   navigation,
   route,
-}: NativeStackScreenProps<LibraryStackParamList, "CardDetail">) {
+}: NativeStackScreenProps<RootStackParamList, "CardDetail">) {
   const cardQuery = useCardDetailQuery(route.params.cardId);
+  const archiveCardMutation = useArchiveCardMutation();
+  const deleteCardMutation = useDeleteCardMutation();
   const card = cardQuery.data;
   const tagPreview = useMemo(() => getStableArray(card?.tags), [card?.tags]);
+
+  async function handleArchiveCard() {
+    if (!card || card.status !== "active" || archiveCardMutation.isPending) {
+      return;
+    }
+
+    try {
+      await archiveCardMutation.mutateAsync(card.id);
+      Alert.alert(libraryCopy.actionCompleted, libraryCopy.cardDetail.archiveSuccessMessage);
+    } catch (error) {
+      Alert.alert(
+        libraryCopy.cardDetail.archiveFailureTitle,
+        error instanceof Error ? error.message : libraryCopy.loadFailed,
+      );
+    }
+  }
+
+  function handleDeleteCard() {
+    if (!card || deleteCardMutation.isPending) {
+      return;
+    }
+
+    Alert.alert(
+      libraryCopy.cardDetail.deleteConfirmTitle,
+      libraryCopy.cardDetail.deleteConfirmDescription,
+      [
+        { text: libraryCopy.cancel, style: "cancel" },
+        {
+          text: libraryCopy.deleteConfirm,
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteCardMutation.mutateAsync(card.id);
+
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+                return;
+              }
+
+              navigation.replace("CardList");
+            } catch (error) {
+              Alert.alert(
+                libraryCopy.cardDetail.deleteFailureTitle,
+                error instanceof Error ? error.message : libraryCopy.loadFailed,
+              );
+            }
+          },
+        },
+      ],
+    );
+  }
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
@@ -30,18 +88,21 @@ export function CardDetailScreen({
           card?.sourceId
             ? () =>
                 navigation.navigate("SourceDetail", {
-                  sourceId: card.sourceId as string,
+                  sourceId: card.sourceId,
                 })
             : undefined
         }
-        rightLabel={card?.sourceId ? "查看来源" : undefined}
+        rightLabel={card?.sourceId ? libraryCopy.cardDetail.sourceDetailAction : undefined}
         subtitle="卡片详情"
         title={card?.title ?? "知识卡片详情"}
       />
 
       {cardQuery.isLoading ? (
         <View style={styles.stateWrap}>
-          <EmptyState description="正在读取卡片详情，请稍等片刻。" title="正在加载卡片" />
+          <EmptyState
+            description={libraryCopy.cardDetail.loadingDescription}
+            title={libraryCopy.cardDetail.loadingTitle}
+          />
         </View>
       ) : null}
 
@@ -51,11 +112,11 @@ export function CardDetailScreen({
             description={
               cardQuery.error instanceof Error
                 ? cardQuery.error.message
-                : "暂时无法读取这张卡片，请稍后再试。"
+                : libraryCopy.cardDetail.errorDescription
             }
             onRetry={() => cardQuery.refetch()}
-            retryLabel="重新加载"
-            title="卡片详情加载失败"
+            retryLabel={libraryCopy.retry}
+            title={libraryCopy.cardDetail.errorTitle}
           />
         </View>
       ) : null}
@@ -102,15 +163,56 @@ export function CardDetailScreen({
 
             {card.sourceId ? (
               <PrimaryButton
-                label="查看同来源卡片"
+                label={libraryCopy.cardDetail.sourceCardsAction}
                 onPress={() =>
                   navigation.navigate("CardList", {
-                    sourceId: card.sourceId as string,
+                    sourceId: card.sourceId,
                   })
                 }
                 variant="secondary"
               />
             ) : null}
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>{libraryCopy.cardDetail.operationsTitle}</Text>
+            <Text style={styles.sectionText}>{libraryCopy.cardDetail.operationsDescription}</Text>
+
+            <View style={styles.actionRow}>
+              {card.status === "active" ? (
+                <PrimaryButton
+                  disabled={archiveCardMutation.isPending}
+                  label={
+                    archiveCardMutation.isPending
+                      ? libraryCopy.cardDetail.archivePendingAction
+                      : libraryCopy.cardDetail.archiveAction
+                  }
+                  iconName="archive-outline"
+                  onPress={handleArchiveCard}
+                />
+              ) : null}
+
+              {card.status === "archived" ? (
+                <PrimaryButton
+                  disabled
+                  label={libraryCopy.cardDetail.archivedAction}
+                  iconName="archive"
+                  variant="secondary"
+                />
+              ) : null}
+
+              <PrimaryButton
+                disabled={deleteCardMutation.isPending}
+                label={
+                  deleteCardMutation.isPending
+                    ? libraryCopy.cardDetail.deletePendingAction
+                    : libraryCopy.cardDetail.deleteAction
+                }
+                iconName="trash-outline"
+                onPress={handleDeleteCard}
+                variant="secondary"
+              />
+            </View>
           </View>
         </ScrollView>
       ) : null}

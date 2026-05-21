@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Field } from "../../../components/ui/field";
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type LibraryStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import {
   useDeleteGroupMutation,
   useGroupCardsQuery,
@@ -25,7 +25,7 @@ import { cardGroupDetailScreenStyles as styles } from "./card-group-detail-scree
 export function CardGroupDetailScreen({
   navigation,
   route,
-}: NativeStackScreenProps<LibraryStackParamList, "CardGroupDetail">) {
+}: NativeStackScreenProps<RootStackParamList, "CardGroupDetail">) {
   const groupQuery = useGroupDetailQuery(route.params.groupId);
   const groupCardsQuery = useGroupCardsQuery(route.params.groupId);
   const renameGroupMutation = useRenameGroupMutation();
@@ -171,10 +171,12 @@ export function CardGroupDetailScreen({
               renameGroupMutation.isPending
             }
             label={renameGroupMutation.isPending ? "保存中..." : "保存名称"}
+            iconName="save-outline"
             onPress={handleRenameGroup}
           />
           <PrimaryButton
             label={deleteGroupMutation.isPending ? "删除中..." : "删除分组"}
+            iconName="trash-outline"
             onPress={handleDeleteGroup}
             variant="secondary"
           />
@@ -203,6 +205,7 @@ export function CardGroupDetailScreen({
           />
           <PrimaryButton
             label={isSelectionMode ? "取消移除" : "批量移除"}
+            iconName={isSelectionMode ? "close-outline" : "remove-circle-outline"}
             onPress={isSelectionMode ? exitSelectionMode : () => setIsSelectionMode(true)}
             variant="secondary"
           />

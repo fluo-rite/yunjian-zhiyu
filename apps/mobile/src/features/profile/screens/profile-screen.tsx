@@ -1,15 +1,15 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { type NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
+import { type NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { type ProfileStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import { selectAuthUser } from "../../../store/auth-slice";
 import { useAppSelector } from "../../../store/hooks";
 import { profileScreenStyles as styles } from "./profile-screen.styles";
 
-export function ProfileScreen({
-  navigation,
-}: NativeStackScreenProps<ProfileStackParamList, "ProfileHome">) {
+export function ProfileScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const user = useAppSelector(selectAuthUser);
 
   const displayName = user?.nickname || user?.username || "未命名用户";

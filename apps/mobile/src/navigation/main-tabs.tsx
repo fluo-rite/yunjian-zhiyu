@@ -1,9 +1,10 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 
+import { LibraryHomeScreen } from "../features/library/screens/library-home-screen";
+import { ProfileScreen } from "../features/profile/screens/profile-screen";
+import { SessionListScreen } from "../features/sessions/screens/session-list-screen";
 import { colors, radii, shadows, spacing, typography } from "../theme/tokens";
-import { LibraryStackNavigator } from "./library-stack";
-import { ProfileStackNavigator } from "./profile-stack";
-import { SessionsStackNavigator } from "./sessions-stack";
 import { type MainTabParamList } from "./types";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -11,7 +12,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 export function MainTabNavigator() {
   return (
     <Tab.Navigator
-      initialRouteName="SessionsStack"
+      initialRouteName="SessionsHome"
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
@@ -45,19 +46,46 @@ export function MainTabNavigator() {
       }}
     >
       <Tab.Screen
-        component={SessionsStackNavigator}
-        name="SessionsStack"
-        options={{ title: "会话", tabBarLabel: "会话" }}
+        component={SessionListScreen}
+        name="SessionsHome"
+        options={{
+          title: "会话",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              color={color}
+              name={focused ? "chatbubbles" : "chatbubbles-outline"}
+              size={22}
+            />
+          ),
+        }}
       />
       <Tab.Screen
-        component={LibraryStackNavigator}
-        name="LibraryStack"
-        options={{ title: "知识库", tabBarLabel: "知识库" }}
+        component={LibraryHomeScreen}
+        name="LibraryHome"
+        options={{
+          title: "知识库",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              color={color}
+              name={focused ? "albums" : "albums-outline"}
+              size={22}
+            />
+          ),
+        }}
       />
       <Tab.Screen
-        component={ProfileStackNavigator}
-        name="ProfileStack"
-        options={{ title: "我", tabBarLabel: "我" }}
+        component={ProfileScreen}
+        name="ProfileHome"
+        options={{
+          title: "我的",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              color={color}
+              name={focused ? "person-circle" : "person-circle-outline"}
+              size={22}
+            />
+          ),
+        }}
       />
     </Tab.Navigator>
   );

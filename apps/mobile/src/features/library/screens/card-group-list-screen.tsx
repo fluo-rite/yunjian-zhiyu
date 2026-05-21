@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Field } from "../../../components/ui/field";
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type LibraryStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import { useCreateGroupMutation, useGroupsQuery } from "../api";
 import { EmptyState } from "../components/empty-state";
 import { ErrorState } from "../components/error-state";
@@ -16,7 +16,7 @@ import { cardGroupListScreenStyles as styles } from "./card-group-list-screen.st
 
 export function CardGroupListScreen({
   navigation,
-}: NativeStackScreenProps<LibraryStackParamList, "CardGroupList">) {
+}: NativeStackScreenProps<RootStackParamList, "CardGroupList">) {
   const [draftName, setDraftName] = useState("");
   const groupsQuery = useGroupsQuery();
   const createGroupMutation = useCreateGroupMutation();

@@ -3,7 +3,7 @@ import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type ProfileStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import { selectAuthUser } from "../../../store/auth-slice";
 import { useAppSelector } from "../../../store/hooks";
 import { accountScreenStyles as styles } from "./account-screen.styles";
@@ -39,7 +39,7 @@ function InfoRow(props: { label: string; value: string }) {
 
 export function AccountScreen({
   navigation,
-}: NativeStackScreenProps<ProfileStackParamList, "Account">) {
+}: NativeStackScreenProps<RootStackParamList, "Account">) {
   const user = useAppSelector(selectAuthUser);
 
   const displayName = user?.nickname || user?.username || "未命名用户";

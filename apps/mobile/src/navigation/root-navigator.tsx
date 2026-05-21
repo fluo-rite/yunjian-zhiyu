@@ -4,6 +4,17 @@ import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { enableScreens } from "react-native-screens";
 
+import { AccountScreen } from "../features/profile/screens/account-screen";
+import { SettingsScreen } from "../features/profile/screens/settings-screen";
+import { CardDetailScreen } from "../features/library/screens/card-detail-screen";
+import { CardGroupDetailScreen } from "../features/library/screens/card-group-detail-screen";
+import { CardGroupListScreen } from "../features/library/screens/card-group-list-screen";
+import { CardListScreen } from "../features/library/screens/card-list-screen";
+import { CreateSourceTextScreen } from "../features/library/screens/create-source-text-screen";
+import { GroupCardPickerScreen } from "../features/library/screens/group-card-picker-screen";
+import { SourceDetailScreen } from "../features/library/screens/source-detail-screen";
+import { SourceListScreen } from "../features/library/screens/source-list-screen";
+import { ChatScreen } from "../features/sessions/screens/chat-screen";
 import {
   hydrateAuthSession,
   selectIsAuthenticated,
@@ -45,7 +56,7 @@ export function RootNavigator() {
       <View style={styles.loadingScreen}>
         <ActivityIndicator color={colors.accentPressed} size="large" />
         <Text style={styles.loadingTitle}>正在恢复登录状态</Text>
-        <Text style={styles.loadingText}>稍等一下，我们在检查本地会话是否仍然有效。</Text>
+        <Text style={styles.loadingText}>稍等一下，我们正在检查本地会话是否仍然有效。</Text>
       </View>
     );
   }
@@ -54,7 +65,20 @@ export function RootNavigator() {
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <Stack.Screen component={MainTabNavigator} name="Main" />
+          <>
+            <Stack.Screen component={MainTabNavigator} name="MainTabs" />
+            <Stack.Screen component={ChatScreen} name="Chat" />
+            <Stack.Screen component={CardListScreen} name="CardList" />
+            <Stack.Screen component={CardDetailScreen} name="CardDetail" />
+            <Stack.Screen component={CardGroupListScreen} name="CardGroupList" />
+            <Stack.Screen component={CardGroupDetailScreen} name="CardGroupDetail" />
+            <Stack.Screen component={GroupCardPickerScreen} name="GroupCardPicker" />
+            <Stack.Screen component={SourceListScreen} name="SourceList" />
+            <Stack.Screen component={SourceDetailScreen} name="SourceDetail" />
+            <Stack.Screen component={CreateSourceTextScreen} name="CreateSourceText" />
+            <Stack.Screen component={AccountScreen} name="Account" />
+            <Stack.Screen component={SettingsScreen} name="Settings" />
+          </>
         ) : (
           <Stack.Screen component={AuthStackNavigator} name="Auth" />
         )}

@@ -6,12 +6,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Field } from "../../../components/ui/field";
 import { PrimaryButton } from "../../../components/ui/primary-button";
 import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type LibraryStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import { type CardStatus, useCardsQuery } from "../api";
 import { CardListView } from "../components/card-list-view";
 import { EmptyState } from "../components/empty-state";
 import { ErrorState } from "../components/error-state";
 import { FilterChipRow, type FilterChipItem } from "../components/filter-chip-row";
+import { libraryCopy } from "../utils/library-copy";
 import { getStableArray } from "../utils/library-state";
 import { cardListScreenStyles as styles } from "./card-list-screen.styles";
 
@@ -31,7 +32,7 @@ function toStatusFilterValue(filterKey: StatusFilterKey): CardStatus | undefined
 export function CardListScreen({
   navigation,
   route,
-}: NativeStackScreenProps<LibraryStackParamList, "CardList">) {
+}: NativeStackScreenProps<RootStackParamList, "CardList">) {
   const [searchInput, setSearchInput] = useState(route.params?.keyword ?? "");
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey>(route.params?.status ?? "all");
 
@@ -71,7 +72,7 @@ export function CardListScreen({
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>统一浏览全部知识卡片</Text>
           <Text style={styles.heroText}>
-            这里是知识区的主检索入口。后续无论从分组还是来源进入，最终都可以回到这里继续筛选。
+            这里是知识区的主检索入口。无论是从分组还是来源进入，最终都可以回到这里继续筛选。
           </Text>
           {route.params?.sourceName ? (
             <Text style={styles.contextText}>当前来源：{route.params.sourceName}</Text>
@@ -81,7 +82,7 @@ export function CardListScreen({
           ) : null}
           {cardsQuery.data?.pagination ? (
             <Text style={styles.resultMeta}>
-              当前结果 {cards.length} 条，共 {cardsQuery.data.pagination.total} 条
+              当前结果 {cards.length} 张，共 {cardsQuery.data.pagination.total} 张
             </Text>
           ) : null}
         </View>
@@ -105,7 +106,7 @@ export function CardListScreen({
 
           {hasLocalFilters ? (
             <PrimaryButton
-              label="清空本页筛选"
+              label={libraryCopy.cardList.clearLocalFilters}
               onPress={handleResetLocalFilters}
               variant="secondary"
             />
@@ -128,8 +129,8 @@ export function CardListScreen({
     if (cardsQuery.isLoading) {
       return (
         <EmptyState
-          description="正在从服务端读取卡片列表，请稍等片刻。"
-          title="正在加载卡片"
+          description={libraryCopy.cardList.loadingDescription}
+          title={libraryCopy.cardList.loadingTitle}
         />
       );
     }
@@ -140,27 +141,33 @@ export function CardListScreen({
           description={
             cardsQuery.error instanceof Error
               ? cardsQuery.error.message
-              : "暂时无法读取卡片列表，请稍后再试。"
+              : libraryCopy.loadFailed
           }
           onRetry={() => cardsQuery.refetch()}
-          retryLabel="重新加载"
-          title="卡片列表加载失败"
+          retryLabel={libraryCopy.retry}
+          title={libraryCopy.cardList.errorTitle}
         />
       );
     }
 
     return (
       <EmptyState
-        actionLabel={hasContextFilter ? "查看全部卡片" : hasLocalFilters ? "清空筛选条件" : undefined}
+        actionLabel={
+          hasContextFilter
+            ? libraryCopy.cardList.showAllCards
+            : hasLocalFilters
+              ? libraryCopy.cardList.clearLocalFilters
+              : undefined
+        }
         description={
           hasContextFilter || hasLocalFilters
-            ? "当前筛选条件下还没有找到匹配的卡片，可以放宽条件后再试。"
-            : "现在还没有可浏览的卡片，后续可以先从知识来源导入文本或等待卡片生成完成。"
+            ? libraryCopy.cardList.emptyFilteredDescription
+            : libraryCopy.cardList.emptyDefaultDescription
         }
         onActionPress={
           hasContextFilter ? handleResetAllFilters : hasLocalFilters ? handleResetLocalFilters : undefined
         }
-        title="暂时没有卡片"
+        title={libraryCopy.cardList.emptyTitle}
       />
     );
   }, [cardsQuery, hasContextFilter, hasLocalFilters]);
@@ -170,7 +177,7 @@ export function CardListScreen({
       <ScreenHeader
         onBack={() => navigation.goBack()}
         onRightPress={hasContextFilter ? handleResetAllFilters : undefined}
-        rightLabel={hasContextFilter ? "全部卡片" : undefined}
+        rightLabel={hasContextFilter ? libraryCopy.cardList.showAllCards : undefined}
         subtitle={screenSubtitle}
         title={screenTitle}
       />

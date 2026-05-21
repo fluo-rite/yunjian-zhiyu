@@ -48,7 +48,7 @@ export function CardListItem(props: {
           {mode === "selectable" && props.selectable ? (
             <View style={[styles.selectionDot, props.selected && styles.selectionDotSelected]}>
               <Text style={[styles.selectionText, props.selected && styles.selectionTextSelected]}>
-                {props.selected ? "已选" : "选择"}
+                {props.selected ? "已选中" : "选择"}
               </Text>
             </View>
           ) : null}

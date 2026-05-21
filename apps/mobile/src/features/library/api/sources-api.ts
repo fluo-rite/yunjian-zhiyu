@@ -3,13 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../lib/api-client";
 import {
   knowledgeSourceCardsResponseSchema,
-  knowledgeSourceDeletePreviewResponseSchema,
   knowledgeSourceDetailSchema,
   knowledgeSourceListResponseSchema,
   knowledgeSourceSchema,
   type KnowledgeSource,
   type KnowledgeSourceCardsResponse,
-  type KnowledgeSourceDeletePreviewResponse,
   type KnowledgeSourceDetail,
   type KnowledgeSourceListResponse,
   type SourceStatus,
@@ -86,13 +84,6 @@ export async function createSourceFromText(
   return knowledgeSourceSchema.parse(response);
 }
 
-export async function getSourceDeletePreview(
-  sourceId: string,
-): Promise<KnowledgeSourceDeletePreviewResponse> {
-  const response = await apiClient.get(`/knowledge-sources/${sourceId}/delete-preview`);
-  return knowledgeSourceDeletePreviewResponseSchema.parse(response);
-}
-
 export async function deleteSource(payload: DeleteSourceInput): Promise<void> {
   await apiClient.delete(`/knowledge-sources/${payload.sourceId}`, {
     body: {
@@ -140,17 +131,6 @@ export function useCreateSourceFromTextMutation() {
     onSuccess: async () => {
       await refreshSourceLists(queryClient);
     },
-  });
-}
-
-export function useSourceDeletePreviewQuery(sourceId: string | null) {
-  return useQuery({
-    queryKey: sourceId
-      ? libraryQueryKeys.sourceDeletePreview(sourceId)
-      : libraryQueryKeys.sourceDeletePreview("pending"),
-    queryFn: () => getSourceDeletePreview(sourceId as string),
-    enabled: Boolean(sourceId),
-    retry: shouldRetryLibraryEntityQuery,
   });
 }
 

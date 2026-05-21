@@ -77,15 +77,10 @@ export async function refreshSourceCards(queryClient: QueryClient, sourceId: str
   await invalidateExact(queryClient, libraryQueryKeys.sourceCards(sourceId));
 }
 
-export async function refreshSourceDeletePreview(queryClient: QueryClient, sourceId: string) {
-  await invalidateExact(queryClient, libraryQueryKeys.sourceDeletePreview(sourceId));
-}
-
 export async function refreshSourceScope(queryClient: QueryClient, sourceId: string) {
   await Promise.all([
     refreshSourceDetail(queryClient, sourceId),
     refreshSourceCards(queryClient, sourceId),
-    refreshSourceDeletePreview(queryClient, sourceId),
   ]);
 }
 
@@ -124,10 +119,6 @@ export async function removeSourceQueries(queryClient: QueryClient, sourceId: st
       queryKey: libraryQueryKeys.sourceCards(sourceId),
       exact: true,
     }),
-    queryClient.cancelQueries({
-      queryKey: libraryQueryKeys.sourceDeletePreview(sourceId),
-      exact: true,
-    }),
   ]);
 
   queryClient.removeQueries({
@@ -136,10 +127,6 @@ export async function removeSourceQueries(queryClient: QueryClient, sourceId: st
   });
   queryClient.removeQueries({
     queryKey: libraryQueryKeys.sourceCards(sourceId),
-    exact: true,
-  });
-  queryClient.removeQueries({
-    queryKey: libraryQueryKeys.sourceDeletePreview(sourceId),
     exact: true,
   });
 }

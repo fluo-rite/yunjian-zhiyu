@@ -1,14 +1,15 @@
-import { type NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
+import { type NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "../../../components/ui/primary-button";
-import { type LibraryStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import { libraryHomeScreenStyles as styles } from "./library-home-screen.styles";
 
-export function LibraryHomeScreen({
-  navigation,
-}: NativeStackScreenProps<LibraryStackParamList, "LibraryHome">) {
+export function LibraryHomeScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -16,8 +17,7 @@ export function LibraryHomeScreen({
           <Text style={styles.eyebrow}>知识工作台</Text>
           <Text style={styles.title}>围绕卡片组织你的学习资料</Text>
           <Text style={styles.description}>
-            知识卡片是主浏览对象，卡片分组和知识来源是两种组织入口。后续的搜索、
-            筛选、确认与沉淀流程都会从这里继续展开。
+            知识卡片是主浏览对象，卡片分组和知识来源是两种组织入口。后续的搜索、筛选、确认与沉淀流程都会从这里继续展开。
           </Text>
         </View>
 
@@ -42,7 +42,10 @@ export function LibraryHomeScreen({
         <View style={styles.entryList}>
           <Pressable
             onPress={() => navigation.navigate("CardList")}
-            style={({ pressed }) => [styles.entryCard, pressed && styles.entryCardPressed]}
+            style={({ pressed }: { pressed: boolean }) => [
+              styles.entryCard,
+              pressed && styles.entryCardPressed,
+            ]}
           >
             <Text style={styles.entryEyebrow}>主浏览页</Text>
             <Text style={styles.entryTitle}>知识卡片</Text>
@@ -54,24 +57,30 @@ export function LibraryHomeScreen({
 
           <Pressable
             onPress={() => navigation.navigate("CardGroupList")}
-            style={({ pressed }) => [styles.entryCard, pressed && styles.entryCardPressed]}
+            style={({ pressed }: { pressed: boolean }) => [
+              styles.entryCard,
+              pressed && styles.entryCardPressed,
+            ]}
           >
             <Text style={styles.entryEyebrow}>主题组织</Text>
             <Text style={styles.entryTitle}>卡片分组</Text>
             <Text style={styles.entryText}>
-              以主题或专题组织卡片，后续会支持进入分组详情后查看组内卡片与添加卡片。
+              以主题或专题组织卡片，后续可以进入分组详情查看组内卡片并继续添加卡片。
             </Text>
             <Text style={styles.entryLink}>查看卡片分组</Text>
           </Pressable>
 
           <Pressable
             onPress={() => navigation.navigate("SourceList")}
-            style={({ pressed }) => [styles.entryCard, pressed && styles.entryCardPressed]}
+            style={({ pressed }: { pressed: boolean }) => [
+              styles.entryCard,
+              pressed && styles.entryCardPressed,
+            ]}
           >
             <Text style={styles.entryEyebrow}>来源追溯</Text>
             <Text style={styles.entryTitle}>知识来源</Text>
             <Text style={styles.entryText}>
-              以文本、文档或消息来源为入口，后续会在详情页确认该来源生成的 pending 卡片。
+              以文本、文档或消息来源为入口，后续会在详情页确认该来源生成的待确认卡片。
             </Text>
             <Text style={styles.entryLink}>查看知识来源</Text>
           </Pressable>
@@ -80,7 +89,7 @@ export function LibraryHomeScreen({
         <View style={styles.roadmapCard}>
           <Text style={styles.roadmapTitle}>当前进度</Text>
           <Text style={styles.roadmapText}>
-            第一批任务已经补齐知识区路由、API 骨架与首页入口页。下一批将优先接通卡片主浏览页和来源列表页。
+            知识区主链路已经具备浏览、整理和来源沉淀能力，接下来会继续收口卡片操作和联调体验。
           </Text>
         </View>
       </ScrollView>

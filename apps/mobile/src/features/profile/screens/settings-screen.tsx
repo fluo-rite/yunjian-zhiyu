@@ -10,12 +10,12 @@ import {
   selectIsLoggingOut,
 } from "../../../store/auth-slice";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
-import { type ProfileStackParamList } from "../../../navigation/types";
+import { type RootStackParamList } from "../../../navigation/types";
 import { settingsScreenStyles as styles } from "./settings-screen.styles";
 
 export function SettingsScreen({
   navigation,
-}: NativeStackScreenProps<ProfileStackParamList, "Settings">) {
+}: NativeStackScreenProps<RootStackParamList, "Settings">) {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectAuthUser);
   const isLoggingOut = useAppSelector(selectIsLoggingOut);

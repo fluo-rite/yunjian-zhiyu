@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
+import { Ionicons, type IoniconsIconName } from "@react-native-vector-icons/ionicons";
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 
 import { colors, radii, spacing, typography } from "../../theme/tokens";
 
@@ -8,15 +9,17 @@ export function PrimaryButton(props: {
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   variant?: "primary" | "secondary";
+  iconName?: IoniconsIconName;
 }) {
   const variant = props.variant ?? "primary";
+  const iconColor = variant === "secondary" ? colors.textPrimary : colors.textOnAccent;
 
   return (
     <Pressable
       accessibilityRole="button"
       disabled={props.disabled}
       onPress={props.onPress}
-      style={({ pressed }) => [
+      style={({ pressed }: { pressed: boolean }) => [
         styles.button,
         variant === "secondary" && styles.buttonSecondary,
         props.style,
@@ -24,9 +27,12 @@ export function PrimaryButton(props: {
         pressed && !props.disabled && styles.pressed,
       ]}
     >
-      <Text style={[styles.label, variant === "secondary" && styles.labelSecondary]}>
-        {props.label}
-      </Text>
+      <View style={styles.content}>
+        {props.iconName ? <Ionicons color={iconColor} name={props.iconName} size={18} /> : null}
+        <Text style={[styles.label, variant === "secondary" && styles.labelSecondary]}>
+          {props.label}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -44,6 +50,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
   },
   label: {
     color: colors.textOnAccent,

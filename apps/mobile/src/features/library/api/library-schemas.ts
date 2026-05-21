@@ -82,17 +82,6 @@ export const knowledgeSourceCardsResponseSchema = z.object({
   items: z.array(cardSchema),
 });
 
-export const linkedCardPreviewSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  status: cardStatusSchema,
-});
-
-export const knowledgeSourceDeletePreviewResponseSchema = z.object({
-  source: knowledgeSourceSchema,
-  linkedCards: z.array(linkedCardPreviewSchema),
-});
-
 export type CardStatus = z.infer<typeof cardStatusSchema>;
 export type SourceType = z.infer<typeof sourceTypeSchema>;
 export type SourceStatus = z.infer<typeof sourceStatusSchema>;
@@ -107,7 +96,3 @@ export type KnowledgeSource = z.infer<typeof knowledgeSourceSchema>;
 export type KnowledgeSourceListResponse = z.infer<typeof knowledgeSourceListResponseSchema>;
 export type KnowledgeSourceDetail = z.infer<typeof knowledgeSourceDetailSchema>;
 export type KnowledgeSourceCardsResponse = z.infer<typeof knowledgeSourceCardsResponseSchema>;
-export type LinkedCardPreview = z.infer<typeof linkedCardPreviewSchema>;
-export type KnowledgeSourceDeletePreviewResponse = z.infer<
-  typeof knowledgeSourceDeletePreviewResponseSchema
->;
