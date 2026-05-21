@@ -1,6 +1,6 @@
-import { Text, View } from "react-native";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
+import { Pressable, Text, View } from "react-native";
 
-import { PrimaryButton } from "./primary-button";
 import { screenHeaderStyles as styles } from "./screen-header.styles";
 
 export function ScreenHeader(props: {
@@ -13,29 +13,35 @@ export function ScreenHeader(props: {
   return (
     <View style={styles.header}>
       {props.onBack ? (
-        <PrimaryButton
-          label="返回"
-          iconName="chevron-back"
+        <Pressable
+          accessibilityLabel="返回"
+          accessibilityRole="button"
           onPress={props.onBack}
-          style={styles.sideButton}
-          variant="secondary"
-        />
+          style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+        >
+          <Ionicons color="#0F172A" name="chevron-back" size={22} />
+        </Pressable>
       ) : (
         <View style={styles.sidePlaceholder} />
       )}
 
       <View style={styles.center}>
-        {props.subtitle ? <Text style={styles.subtitle}>{props.subtitle}</Text> : null}
-        <Text style={styles.title}>{props.title}</Text>
+        <Text numberOfLines={1} style={styles.title}>
+          {props.title}
+        </Text>
       </View>
 
       {props.rightLabel ? (
-        <PrimaryButton
-          label={props.rightLabel}
+        <Pressable
+          accessibilityLabel={props.rightLabel}
+          accessibilityRole="button"
           onPress={props.onRightPress}
-          style={styles.sideButton}
-          variant="secondary"
-        />
+          style={({ pressed }) => [styles.rightAction, pressed && styles.rightActionPressed]}
+        >
+          <Text numberOfLines={1} style={styles.rightActionText}>
+            {props.rightLabel}
+          </Text>
+        </Pressable>
       ) : (
         <View style={styles.sidePlaceholder} />
       )}

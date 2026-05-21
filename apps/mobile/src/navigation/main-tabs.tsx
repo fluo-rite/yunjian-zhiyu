@@ -4,7 +4,7 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { LibraryHomeScreen } from "../features/library/screens/library-home-screen";
 import { ProfileScreen } from "../features/profile/screens/profile-screen";
 import { SessionListScreen } from "../features/sessions/screens/session-list-screen";
-import { colors, radii, shadows, spacing, typography } from "../theme/tokens";
+import { colors, radii, spacing, typography } from "../theme/tokens";
 import { type MainTabParamList } from "./types";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -27,18 +27,13 @@ export function MainTabNavigator() {
           marginVertical: spacing.xs,
         },
         tabBarStyle: {
-          height: 76,
-          marginHorizontal: spacing.xl,
-          marginBottom: spacing.sm,
+          height: 72,
           paddingTop: spacing.sm,
           paddingBottom: spacing.sm,
-          borderTopWidth: 0,
-          borderWidth: 1,
+          borderTopWidth: 1,
           borderColor: colors.borderSoft,
           borderRadius: radii.xl,
           backgroundColor: colors.surface,
-          position: "absolute",
-          ...shadows.sheet,
         },
         sceneStyle: {
           backgroundColor: colors.background,
