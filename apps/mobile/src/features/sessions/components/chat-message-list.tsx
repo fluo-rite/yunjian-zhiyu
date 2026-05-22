@@ -20,6 +20,7 @@ export type ChatMessageListProps = {
 
 const ESTIMATED_ITEM_SIZE = 180;
 const BOTTOM_STICKY_THRESHOLD = 120;
+const AUTO_SCROLL_INTERVAL_MS = 100;
 
 function ChatMessageListComponent({
   messages,
@@ -34,6 +35,7 @@ function ChatMessageListComponent({
 }: ChatMessageListProps) {
   const listRef = useRef<FlashListRef<Message> | null>(null);
   const isNearBottomRef = useRef(true);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastMessage = messages[messages.length - 1];
 
   const listExtraData = useMemo(
@@ -59,37 +61,50 @@ function ChatMessageListComponent({
     ],
   );
 
-  useEffect(() => {
-    const isStreamingLastAssistant =
-      lastMessage?.id === streamAssistantMessageId &&
-      lastMessage?.role === "assistant" &&
-      !terminalMessage &&
-      (lastMessage?.status === "streaming" || Boolean(streamedContent));
-
-    const shouldStickToBottom = isNearBottomRef.current || isStreamingLastAssistant;
-
-    if (!shouldStickToBottom) {
+  function cancelScheduledAutoScroll() {
+    if (scrollTimerRef.current === null) {
       return;
     }
 
-    const timer = setTimeout(() => {
+    clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = null;
+  }
+
+  function scheduleAutoScroll() {
+    if (scrollTimerRef.current !== null) {
+      return;
+    }
+
+    scrollTimerRef.current = setTimeout(() => {
+      scrollTimerRef.current = null;
       listRef.current?.scrollToEnd({ animated: messages.length > 0 });
-    }, 0);
+    }, AUTO_SCROLL_INTERVAL_MS);
+  }
+
+  useEffect(() => {
+    if (!isNearBottomRef.current) {
+      return;
+    }
+
+    scheduleAutoScroll();
 
     return () => {
-      clearTimeout(timer);
+      cancelScheduledAutoScroll();
     };
   }, [
     composerSpacerHeight,
     lastMessage?.content,
     lastMessage?.id,
-    lastMessage?.role,
-    lastMessage?.status,
     messages.length,
-    streamAssistantMessageId,
     streamedContent,
     terminalMessage,
   ]);
+
+  useEffect(() => {
+    return () => {
+      cancelScheduledAutoScroll();
+    };
+  }, []);
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
@@ -152,13 +167,9 @@ function ChatMessageListComponent({
             : isCurrentStreamTarget && streamedContent
               ? { ...item, content: streamedContent }
               : item;
-        const renderKey = isCurrentStreamTarget
-          ? `${item.id}:${terminalMessage?.status ?? item.status}:${streamedContent ?? ""}:${ephemeralPhaseLabel ?? ""}`
-          : item.id;
 
         return (
           <ChatMessageItem
-            key={renderKey}
             ephemeralStatusLabel={isCurrentStreamTarget ? ephemeralPhaseLabel : null}
             message={renderedMessage}
           />

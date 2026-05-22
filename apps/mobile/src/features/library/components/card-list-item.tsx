@@ -11,6 +11,10 @@ import { cardListItemStyles as styles } from "./card-list-item.styles";
 
 export type CardListItemMode = "browse" | "embedded" | "selectable";
 
+function getCardTagKey(cardId: string, tag: string) {
+  return `${cardId}:${tag}`;
+}
+
 export function CardListItem(props: {
   card: KnowledgeCard;
   mode?: CardListItemMode;
@@ -38,8 +42,7 @@ export function CardListItem(props: {
         <View style={styles.headerCopy}>
           <Text style={styles.title}>{props.card.title}</Text>
           <Text style={styles.meta}>
-            {getSourceTypeLabel(props.card.sourceType)} · 更新于{" "}
-            {formatCompactDateTimeLabel(props.card.updatedAt)}
+            {getSourceTypeLabel(props.card.sourceType)} · 更新于 {formatCompactDateTimeLabel(props.card.updatedAt)}
           </Text>
         </View>
 
@@ -60,7 +63,7 @@ export function CardListItem(props: {
       {tagPreview.length > 0 ? (
         <View style={styles.tagsRow}>
           {tagPreview.map((tag) => (
-            <View key={tag} style={styles.tag}>
+            <View key={getCardTagKey(props.card.id, tag)} style={styles.tag}>
               <Text style={styles.tagLabel}>{tag}</Text>
             </View>
           ))}

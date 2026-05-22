@@ -28,7 +28,7 @@ async function openMarkdownLink(url: string) {
 export function ChatMessageMarkdownBody({ content }: ChatMessageMarkdownBodyProps) {
   return (
     <EnrichedMarkdownText
-      allowTrailingMargin={false}
+      allowTrailingMargin
       containerStyle={styles.container}
       flavor="github"
       markdown={content}

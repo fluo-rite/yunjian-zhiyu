@@ -15,6 +15,18 @@ function getCitationTypeLabel(citation: Citation) {
   return citation.type === "web" ? "网页来源" : "知识卡片";
 }
 
+function getCitationKey(messageId: string, citation: Citation) {
+  if (citation.sourceId) {
+    return `${messageId}:${citation.type}:${citation.sourceId}`;
+  }
+
+  if (citation.url) {
+    return `${messageId}:${citation.type}:${citation.url}`;
+  }
+
+  return `${messageId}:${citation.type}:${citation.title}:${citation.snippet}`;
+}
+
 function ChatMessageItemComponent({
   message,
   renderMode,
@@ -109,8 +121,8 @@ function ChatMessageItemComponent({
               showsVerticalScrollIndicator={false}
               style={styles.modalScroll}
             >
-              {citations.map((citation, index) => (
-                <View key={`${message.id}-${citation.title}-${index}`} style={styles.citationCard}>
+              {citations.map((citation) => (
+                <View key={getCitationKey(message.id, citation)} style={styles.citationCard}>
                   <Text style={styles.citationMeta}>{getCitationTypeLabel(citation)}</Text>
                   <Text style={styles.citationTitle}>{citation.title}</Text>
                   <Text style={styles.citationSnippet}>{citation.snippet}</Text>

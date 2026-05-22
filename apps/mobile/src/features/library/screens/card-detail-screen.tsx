@@ -15,6 +15,10 @@ import { formatDateTimeLabel, getSourceTypeLabel } from "../utils/library-format
 import { getStableArray } from "../utils/library-state";
 import { cardDetailScreenStyles as styles } from "./card-detail-screen.styles";
 
+function getCardTagKey(cardId: string, tag: string) {
+  return `${cardId}:${tag}`;
+}
+
 export function CardDetailScreen({
   navigation,
   route,
@@ -122,7 +126,7 @@ export function CardDetailScreen({
             {tagPreview.length > 0 ? (
               <View style={styles.tagsRow}>
                 {tagPreview.map((tag) => (
-                  <View key={tag} style={styles.tag}>
+                  <View key={getCardTagKey(card.id, tag)} style={styles.tag}>
                     <Text style={styles.tagLabel}>{tag}</Text>
                   </View>
                 ))}

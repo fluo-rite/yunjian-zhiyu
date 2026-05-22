@@ -7,6 +7,9 @@ export const sessionListScreenStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  page: {
+    flex: 1,
+  },
   content: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
@@ -18,7 +21,16 @@ export const sessionListScreenStyles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   section: {
+    position: "relative",
     gap: spacing.lg,
+  },
+  menuDismissLayer: {
+    position: "absolute",
+    top: -spacing.xl,
+    right: -spacing.xl,
+    bottom: -spacing.xl,
+    left: -spacing.xl,
+    zIndex: 15,
   },
   emptyCard: {
     gap: spacing.md,
@@ -39,13 +51,20 @@ export const sessionListScreenStyles = StyleSheet.create({
     lineHeight: 22,
   },
   card: {
+    position: "relative",
     gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingRight: spacing.xl,
+    paddingBottom: spacing.lg,
+    paddingLeft: spacing.xl,
     ...shadows.card,
+  },
+  cardMenuOpen: {
+    zIndex: 20,
   },
   cardPressed: {
     opacity: 0.94,
@@ -71,5 +90,46 @@ export const sessionListScreenStyles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.body,
     lineHeight: 22,
+  },
+  cardFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: spacing.xs,
+  },
+  moreButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
+  moreButtonPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  deleteMenu: {
+    position: "absolute",
+    right: spacing.lg,
+    bottom: 52,
+    minWidth: 88,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    zIndex: 25,
+    ...shadows.card,
+  },
+  deleteMenuPressed: {
+    backgroundColor: "#FFF1F2",
+  },
+  deleteMenuDisabled: {
+    opacity: 0.7,
+  },
+  deleteMenuText: {
+    color: colors.danger,
+    fontSize: typography.caption,
+    fontWeight: "700",
   },
 });

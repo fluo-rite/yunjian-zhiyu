@@ -14,6 +14,8 @@ type StreamState = {
   isConnecting: boolean;
 };
 
+const STREAM_FLUSH_INTERVAL_MS = 200;
+
 const initialState: StreamState = {
   lastEventId: null,
   streamedContent: "",
@@ -30,15 +32,57 @@ export function useAssistantMessageStream(
   const accessToken = useAppSelector(selectAccessToken);
   const [state, setState] = useState<StreamState>(initialState);
   const hasTerminalEventRef = useRef(false);
+  const pendingDeltaRef = useRef("");
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function cancelDeltaFlush() {
+    if (flushTimerRef.current === null) {
+      return;
+    }
+
+    clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = null;
+  }
+
+  function flushPendingDelta() {
+    cancelDeltaFlush();
+
+    if (!pendingDeltaRef.current) {
+      return;
+    }
+
+    const bufferedDelta = pendingDeltaRef.current;
+    pendingDeltaRef.current = "";
+
+    setState((current) => ({
+      ...current,
+      streamedContent: current.streamedContent + bufferedDelta,
+    }));
+  }
+
+  function scheduleDeltaFlush() {
+    if (flushTimerRef.current !== null) {
+      return;
+    }
+
+    flushTimerRef.current = setTimeout(() => {
+      flushTimerRef.current = null;
+      flushPendingDelta();
+    }, STREAM_FLUSH_INTERVAL_MS);
+  }
 
   useEffect(() => {
     if (!chatId || !assistantMessageId || !accessToken) {
+      pendingDeltaRef.current = "";
+      cancelDeltaFlush();
       setState(initialState);
       hasTerminalEventRef.current = false;
       return;
     }
 
     hasTerminalEventRef.current = false;
+    pendingDeltaRef.current = "";
+    cancelDeltaFlush();
     setState({
       lastEventId: null,
       streamedContent: "",
@@ -53,12 +97,6 @@ export function useAssistantMessageStream(
       assistantMessageId,
       accessToken,
       onEvent(event) {
-        setState((current) => ({
-          ...current,
-          isConnecting: false,
-          lastEventId: event.id ?? current.lastEventId,
-        }));
-
         switch (event.type) {
           case "status":
             setState((current) => ({
@@ -77,16 +115,19 @@ export function useAssistantMessageStream(
             }));
             return;
           case "message.delta":
+            pendingDeltaRef.current += event.data.delta;
             setState((current) => ({
               ...current,
               isConnecting: false,
               lastEventId: event.id ?? current.lastEventId,
-              streamedContent: current.streamedContent + event.data.delta,
               ephemeralPhaseLabel: null,
             }));
+            scheduleDeltaFlush();
             return;
           case "message.done":
             hasTerminalEventRef.current = true;
+            pendingDeltaRef.current = "";
+            cancelDeltaFlush();
             setState((current) => ({
               ...current,
               isConnecting: false,
@@ -99,6 +140,8 @@ export function useAssistantMessageStream(
             return;
           case "message.aborted":
             hasTerminalEventRef.current = true;
+            pendingDeltaRef.current = "";
+            cancelDeltaFlush();
             setState((current) => ({
               ...current,
               isConnecting: false,
@@ -110,6 +153,8 @@ export function useAssistantMessageStream(
             return;
           case "error":
             hasTerminalEventRef.current = true;
+            pendingDeltaRef.current = "";
+            cancelDeltaFlush();
             setState((current) => ({
               ...current,
               isConnecting: false,
@@ -124,6 +169,8 @@ export function useAssistantMessageStream(
         }
       },
       onError(error) {
+        pendingDeltaRef.current = "";
+        cancelDeltaFlush();
         setState((current) => ({
           ...current,
           isConnecting: false,
@@ -136,6 +183,7 @@ export function useAssistantMessageStream(
           return;
         }
 
+        flushPendingDelta();
         setState((current) => ({
           ...current,
           isConnecting: false,
@@ -144,6 +192,8 @@ export function useAssistantMessageStream(
     });
 
     return () => {
+      pendingDeltaRef.current = "";
+      cancelDeltaFlush();
       connection.close();
     };
   }, [accessToken, assistantMessageId, chatId]);
