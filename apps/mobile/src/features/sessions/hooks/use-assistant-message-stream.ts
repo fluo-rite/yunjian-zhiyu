@@ -14,7 +14,7 @@ type StreamState = {
   isConnecting: boolean;
 };
 
-const STREAM_FLUSH_INTERVAL_MS = 200;
+const STREAM_FLUSH_INTERVAL_MS = 100;
 
 const initialState: StreamState = {
   lastEventId: null,

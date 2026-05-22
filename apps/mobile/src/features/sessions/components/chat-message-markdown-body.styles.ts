@@ -1,5 +1,4 @@
 import { Platform, StyleSheet } from "react-native";
-import type { MarkdownStyle } from "react-native-enriched-markdown";
 
 import { colors, radii, spacing, typography } from "../../../theme/tokens";
 
@@ -15,7 +14,15 @@ export const chatMessageMarkdownBodyStyles = StyleSheet.create({
   },
 });
 
-export const chatMessageMarkdownStyles: MarkdownStyle = {
+export const chatMessageMarkdownStyles = {
+  body: {
+    color: colors.textPrimary,
+    fontSize: typography.body,
+    lineHeight: 24,
+  },
+  text: {
+    color: colors.textPrimary,
+  },
   paragraph: {
     color: colors.textPrimary,
     fontSize: typography.body,
@@ -23,7 +30,7 @@ export const chatMessageMarkdownStyles: MarkdownStyle = {
     marginTop: 0,
     marginBottom: spacing.md,
   },
-  h1: {
+  heading1: {
     color: colors.textPrimary,
     fontSize: 22,
     fontWeight: "700",
@@ -31,7 +38,7 @@ export const chatMessageMarkdownStyles: MarkdownStyle = {
     marginTop: 0,
     marginBottom: spacing.md,
   },
-  h2: {
+  heading2: {
     color: colors.textPrimary,
     fontSize: 20,
     fontWeight: "700",
@@ -39,7 +46,7 @@ export const chatMessageMarkdownStyles: MarkdownStyle = {
     marginTop: 0,
     marginBottom: spacing.md,
   },
-  h3: {
+  heading3: {
     color: colors.textPrimary,
     fontSize: 18,
     fontWeight: "700",
@@ -47,7 +54,7 @@ export const chatMessageMarkdownStyles: MarkdownStyle = {
     marginTop: 0,
     marginBottom: spacing.sm,
   },
-  h4: {
+  heading4: {
     color: colors.textPrimary,
     fontSize: 17,
     fontWeight: "700",
@@ -55,7 +62,7 @@ export const chatMessageMarkdownStyles: MarkdownStyle = {
     marginTop: 0,
     marginBottom: spacing.sm,
   },
-  h5: {
+  heading5: {
     color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "700",
@@ -63,7 +70,7 @@ export const chatMessageMarkdownStyles: MarkdownStyle = {
     marginTop: 0,
     marginBottom: spacing.sm,
   },
-  h6: {
+  heading6: {
     color: colors.textSecondary,
     fontSize: typography.body,
     fontWeight: "700",
@@ -75,25 +82,52 @@ export const chatMessageMarkdownStyles: MarkdownStyle = {
     color: colors.textSecondary,
     fontSize: typography.body,
     lineHeight: 24,
-    borderColor: colors.border,
-    borderWidth: 3,
-    gapWidth: spacing.md,
+    borderLeftColor: colors.border,
+    borderLeftWidth: 3,
+    paddingLeft: spacing.md,
     backgroundColor: colors.surfaceMuted,
     marginTop: 0,
     marginBottom: spacing.md,
   },
-  list: {
-    color: colors.textPrimary,
-    fontSize: typography.body,
-    lineHeight: 24,
-    markerColor: colors.accentPressed,
-    markerFontWeight: "700",
-    gapWidth: spacing.sm,
-    marginLeft: spacing.xs,
+  bullet_list: {
     marginTop: 0,
     marginBottom: spacing.md,
   },
-  codeBlock: {
+  ordered_list: {
+    marginTop: 0,
+    marginBottom: spacing.md,
+  },
+  list_item: {
+    color: colors.textPrimary,
+    fontSize: typography.body,
+    lineHeight: 24,
+    marginLeft: spacing.xs,
+  },
+  bullet_list_icon: {
+    color: colors.accentPressed,
+    marginRight: spacing.sm,
+  },
+  bullet_list_content: {
+    flex: 1,
+  },
+  ordered_list_icon: {
+    color: colors.accentPressed,
+    fontWeight: "700",
+    marginRight: spacing.sm,
+  },
+  ordered_list_content: {
+    flex: 1,
+  },
+  code_block: {
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.borderSoft,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    marginTop: 0,
+    marginBottom: spacing.md,
+  },
+  fence: {
     color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 22,
@@ -108,7 +142,7 @@ export const chatMessageMarkdownStyles: MarkdownStyle = {
   },
   link: {
     color: colors.accentPressed,
-    underline: false,
+    textDecorationLine: "none",
   },
   strong: {
     color: colors.textPrimary,
@@ -116,32 +150,50 @@ export const chatMessageMarkdownStyles: MarkdownStyle = {
   em: {
     color: colors.textPrimary,
   },
-  code: {
+  code_inline: {
     color: colors.textPrimary,
     fontSize: 14,
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.borderSoft,
     fontFamily: monoFontFamily,
   },
-  thematicBreak: {
-    color: colors.border,
-    height: 1,
+  hr: {
+    backgroundColor: colors.border,
+    height: StyleSheet.hairlineWidth,
     marginTop: spacing.sm,
     marginBottom: spacing.md,
   },
   table: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    lineHeight: 22,
-    headerFontFamily: monoFontFamily,
-    headerBackgroundColor: colors.surfaceMuted,
-    headerTextColor: colors.textPrimary,
-    rowEvenBackgroundColor: colors.surface,
-    rowOddBackgroundColor: colors.surfaceMuted,
     borderColor: colors.borderSoft,
     borderWidth: 1,
     borderRadius: radii.md,
-    cellPaddingHorizontal: spacing.sm,
-    cellPaddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  thead: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  tbody: {
+    backgroundColor: colors.surface,
+  },
+  th: {
+    color: colors.textPrimary,
+    fontFamily: monoFontFamily,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderColor: colors.borderSoft,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  td: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    lineHeight: 22,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderColor: colors.borderSoft,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  tr: {
+    borderColor: colors.borderSoft,
+    borderWidth: StyleSheet.hairlineWidth,
   },
 };
