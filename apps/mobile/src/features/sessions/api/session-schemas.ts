@@ -33,7 +33,7 @@ export const messageMetadataSchema = z
     requestedUseWebSearch: z.boolean().optional(),
     usedKnowledge: z.boolean().optional(),
     usedWebSearch: z.boolean().optional(),
-    latencyMs: z.number().int().optional(),
+    latencyMs: z.number().int().nullable().optional(),
     citations: z.array(citationSchema).optional(),
   })
   .passthrough();

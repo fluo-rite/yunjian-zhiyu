@@ -7,21 +7,19 @@ import { type Message } from "../api";
 
 type StreamState = {
   lastEventId: string | null;
-  phase: string | null;
-  phaseLabel: string | null;
   streamedContent: string;
   terminalMessage: Message | null;
   errorMessage: string | null;
+  ephemeralPhaseLabel: string | null;
   isConnecting: boolean;
 };
 
 const initialState: StreamState = {
   lastEventId: null,
-  phase: null,
-  phaseLabel: null,
   streamedContent: "",
   terminalMessage: null,
   errorMessage: null,
+  ephemeralPhaseLabel: null,
   isConnecting: false,
 };
 
@@ -43,11 +41,10 @@ export function useAssistantMessageStream(
     hasTerminalEventRef.current = false;
     setState({
       lastEventId: null,
-      phase: null,
-      phaseLabel: null,
       streamedContent: "",
       terminalMessage: null,
       errorMessage: null,
+      ephemeralPhaseLabel: null,
       isConnecting: true,
     });
 
@@ -68,8 +65,15 @@ export function useAssistantMessageStream(
               ...current,
               isConnecting: false,
               lastEventId: event.id ?? current.lastEventId,
-              phase: event.data.phase,
-              phaseLabel: event.data.label,
+              ephemeralPhaseLabel: event.data.label,
+            }));
+            return;
+          case "message.start":
+            setState((current) => ({
+              ...current,
+              isConnecting: false,
+              lastEventId: event.id ?? current.lastEventId,
+              ephemeralPhaseLabel: null,
             }));
             return;
           case "message.delta":
@@ -78,6 +82,7 @@ export function useAssistantMessageStream(
               isConnecting: false,
               lastEventId: event.id ?? current.lastEventId,
               streamedContent: current.streamedContent + event.data.delta,
+              ephemeralPhaseLabel: null,
             }));
             return;
           case "message.done":
@@ -88,9 +93,8 @@ export function useAssistantMessageStream(
               lastEventId: event.id ?? current.lastEventId,
               streamedContent: event.data.message.content,
               terminalMessage: event.data.message,
-              phase: null,
-              phaseLabel: null,
               errorMessage: null,
+              ephemeralPhaseLabel: null,
             }));
             return;
           case "message.aborted":
@@ -101,8 +105,7 @@ export function useAssistantMessageStream(
               lastEventId: event.id ?? current.lastEventId,
               streamedContent: event.data.message.content,
               terminalMessage: event.data.message,
-              phase: null,
-              phaseLabel: null,
+              ephemeralPhaseLabel: null,
             }));
             return;
           case "error":
@@ -112,9 +115,8 @@ export function useAssistantMessageStream(
               isConnecting: false,
               lastEventId: event.id ?? current.lastEventId,
               terminalMessage: event.data.finalMessage ?? null,
-              phase: null,
-              phaseLabel: null,
               errorMessage: event.data.message,
+              ephemeralPhaseLabel: null,
             }));
             return;
           default:
@@ -126,8 +128,7 @@ export function useAssistantMessageStream(
           ...current,
           isConnecting: false,
           errorMessage: error.message,
-          phase: null,
-          phaseLabel: null,
+          ephemeralPhaseLabel: null,
         }));
       },
       onClose() {

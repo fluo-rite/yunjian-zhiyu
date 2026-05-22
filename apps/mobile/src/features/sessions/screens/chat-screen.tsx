@@ -62,25 +62,6 @@ export function ChatScreen({
     }
   }, [messages, stream.isStreaming, streamAssistantMessageId]);
 
-  const displayMessages = useMemo(
-    () =>
-      messages.map((message) => {
-        if (message.id !== streamAssistantMessageId) {
-          return message;
-        }
-
-        if (stream.terminalMessage) {
-          return stream.terminalMessage;
-        }
-
-        return {
-          ...message,
-          content: stream.streamedContent || message.content,
-        };
-      }),
-    [messages, stream.streamedContent, stream.terminalMessage, streamAssistantMessageId],
-  );
-
   const fallbackTitle = useMemo(() => (chatId ? "会话详情" : "新会话"), [chatId]);
   const isSending = createChatMutation.isPending || sendChatMessageMutation.isPending || stream.isConnecting;
   const isStreaming = stream.isStreaming || abortChatMessageMutation.isPending;
@@ -171,11 +152,14 @@ export function ChatScreen({
       >
         <ChatMessageList
           composerSpacerHeight={composerHeight}
+          ephemeralPhaseLabel={stream.ephemeralPhaseLabel}
           errorMessage={messagesQuery.error instanceof Error ? messagesQuery.error.message : undefined}
           isError={messagesQuery.isError}
           isLoading={messagesQuery.isLoading && Boolean(chatId)}
-          messages={displayMessages}
-          phaseLabel={stream.phaseLabel}
+          messages={messages}
+          streamAssistantMessageId={streamAssistantMessageId}
+          streamedContent={stream.streamedContent}
+          terminalMessage={stream.terminalMessage}
         />
 
         <View

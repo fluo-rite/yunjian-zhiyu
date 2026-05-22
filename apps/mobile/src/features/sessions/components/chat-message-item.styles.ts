@@ -14,8 +14,7 @@ export const chatMessageItemStyles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   bubbleWrap: {
-    width: "90%",
-    maxWidth: "90%",
+    maxWidth: "100%",
     gap: spacing.xs,
   },
   bubble: {
@@ -39,6 +38,11 @@ export const chatMessageItemStyles = StyleSheet.create({
   },
   statusText: {
     color: colors.textTertiary,
+    fontSize: typography.caption,
+    lineHeight: 18,
+  },
+  streamingStatusText: {
+    color: colors.textSecondary,
     fontSize: typography.caption,
     lineHeight: 18,
   },

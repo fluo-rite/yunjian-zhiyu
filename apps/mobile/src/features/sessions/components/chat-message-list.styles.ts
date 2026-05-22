@@ -36,23 +36,6 @@ export const chatMessageListStyles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 22,
   },
-  statusCard: {
-    gap: spacing.xs,
-    borderRadius: radii.lg,
-    backgroundColor: colors.accentSurface,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  statusLabel: {
-    color: colors.accentPressed,
-    fontSize: typography.meta,
-    fontWeight: "700",
-  },
-  statusText: {
-    color: colors.textPrimary,
-    fontSize: typography.body,
-    lineHeight: 22,
-  },
   welcomeCard: {
     gap: spacing.md,
     borderWidth: 1,

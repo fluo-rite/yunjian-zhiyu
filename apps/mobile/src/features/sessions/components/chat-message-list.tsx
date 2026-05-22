@@ -11,8 +11,11 @@ export type ChatMessageListProps = {
   isLoading: boolean;
   isError: boolean;
   errorMessage?: string;
-  phaseLabel?: string | null;
   composerSpacerHeight: number;
+  streamAssistantMessageId?: string | null;
+  streamedContent?: string;
+  terminalMessage?: Message | null;
+  ephemeralPhaseLabel?: string | null;
 };
 
 const ESTIMATED_ITEM_SIZE = 180;
@@ -23,16 +26,47 @@ function ChatMessageListComponent({
   isLoading,
   isError,
   errorMessage,
-  phaseLabel,
   composerSpacerHeight,
+  streamAssistantMessageId,
+  streamedContent,
+  terminalMessage,
+  ephemeralPhaseLabel,
 }: ChatMessageListProps) {
   const listRef = useRef<FlashListRef<Message> | null>(null);
   const isNearBottomRef = useRef(true);
   const lastMessage = messages[messages.length - 1];
 
+  const listExtraData = useMemo(
+    () => ({
+      composerSpacerHeight,
+      errorMessage,
+      isError,
+      isLoading,
+      streamAssistantMessageId,
+      streamedContent,
+      terminalMessage,
+      ephemeralPhaseLabel,
+    }),
+    [
+      composerSpacerHeight,
+      ephemeralPhaseLabel,
+      errorMessage,
+      isError,
+      isLoading,
+      streamAssistantMessageId,
+      streamedContent,
+      terminalMessage,
+    ],
+  );
+
   useEffect(() => {
-    const shouldStickToBottom =
-      isNearBottomRef.current || (lastMessage?.role === "assistant" && lastMessage.status === "streaming");
+    const isStreamingLastAssistant =
+      lastMessage?.id === streamAssistantMessageId &&
+      lastMessage?.role === "assistant" &&
+      !terminalMessage &&
+      (lastMessage?.status === "streaming" || Boolean(streamedContent));
+
+    const shouldStickToBottom = isNearBottomRef.current || isStreamingLastAssistant;
 
     if (!shouldStickToBottom) {
       return;
@@ -52,7 +86,9 @@ function ChatMessageListComponent({
     lastMessage?.role,
     lastMessage?.status,
     messages.length,
-    phaseLabel,
+    streamAssistantMessageId,
+    streamedContent,
+    terminalMessage,
   ]);
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -63,9 +99,9 @@ function ChatMessageListComponent({
   }
 
   const listHeaderComponent = useMemo(() => {
-    const showWelcomeCard = messages.length === 0 && !isLoading && !isError && !phaseLabel;
+    const showWelcomeCard = messages.length === 0 && !isLoading && !isError;
 
-    if (!showWelcomeCard && !isLoading && !isError && !phaseLabel) {
+    if (!showWelcomeCard && !isLoading && !isError) {
       return null;
     }
 
@@ -91,29 +127,16 @@ function ChatMessageListComponent({
             <Text style={styles.infoText}>{errorMessage || "请稍后再试。"}</Text>
           </View>
         ) : null}
-
-        {phaseLabel ? (
-          <View style={styles.statusCard}>
-            <Text style={styles.statusLabel}>当前状态</Text>
-            <Text style={styles.statusText}>{phaseLabel}</Text>
-          </View>
-        ) : null}
       </View>
     );
-  }, [errorMessage, isError, isLoading, messages.length, phaseLabel]);
+  }, [errorMessage, isError, isLoading, messages.length]);
 
   return (
     <FlashList
       contentContainerStyle={styles.contentContainer}
       data={messages}
       estimatedItemSize={ESTIMATED_ITEM_SIZE}
-      extraData={{
-        composerSpacerHeight,
-        errorMessage,
-        isError,
-        isLoading,
-        phaseLabel,
-      }}
+      extraData={listExtraData}
       ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
       keyboardShouldPersistTaps="handled"
       keyExtractor={(item) => item.id}
@@ -121,7 +144,26 @@ function ChatMessageListComponent({
       ListHeaderComponent={listHeaderComponent}
       onScroll={handleScroll}
       ref={listRef}
-      renderItem={({ item }) => <ChatMessageItem message={item} />}
+      renderItem={({ item }) => {
+        const isCurrentStreamTarget = item.id === streamAssistantMessageId;
+        const renderedMessage =
+          isCurrentStreamTarget && terminalMessage
+            ? terminalMessage
+            : isCurrentStreamTarget && streamedContent
+              ? { ...item, content: streamedContent }
+              : item;
+        const renderKey = isCurrentStreamTarget
+          ? `${item.id}:${terminalMessage?.status ?? item.status}:${streamedContent ?? ""}:${ephemeralPhaseLabel ?? ""}`
+          : item.id;
+
+        return (
+          <ChatMessageItem
+            key={renderKey}
+            ephemeralStatusLabel={isCurrentStreamTarget ? ephemeralPhaseLabel : null}
+            message={renderedMessage}
+          />
+        );
+      }}
       scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
       style={styles.list}

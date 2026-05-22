@@ -8,18 +8,28 @@ import { chatMessageItemStyles as styles } from "./chat-message-item.styles";
 export type ChatMessageItemProps = {
   message: Message;
   renderMode?: "plain" | "markdown";
+  ephemeralStatusLabel?: string | null;
 };
 
 function getCitationTypeLabel(citation: Citation) {
   return citation.type === "web" ? "网页来源" : "知识卡片";
 }
 
-function ChatMessageItemComponent({ message, renderMode }: ChatMessageItemProps) {
+function ChatMessageItemComponent({
+  message,
+  renderMode,
+  ephemeralStatusLabel,
+}: ChatMessageItemProps) {
   const [isCitationModalVisible, setIsCitationModalVisible] = useState(false);
   const isUser = message.role === "user";
   const shouldRenderMarkdown = renderMode ? renderMode === "markdown" : !isUser;
   const citations = !isUser ? message.metadata?.citations ?? [] : [];
-  const assistantContent = message.content || (message.status === "streaming" ? "正在生成回复…" : "");
+  const assistantContent = !isUser ? message.content : "";
+
+  const assistantFallbackText =
+    !assistantContent && message.status === "streaming" && !ephemeralStatusLabel
+      ? "正在生成回复…"
+      : null;
 
   return (
     <>
@@ -31,6 +41,14 @@ function ChatMessageItemComponent({ message, renderMode }: ChatMessageItemProps)
             ) : (
               <Text style={styles.userText}>{message.content}</Text>
             )}
+
+            {!isUser && assistantFallbackText ? (
+              <Text style={styles.statusText}>{assistantFallbackText}</Text>
+            ) : null}
+
+            {!isUser && ephemeralStatusLabel ? (
+              <Text style={styles.streamingStatusText}>{ephemeralStatusLabel}</Text>
+            ) : null}
 
             {!isUser && message.status === "failed" ? (
               <Text style={styles.errorText}>{message.errorMessage || "这次回复没有成功完成。"}</Text>
