@@ -15,7 +15,6 @@ import {
 } from "./library-schemas";
 import {
   refreshAffectedGroups,
-  refreshAffectedSourceDisplays,
   refreshAffectedSources,
   refreshCardDetail,
   refreshCardLists,
@@ -125,7 +124,7 @@ export function useConfirmCardsMutation() {
 
       await Promise.all([
         refreshCardLists(queryClient),
-        refreshAffectedSourceDisplays(queryClient, sourceIds),
+        refreshAffectedSources(queryClient, sourceIds),
         ...result.items.map((card) => refreshCardDetail(queryClient, card.id)),
       ]);
     },

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { ApiError, apiClient } from "../../../lib/api-client";
+import { apiClient } from "../../../lib/api-client";
 import {
   cardGroupCardsResponseSchema,
   cardGroupListResponseSchema,
@@ -9,6 +9,13 @@ import {
   type CardGroupCardsResponse,
   type CardGroupListResponse,
 } from "./library-schemas";
+import {
+  refreshGroupDetail,
+  refreshGroupList,
+  refreshGroupScope,
+  removeGroupQueries,
+  shouldRetryLibraryEntityQuery,
+} from "./library-cache";
 import { libraryQueryKeys } from "./library-query-keys";
 
 export type CreateGroupInput = {
@@ -78,36 +85,6 @@ export async function removeCardsFromGroup(payload: UpdateGroupCardsInput): Prom
   });
 }
 
-function shouldRetryGroupQuery(failureCount: number, error: unknown) {
-  if (error instanceof ApiError && error.status === 404) {
-    return false;
-  }
-
-  return failureCount < 2;
-}
-
-async function refreshGroupList(queryClient: ReturnType<typeof useQueryClient>) {
-  await queryClient.invalidateQueries({
-    queryKey: libraryQueryKeys.groupList(),
-  });
-}
-
-async function refreshSingleGroup(
-  queryClient: ReturnType<typeof useQueryClient>,
-  groupId: string,
-) {
-  await Promise.all([
-    queryClient.invalidateQueries({
-      queryKey: libraryQueryKeys.groupDetail(groupId),
-      exact: true,
-    }),
-    queryClient.invalidateQueries({
-      queryKey: libraryQueryKeys.groupCards(groupId),
-      exact: true,
-    }),
-  ]);
-}
-
 export function useGroupsQuery() {
   return useQuery({
     queryKey: libraryQueryKeys.groupList(),
@@ -122,7 +99,7 @@ export function useGroupDetailQuery(groupId: string | null) {
       : libraryQueryKeys.groupDetail("pending"),
     queryFn: () => getGroup(groupId as string),
     enabled: Boolean(groupId),
-    retry: shouldRetryGroupQuery,
+    retry: shouldRetryLibraryEntityQuery,
   });
 }
 
@@ -133,7 +110,7 @@ export function useGroupCardsQuery(groupId: string | null) {
       : libraryQueryKeys.groupCards("pending"),
     queryFn: () => listGroupCards(groupId as string),
     enabled: Boolean(groupId),
-    retry: shouldRetryGroupQuery,
+    retry: shouldRetryLibraryEntityQuery,
   });
 }
 
@@ -156,10 +133,7 @@ export function useRenameGroupMutation() {
     onSuccess: async (_, payload) => {
       await Promise.all([
         refreshGroupList(queryClient),
-        queryClient.invalidateQueries({
-          queryKey: libraryQueryKeys.groupDetail(payload.groupId),
-          exact: true,
-        }),
+        refreshGroupDetail(queryClient, payload.groupId),
       ]);
     },
   });
@@ -171,22 +145,7 @@ export function useDeleteGroupMutation() {
   return useMutation({
     mutationFn: deleteGroup,
     onSuccess: async (_, groupId) => {
-      await Promise.all([
-        queryClient.cancelQueries({
-          queryKey: libraryQueryKeys.groupDetail(groupId),
-        }),
-        queryClient.cancelQueries({
-          queryKey: libraryQueryKeys.groupCards(groupId),
-        }),
-      ]);
-
-      queryClient.removeQueries({
-        queryKey: libraryQueryKeys.groupDetail(groupId),
-      });
-      queryClient.removeQueries({
-        queryKey: libraryQueryKeys.groupCards(groupId),
-      });
-
+      await removeGroupQueries(queryClient, groupId);
       await refreshGroupList(queryClient);
     },
   });
@@ -198,7 +157,7 @@ export function useAddCardsToGroupMutation() {
   return useMutation({
     mutationFn: addCardsToGroup,
     onSuccess: async (_, payload) => {
-      await refreshSingleGroup(queryClient, payload.groupId);
+      await refreshGroupScope(queryClient, payload.groupId);
     },
   });
 }
@@ -209,7 +168,7 @@ export function useRemoveCardsFromGroupMutation() {
   return useMutation({
     mutationFn: removeCardsFromGroup,
     onSuccess: async (_, payload) => {
-      await refreshSingleGroup(queryClient, payload.groupId);
+      await refreshGroupScope(queryClient, payload.groupId);
     },
   });
 }

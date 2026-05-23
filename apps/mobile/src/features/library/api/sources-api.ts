@@ -1,8 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { resolveApiBaseUrl } from "../../../config/app-config";
 import { apiClient } from "../../../lib/api-client";
-import { store } from "../../../store";
 import {
   knowledgeSourceCardsResponseSchema,
   knowledgeSourceDetailSchema,
@@ -64,6 +62,14 @@ function normalizeListSourcesParams(params?: ListSourcesParams) {
   };
 }
 
+function normalizeUploadFileUri(fileUri: string) {
+  if (/^[a-z]+:\/\//i.test(fileUri)) {
+    return fileUri;
+  }
+
+  return `file://${fileUri}`;
+}
+
 export async function listSources(params?: ListSourcesParams): Promise<KnowledgeSourceListResponse> {
   const normalized = normalizeListSourcesParams(params);
   const response = await apiClient.get("/knowledge-sources", {
@@ -108,23 +114,9 @@ export async function createSourceFromMessages(
   return knowledgeSourceSchema.parse(response);
 }
 
-function normalizeUploadFileUri(fileUri: string) {
-  if (/^[a-z]+:\/\//i.test(fileUri)) {
-    return fileUri;
-  }
-
-  return `file://${fileUri}`;
-}
-
 export async function createSourceFromDocument(
   payload: CreateSourceFromDocumentInput,
 ): Promise<KnowledgeSource> {
-  const accessToken = store.getState().auth.tokens?.accessToken;
-
-  if (!accessToken) {
-    throw new Error("登录状态已失效，请重新登录后再试。");
-  }
-
   const formData = new FormData();
   formData.append("name", payload.name);
   formData.append(
@@ -136,34 +128,11 @@ export async function createSourceFromDocument(
     } as any,
   );
 
-  const response = await fetch(`${resolveApiBaseUrl()}/knowledge-sources/from-document`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
+  const response = await apiClient.upload("/knowledge-sources/from-document", {
     body: formData,
   });
 
-  const contentType = response.headers.get("content-type") || "";
-  const responseBody = contentType.includes("application/json")
-    ? await response.json()
-    : await response.text();
-
-  if (!response.ok) {
-    if (
-      responseBody &&
-      typeof responseBody === "object" &&
-      "detail" in responseBody &&
-      typeof responseBody.detail === "string"
-    ) {
-      throw new Error(responseBody.detail);
-    }
-
-    throw new Error(`上传失败 (${response.status})`);
-  }
-
-  return knowledgeSourceSchema.parse(responseBody);
+  return knowledgeSourceSchema.parse(response);
 }
 
 export async function deleteSource(payload: DeleteSourceInput): Promise<void> {

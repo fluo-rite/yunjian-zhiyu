@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-import { PrimaryButton } from "../../../components/ui/primary-button";
+import { PrimaryButton } from "../ui/primary-button";
 import { errorStateStyles as styles } from "./error-state.styles";
 
 export function ErrorState(props: {

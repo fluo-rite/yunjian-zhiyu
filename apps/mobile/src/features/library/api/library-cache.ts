@@ -63,6 +63,28 @@ export async function refreshAffectedGroups(queryClient: QueryClient, groupIds: 
   await Promise.all(uniqueGroupIds.map((groupId) => refreshGroupScope(queryClient, groupId)));
 }
 
+export async function removeGroupQueries(queryClient: QueryClient, groupId: string) {
+  await Promise.all([
+    queryClient.cancelQueries({
+      queryKey: libraryQueryKeys.groupDetail(groupId),
+      exact: true,
+    }),
+    queryClient.cancelQueries({
+      queryKey: libraryQueryKeys.groupCards(groupId),
+      exact: true,
+    }),
+  ]);
+
+  queryClient.removeQueries({
+    queryKey: libraryQueryKeys.groupDetail(groupId),
+    exact: true,
+  });
+  queryClient.removeQueries({
+    queryKey: libraryQueryKeys.groupCards(groupId),
+    exact: true,
+  });
+}
+
 export async function refreshSourceLists(queryClient: QueryClient) {
   await queryClient.invalidateQueries({
     queryKey: libraryQueryKeys.sourceLists(),
@@ -84,29 +106,12 @@ export async function refreshSourceScope(queryClient: QueryClient, sourceId: str
   ]);
 }
 
-export async function refreshSourceDisplayScope(queryClient: QueryClient, sourceId: string) {
-  await Promise.all([
-    refreshSourceDetail(queryClient, sourceId),
-    refreshSourceCards(queryClient, sourceId),
-  ]);
-}
-
 export async function refreshAffectedSources(
   queryClient: QueryClient,
   sourceIds: readonly string[],
 ) {
   const uniqueSourceIds = uniqueIds(sourceIds);
   await Promise.all(uniqueSourceIds.map((sourceId) => refreshSourceScope(queryClient, sourceId)));
-}
-
-export async function refreshAffectedSourceDisplays(
-  queryClient: QueryClient,
-  sourceIds: readonly string[],
-) {
-  const uniqueSourceIds = uniqueIds(sourceIds);
-  await Promise.all(
-    uniqueSourceIds.map((sourceId) => refreshSourceDisplayScope(queryClient, sourceId)),
-  );
 }
 
 export async function removeSourceQueries(queryClient: QueryClient, sourceId: string) {

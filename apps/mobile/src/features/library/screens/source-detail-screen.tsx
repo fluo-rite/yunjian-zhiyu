@@ -13,8 +13,8 @@ import {
   useSourceDetailQuery,
 } from "../api";
 import { CardListView } from "../components/card-list-view";
-import { EmptyState } from "../components/empty-state";
-import { ErrorState } from "../components/error-state";
+import { EmptyState } from "../../../components/feedback/empty-state";
+import { ErrorState } from "../../../components/feedback/error-state";
 import { SourceStatusBadge } from "../components/source-status-badge";
 import { getSourceDetailCapabilities } from "../utils/library-view-capabilities";
 import { defaultSourceDetailMode } from "../utils/library-view-modes";

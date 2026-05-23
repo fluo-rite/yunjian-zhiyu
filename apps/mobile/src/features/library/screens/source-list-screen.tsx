@@ -12,8 +12,8 @@ import {
   type SourceType,
   useSourcesQuery,
 } from "../api";
-import { EmptyState } from "../components/empty-state";
-import { ErrorState } from "../components/error-state";
+import { EmptyState } from "../../../components/feedback/empty-state";
+import { ErrorState } from "../../../components/feedback/error-state";
 import { FilterChipRow, type FilterChipItem } from "../components/filter-chip-row";
 import { SessionImportHintModal } from "../components/session-import-hint-modal";
 import { SourceImportSheet } from "../components/source-import-sheet";

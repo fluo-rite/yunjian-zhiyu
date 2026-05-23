@@ -2,7 +2,10 @@ import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 
+import { EmptyState } from "../../../components/feedback/empty-state";
+import { ErrorState } from "../../../components/feedback/error-state";
 import { type Message } from "../api";
+import { sessionCopy } from "../utils/session-copy";
 import { ChatMessageItem } from "./chat-message-item";
 import { chatMessageListStyles as styles } from "./chat-message-list.styles";
 
@@ -132,23 +135,23 @@ function ChatMessageListComponent({
       <View style={styles.listHeader}>
         {showWelcomeCard ? (
           <View style={styles.welcomeCard}>
-            <Text style={styles.welcomeTitle}>开始新的对话</Text>
-            <Text style={styles.welcomeText}>输入你的问题、想法，或者想整理的内容。</Text>
+            <Text style={styles.welcomeTitle}>{sessionCopy.chat.welcomeTitle}</Text>
+            <Text style={styles.welcomeText}>{sessionCopy.chat.welcomeDescription}</Text>
           </View>
         ) : null}
 
         {isLoading ? (
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>正在加载会话</Text>
-            <Text style={styles.infoText}>请稍等，我们正在同步当前对话内容。</Text>
-          </View>
+          <EmptyState
+            description={sessionCopy.chat.loadingDescription}
+            title={sessionCopy.chat.loadingTitle}
+          />
         ) : null}
 
         {isError ? (
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>消息加载失败</Text>
-            <Text style={styles.infoText}>{errorMessage || "请稍后再试。"}</Text>
-          </View>
+          <ErrorState
+            description={errorMessage || sessionCopy.chat.errorDescription}
+            title={sessionCopy.chat.errorTitle}
+          />
         ) : null}
       </View>
     );

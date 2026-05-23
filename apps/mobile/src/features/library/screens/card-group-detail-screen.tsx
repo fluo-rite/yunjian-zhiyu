@@ -15,8 +15,8 @@ import {
   useRenameGroupMutation,
 } from "../api";
 import { CardListView } from "../components/card-list-view";
-import { EmptyState } from "../components/empty-state";
-import { ErrorState } from "../components/error-state";
+import { EmptyState } from "../../../components/feedback/empty-state";
+import { ErrorState } from "../../../components/feedback/error-state";
 import { SelectionFooter } from "../components/selection-footer";
 import { formatDateTimeLabel } from "../utils/library-formatters";
 import { getStableArray, retainExistingIds } from "../utils/library-state";
