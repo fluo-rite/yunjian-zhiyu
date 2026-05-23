@@ -1,13 +1,13 @@
 import { Pressable, Text, View } from "react-native";
 
-import type { KnowledgeCard } from "../api";
+import type { KnowledgeCard } from "@/features/library/api";
 import {
   buildCardSnippet,
   formatCompactDateTimeLabel,
   getSourceTypeLabel,
-} from "../utils/library-formatters";
-import { CardStatusBadge } from "./card-status-badge";
-import { cardListItemStyles as styles } from "./card-list-item.styles";
+} from "@/features/library/utils/library-formatters";
+import { CardStatusBadge } from "@/features/library/components/card-status-badge";
+import { cardListItemStyles as styles } from "@/features/library/components/card-list-item.styles";
 
 export type CardListItemMode = "browse" | "embedded" | "selectable";
 

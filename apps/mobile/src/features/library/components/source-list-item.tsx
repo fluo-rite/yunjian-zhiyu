@@ -1,9 +1,9 @@
 import { Pressable, Text, View } from "react-native";
 
-import type { KnowledgeSource } from "../api";
-import { buildSourceMetaLine } from "../utils/library-formatters";
-import { SourceStatusBadge } from "./source-status-badge";
-import { sourceListItemStyles as styles } from "./source-list-item.styles";
+import type { KnowledgeSource } from "@/features/library/api";
+import { buildSourceMetaLine } from "@/features/library/utils/library-formatters";
+import { SourceStatusBadge } from "@/features/library/components/source-status-badge";
+import { sourceListItemStyles as styles } from "@/features/library/components/source-list-item.styles";
 
 export function SourceListItem(props: {
   source: KnowledgeSource;

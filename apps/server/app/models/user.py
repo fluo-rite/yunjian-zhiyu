@@ -19,11 +19,11 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     auth_provider: Mapped[str] = mapped_column(String(20), default="local")
     hashed_password: Mapped[str] = mapped_column(String(255))
 
-    chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
-    cards = relationship("KnowledgeCard", back_populates="user", cascade="all, delete-orphan")
+    chats = relationship("Chat", back_populates="user", passive_deletes="all")
+    cards = relationship("KnowledgeCard", back_populates="user", passive_deletes="all")
     knowledge_sources = relationship(
         "KnowledgeSource",
         back_populates="user",
-        cascade="all, delete-orphan",
+        passive_deletes="all",
     )
-    card_groups = relationship("CardGroup", back_populates="user", cascade="all, delete-orphan")
+    card_groups = relationship("CardGroup", back_populates="user", passive_deletes="all")

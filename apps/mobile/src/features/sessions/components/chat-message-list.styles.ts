@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radii, shadows, spacing, typography } from "../../../theme/tokens";
+import { colors, radii, shadows, spacing, typography } from "@/theme/tokens";
 
 export const chatMessageListStyles = StyleSheet.create({
   list: {

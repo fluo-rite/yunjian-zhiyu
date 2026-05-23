@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from io import BytesIO
 
 from pypdf import PdfReader
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.models.card import KnowledgeCard
@@ -235,23 +235,22 @@ class KnowledgeSourceService:
         payload: DeleteKnowledgeSourceRequest,
     ) -> None:
         source = KnowledgeSourceService.get_or_raise(db, user, source_id)
-        linked_cards = (
+        if payload.delete_cards:
             db.execute(
-                select(KnowledgeCard).where(
+                delete(KnowledgeCard).where(
                     KnowledgeCard.user_id == user.id,
                     KnowledgeCard.source_id == source.id,
                 )
             )
-            .scalars()
-            .all()
-        )
-        if payload.delete_cards:
-            for card in linked_cards:
-                db.delete(card)
         else:
-            for card in linked_cards:
-                card.source_id = None
-                db.add(card)
+            db.execute(
+                update(KnowledgeCard)
+                .where(
+                    KnowledgeCard.user_id == user.id,
+                    KnowledgeCard.source_id == source.id,
+                )
+                .values(source_id=None)
+            )
         db.delete(source)
         db.commit()
 

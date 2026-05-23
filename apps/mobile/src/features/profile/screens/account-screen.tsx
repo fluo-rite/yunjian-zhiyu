@@ -2,11 +2,11 @@ import { ScrollView, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type RootStackParamList } from "../../../navigation/types";
-import { selectAuthUser } from "../../../store/auth-slice";
-import { useAppSelector } from "../../../store/hooks";
-import { accountScreenStyles as styles } from "./account-screen.styles";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { type RootStackParamList } from "@/navigation/types";
+import { selectAuthUser } from "@/store/auth-slice";
+import { useAppSelector } from "@/store/hooks";
+import { accountScreenStyles as styles } from "@/features/profile/screens/account-screen.styles";
 
 function formatDateLabel(value: string | null | undefined) {
   if (!value) {

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { apiClient } from "../../../lib/api-client";
+import { apiClient } from "@/lib/api-client";
 import {
   knowledgeSourceCardsResponseSchema,
   knowledgeSourceDetailSchema,
@@ -12,14 +12,14 @@ import {
   type KnowledgeSourceListResponse,
   type SourceStatus,
   type SourceType,
-} from "./library-schemas";
+} from "@/features/library/api/library-schemas";
 import {
   refreshCardLists,
   refreshSourceLists,
   removeSourceQueries,
   shouldRetryLibraryEntityQuery,
-} from "./library-cache";
-import { libraryQueryKeys } from "./library-query-keys";
+} from "@/features/library/api/library-cache";
+import { libraryQueryKeys } from "@/features/library/api/library-query-keys";
 
 const DEFAULT_SOURCE_PAGE = 1;
 const DEFAULT_SOURCE_PAGE_SIZE = 20;

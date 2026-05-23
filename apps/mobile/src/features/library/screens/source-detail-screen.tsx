@@ -3,29 +3,29 @@ import { Alert, ScrollView, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type RootStackParamList } from "../../../navigation/types";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { type RootStackParamList } from "@/navigation/types";
 import {
   useConfirmCardsMutation,
   useDeleteSourceMutation,
   useSourceCardsQuery,
   useSourceDetailQuery,
-} from "../api";
-import { CardListView } from "../components/card-list-view";
-import { EmptyState } from "../../../components/feedback/empty-state";
-import { ErrorState } from "../../../components/feedback/error-state";
-import { SourceStatusBadge } from "../components/source-status-badge";
-import { getSourceDetailCapabilities } from "../utils/library-view-capabilities";
-import { defaultSourceDetailMode } from "../utils/library-view-modes";
+} from "@/features/library/api";
+import { CardListView } from "@/features/library/components/card-list-view";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { ErrorState } from "@/components/feedback/error-state";
+import { SourceStatusBadge } from "@/features/library/components/source-status-badge";
+import { getSourceDetailCapabilities } from "@/features/library/utils/library-view-capabilities";
+import { defaultSourceDetailMode } from "@/features/library/utils/library-view-modes";
 import {
   countCardsByStatus,
   formatDateTimeLabel,
   getSourceStatusLabel,
   getSourceTypeLabel,
-} from "../utils/library-formatters";
-import { getStableArray, retainExistingIds } from "../utils/library-state";
-import { sourceDetailScreenStyles as styles } from "./source-detail-screen.styles";
+} from "@/features/library/utils/library-formatters";
+import { getStableArray, retainExistingIds } from "@/features/library/utils/library-state";
+import { sourceDetailScreenStyles as styles } from "@/features/library/screens/source-detail-screen.styles";
 
 export function SourceDetailScreen({
   navigation,

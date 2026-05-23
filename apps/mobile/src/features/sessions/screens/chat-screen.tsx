@@ -3,15 +3,15 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type RootStackParamList } from "../../../navigation/types";
-import { ChatComposer } from "../components/chat-composer";
-import { ChatMessageList } from "../components/chat-message-list";
-import { ChatSelectionActionBar } from "../components/chat-selection-action-bar";
-import { useChatSelectionController } from "../hooks/use-chat-selection-controller";
-import { useChatSessionController } from "../hooks/use-chat-session-controller";
-import { sessionCopy } from "../utils/session-copy";
-import { chatScreenStyles as styles } from "./chat-screen.styles";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { type RootStackParamList } from "@/navigation/types";
+import { ChatComposer } from "@/features/sessions/components/chat-composer";
+import { ChatMessageList } from "@/features/sessions/components/chat-message-list";
+import { ChatSelectionActionBar } from "@/features/sessions/components/chat-selection-action-bar";
+import { useChatSelectionController } from "@/features/sessions/hooks/use-chat-selection-controller";
+import { useChatSessionController } from "@/features/sessions/hooks/use-chat-session-controller";
+import { sessionCopy } from "@/features/sessions/utils/session-copy";
+import { chatScreenStyles as styles } from "@/features/sessions/screens/chat-screen.styles";
 
 export function ChatScreen({
   navigation,

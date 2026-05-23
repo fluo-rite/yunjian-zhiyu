@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { chatSelectionActionBarStyles as styles } from "./chat-selection-action-bar.styles";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { chatSelectionActionBarStyles as styles } from "@/features/sessions/components/chat-selection-action-bar.styles";
 
 export function ChatSelectionActionBar(props: {
   selectedCount: number;

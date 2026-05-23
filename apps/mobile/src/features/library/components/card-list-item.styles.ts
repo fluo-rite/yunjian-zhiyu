@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radii, shadows, spacing, typography } from "../../../theme/tokens";
+import { colors, radii, shadows, spacing, typography } from "@/theme/tokens";
 
 export const cardListItemStyles = StyleSheet.create({
   card: {

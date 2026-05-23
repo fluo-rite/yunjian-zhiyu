@@ -2,12 +2,12 @@ import { StatusBar } from "react-native";
 import { Provider } from "react-redux";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { configureApiClient } from "./src/lib/api-client";
-import { QueryProvider } from "./src/lib/query/query-provider";
-import { expireAuthSessionThunk } from "./src/store/auth-slice";
-import { store } from "./src/store";
-import { colors } from "./src/theme/tokens";
-import { RootNavigator } from "./src/navigation/root-navigator";
+import { configureApiClient } from "@/lib/api-client";
+import { QueryProvider } from "@/lib/query/query-provider";
+import { expireAuthSessionThunk } from "@/store/auth-slice";
+import { store } from "@/store";
+import { colors } from "@/theme/tokens";
+import { RootNavigator } from "@/navigation/root-navigator";
 
 configureApiClient({
   getAccessToken: () => store.getState().auth.tokens?.accessToken ?? null,

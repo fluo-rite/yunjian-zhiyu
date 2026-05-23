@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -10,6 +10,7 @@ from app.schemas.card import (
     CardRead,
     ConfirmCardsRequest,
     ConfirmCardsResponse,
+    DeleteCardResponse,
 )
 from app.services.card_service import CardService
 
@@ -77,14 +78,13 @@ def archive_card(
     return CardService.archive(db, card)
 
 
-@router.delete("/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{card_id}", response_model=DeleteCardResponse)
 def delete_card(
     card_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Response:
+) -> DeleteCardResponse:
     card = CardService.get_or_none(db, current_user, card_id)
     if card is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found.")
-    CardService.delete(db, card)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return CardService.delete(db, card)

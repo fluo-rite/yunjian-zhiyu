@@ -26,4 +26,4 @@ class KnowledgeSource(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     source_metadata: Mapped[dict | None] = mapped_column("source_meta", JSON, nullable=True)
 
     user = relationship("User", back_populates="knowledge_sources")
-    cards = relationship("KnowledgeCard", back_populates="source")
+    cards = relationship("KnowledgeCard", back_populates="source", passive_deletes="all")

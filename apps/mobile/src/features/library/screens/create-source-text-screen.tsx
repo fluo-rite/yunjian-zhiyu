@@ -3,12 +3,12 @@ import { Alert, ScrollView, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Field } from "../../../components/ui/field";
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type RootStackParamList } from "../../../navigation/types";
-import { useCreateSourceFromTextMutation } from "../api";
-import { createSourceTextScreenStyles as styles } from "./create-source-text-screen.styles";
+import { Field } from "@/components/ui/field";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { type RootStackParamList } from "@/navigation/types";
+import { useCreateSourceFromTextMutation } from "@/features/library/api";
+import { createSourceTextScreenStyles as styles } from "@/features/library/screens/create-source-text-screen.styles";
 
 export function CreateSourceTextScreen({
   navigation,

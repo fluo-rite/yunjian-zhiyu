@@ -3,16 +3,16 @@ import { Alert, FlatList, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Field } from "../../../components/ui/field";
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type RootStackParamList } from "../../../navigation/types";
-import { useCreateGroupMutation, useGroupsQuery } from "../api";
-import { EmptyState } from "../../../components/feedback/empty-state";
-import { ErrorState } from "../../../components/feedback/error-state";
-import { GroupListItem } from "../components/group-list-item";
-import { getStableArray } from "../utils/library-state";
-import { cardGroupListScreenStyles as styles } from "./card-group-list-screen.styles";
+import { Field } from "@/components/ui/field";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { type RootStackParamList } from "@/navigation/types";
+import { useCreateGroupMutation, useGroupsQuery } from "@/features/library/api";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { ErrorState } from "@/components/feedback/error-state";
+import { GroupListItem } from "@/features/library/components/group-list-item";
+import { getStableArray } from "@/features/library/utils/library-state";
+import { cardGroupListScreenStyles as styles } from "@/features/library/screens/card-group-list-screen.styles";
 
 export function CardGroupListScreen({
   navigation,

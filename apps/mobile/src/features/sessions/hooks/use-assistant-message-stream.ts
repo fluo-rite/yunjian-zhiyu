@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { connectAssistantMessageStream } from "../../../lib/stream/message-stream";
-import { selectAccessToken } from "../../../store/auth-slice";
-import { useAppSelector } from "../../../store/hooks";
-import { type Message } from "../api";
+import { connectAssistantMessageStream } from "@/lib/stream/message-stream";
+import { selectAccessToken } from "@/store/auth-slice";
+import { useAppSelector } from "@/store/hooks";
+import { type Message } from "@/features/sessions/api";
 
 type StreamState = {
   lastEventId: string | null;

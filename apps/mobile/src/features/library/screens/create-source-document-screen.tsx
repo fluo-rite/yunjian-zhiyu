@@ -3,17 +3,17 @@ import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Field } from "../../../components/ui/field";
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type RootStackParamList } from "../../../navigation/types";
-import { useCreateSourceFromDocumentMutation } from "../api";
+import { Field } from "@/components/ui/field";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { type RootStackParamList } from "@/navigation/types";
+import { useCreateSourceFromDocumentMutation } from "@/features/library/api";
 import {
   formatSelectedDocumentSize,
   getSourceDocumentBaseName,
   pickSourceDocument,
-} from "../utils/source-document-picker";
-import { createSourceDocumentScreenStyles as styles } from "./create-source-document-screen.styles";
+} from "@/features/library/utils/source-document-picker";
+import { createSourceDocumentScreenStyles as styles } from "@/features/library/screens/create-source-document-screen.styles";
 
 export function CreateSourceDocumentScreen({
   navigation,

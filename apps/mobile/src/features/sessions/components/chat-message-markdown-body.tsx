@@ -4,7 +4,7 @@ import Markdown, { MarkdownIt } from "react-native-markdown-display";
 import {
   chatMessageMarkdownBodyStyles as styles,
   chatMessageMarkdownStyles,
-} from "./chat-message-markdown-body.styles";
+} from "@/features/sessions/components/chat-message-markdown-body.styles";
 
 export type ChatMessageMarkdownBodyProps = {
   content: string;

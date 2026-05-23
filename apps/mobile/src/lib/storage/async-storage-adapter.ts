@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { type KeyValueStorage } from "./key-value-storage";
+import { type KeyValueStorage } from "@/lib/storage/key-value-storage";
 
 export const asyncStorageAdapter: KeyValueStorage = {
   getItem(key) {

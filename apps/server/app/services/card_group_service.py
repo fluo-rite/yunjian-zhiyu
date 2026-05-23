@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
 
 from app.models.card import KnowledgeCard
@@ -92,23 +92,20 @@ class CardGroupService:
             .scalars()
             .all()
         )
-        for card_id in card_ids:
-            if card_id not in existing_ids:
-                db.add(CardGroupItem(group_id=group.id, card_id=card_id))
+        missing_ids = [card_id for card_id in card_ids if card_id not in existing_ids]
+        if missing_ids:
+            db.execute(
+                insert(CardGroupItem),
+                [{"group_id": group.id, "card_id": card_id} for card_id in missing_ids],
+            )
         db.commit()
 
     @staticmethod
     def remove_cards(db: Session, *, group: CardGroup, card_ids: list[str]) -> None:
-        items = (
-            db.execute(
-                select(CardGroupItem).where(
-                    CardGroupItem.group_id == group.id,
-                    CardGroupItem.card_id.in_(card_ids),
-                )
+        db.execute(
+            delete(CardGroupItem).where(
+                CardGroupItem.group_id == group.id,
+                CardGroupItem.card_id.in_(card_ids),
             )
-            .scalars()
-            .all()
         )
-        for item in items:
-            db.delete(item)
         db.commit()

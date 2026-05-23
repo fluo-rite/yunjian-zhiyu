@@ -1,3 +1,3 @@
-export * from "./chats-api";
-export * from "./session-query-keys";
-export * from "./session-schemas";
+export * from "@/features/sessions/api/chats-api";
+export * from "@/features/sessions/api/session-query-keys";
+export * from "@/features/sessions/api/session-schemas";

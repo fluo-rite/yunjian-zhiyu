@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 
-import { PrimaryButton } from "../ui/primary-button";
-import { emptyStateStyles as styles } from "./empty-state.styles";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { emptyStateStyles as styles } from "@/components/feedback/empty-state.styles";
 
 export function EmptyState(props: {
   title: string;

@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { spacing } from "../../../theme/tokens";
+import { spacing } from "@/theme/tokens";
 
 export const cardListViewStyles = StyleSheet.create({
   content: {

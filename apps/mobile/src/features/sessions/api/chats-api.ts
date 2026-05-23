@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { apiClient } from "../../../lib/api-client";
+import { apiClient } from "@/lib/api-client";
 import {
   abortChatMessageResponseSchema,
   chatListResponseSchema,
@@ -12,8 +12,8 @@ import {
   type ChatListResponse,
   type CreateChatMessageResponse,
   type MessageListResponse,
-} from "./session-schemas";
-import { sessionQueryKeys } from "./session-query-keys";
+} from "@/features/sessions/api/session-schemas";
+import { sessionQueryKeys } from "@/features/sessions/api/session-query-keys";
 
 const DEFAULT_CHAT_PAGE = 1;
 const DEFAULT_CHAT_PAGE_SIZE = 20;

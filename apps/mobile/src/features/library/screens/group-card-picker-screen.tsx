@@ -3,17 +3,17 @@ import { Alert, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Field } from "../../../components/ui/field";
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type RootStackParamList } from "../../../navigation/types";
-import { type CardStatus, useAddCardsToGroupMutation, useCardsQuery } from "../api";
-import { CardListView } from "../components/card-list-view";
-import { EmptyState } from "../../../components/feedback/empty-state";
-import { ErrorState } from "../../../components/feedback/error-state";
-import { FilterChipRow, type FilterChipItem } from "../components/filter-chip-row";
-import { SelectionFooter } from "../components/selection-footer";
-import { getStableArray, retainExistingIds } from "../utils/library-state";
-import { groupCardPickerScreenStyles as styles } from "./group-card-picker-screen.styles";
+import { Field } from "@/components/ui/field";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { type RootStackParamList } from "@/navigation/types";
+import { type CardStatus, useAddCardsToGroupMutation, useCardsQuery } from "@/features/library/api";
+import { CardListView } from "@/features/library/components/card-list-view";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { ErrorState } from "@/components/feedback/error-state";
+import { FilterChipRow, type FilterChipItem } from "@/features/library/components/filter-chip-row";
+import { SelectionFooter } from "@/features/library/components/selection-footer";
+import { getStableArray, retainExistingIds } from "@/features/library/utils/library-state";
+import { groupCardPickerScreenStyles as styles } from "@/features/library/screens/group-card-picker-screen.styles";
 
 type StatusFilterKey = "all" | CardStatus;
 

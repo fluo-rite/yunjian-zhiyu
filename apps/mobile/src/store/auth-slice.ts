@@ -1,15 +1,15 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-import { type AuthResponse, type AuthUser, type TokenPair } from "../lib/api";
-import { type PersistedSession } from "../features/auth/services/auth-session";
-import type { RootState } from "./index";
+import { type AuthResponse, type AuthUser, type TokenPair } from "@/lib/api";
+import { type PersistedSession } from "@/features/auth/services/auth-session";
+import type { RootState } from "@/store/index";
 import {
   expireAuthSessionThunk,
   hydrateAuthSession,
   loginThunk,
   logoutThunk,
   registerThunk,
-} from "./auth-thunks";
+} from "@/store/auth-thunks";
 
 type AuthState = {
   user: AuthUser | null;

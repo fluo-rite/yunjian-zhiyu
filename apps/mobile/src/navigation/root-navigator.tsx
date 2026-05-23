@@ -4,28 +4,28 @@ import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { enableScreens } from "react-native-screens";
 
-import { AccountScreen } from "../features/profile/screens/account-screen";
-import { SettingsScreen } from "../features/profile/screens/settings-screen";
-import { CardDetailScreen } from "../features/library/screens/card-detail-screen";
-import { CardGroupDetailScreen } from "../features/library/screens/card-group-detail-screen";
-import { CardGroupListScreen } from "../features/library/screens/card-group-list-screen";
-import { CardListScreen } from "../features/library/screens/card-list-screen";
-import { CreateSourceTextScreen } from "../features/library/screens/create-source-text-screen";
-import { CreateSourceDocumentScreen } from "../features/library/screens/create-source-document-screen";
-import { GroupCardPickerScreen } from "../features/library/screens/group-card-picker-screen";
-import { SourceDetailScreen } from "../features/library/screens/source-detail-screen";
-import { SourceListScreen } from "../features/library/screens/source-list-screen";
-import { ChatScreen } from "../features/sessions/screens/chat-screen";
+import { AccountScreen } from "@/features/profile/screens/account-screen";
+import { SettingsScreen } from "@/features/profile/screens/settings-screen";
+import { CardDetailScreen } from "@/features/library/screens/card-detail-screen";
+import { CardGroupDetailScreen } from "@/features/library/screens/card-group-detail-screen";
+import { CardGroupListScreen } from "@/features/library/screens/card-group-list-screen";
+import { CardListScreen } from "@/features/library/screens/card-list-screen";
+import { CreateSourceTextScreen } from "@/features/library/screens/create-source-text-screen";
+import { CreateSourceDocumentScreen } from "@/features/library/screens/create-source-document-screen";
+import { GroupCardPickerScreen } from "@/features/library/screens/group-card-picker-screen";
+import { SourceDetailScreen } from "@/features/library/screens/source-detail-screen";
+import { SourceListScreen } from "@/features/library/screens/source-list-screen";
+import { ChatScreen } from "@/features/sessions/screens/chat-screen";
 import {
   hydrateAuthSession,
   selectIsAuthenticated,
   selectIsHydrating,
-} from "../store/auth-slice";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { colors, spacing, typography } from "../theme/tokens";
-import { AuthStackNavigator } from "./auth-stack";
-import { MainTabNavigator } from "./main-tabs";
-import { type RootStackParamList } from "./types";
+} from "@/store/auth-slice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { colors, spacing, typography } from "@/theme/tokens";
+import { AuthStackNavigator } from "@/navigation/auth-stack";
+import { MainTabNavigator } from "@/navigation/main-tabs";
+import { type RootStackParamList } from "@/navigation/types";
 
 enableScreens();
 

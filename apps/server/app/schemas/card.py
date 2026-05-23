@@ -67,3 +67,22 @@ class ConfirmCardsResponse(CamelModel):
 
 class ArchiveCardResponse(CardRead):
     pass
+
+
+class DeleteCardResponse(CamelModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "deletedCardId": "b6d94870-4bdf-4b5f-8d6e-94c72f98d2f5",
+                "affectedSourceIds": ["1f7d6c58-4cf1-455f-b218-e3b6e7e0c9a7"],
+                "affectedGroupIds": [
+                    "8d9674b3-2d3d-4f0c-87ab-54eeb2b08b6f",
+                    "4d27f83f-f8d1-4f50-bec4-8b5e6781dbef",
+                ],
+            }
+        }
+    )
+
+    deleted_card_id: str
+    affected_source_ids: list[str]
+    affected_group_ids: list[str]

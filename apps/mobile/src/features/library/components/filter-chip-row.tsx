@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, Text } from "react-native";
 
-import { filterChipRowStyles as styles } from "./filter-chip-row.styles";
+import { filterChipRowStyles as styles } from "@/features/library/components/filter-chip-row.styles";
 
 export type FilterChipItem<T extends string> = {
   key: T;

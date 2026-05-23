@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 
-import { useCreateSourceFromMessagesMutation, type KnowledgeSource } from "../../../features/library/api";
-import { type Message } from "../api";
-import { sessionCopy } from "../utils/session-copy";
-import { buildMessageSourceName, getSelectedMessagePayload } from "../utils/session-helpers";
+import { useCreateSourceFromMessagesMutation, type KnowledgeSource } from "@/features/library/api";
+import { type Message } from "@/features/sessions/api";
+import { sessionCopy } from "@/features/sessions/utils/session-copy";
+import { buildMessageSourceName, getSelectedMessagePayload } from "@/features/sessions/utils/session-helpers";
 
 export function useChatSelectionController(args: {
   chatId: string | null;

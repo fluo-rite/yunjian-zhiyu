@@ -5,7 +5,7 @@ import {
   hydrateAuthSessionService,
   loginAndPersistSession,
   registerAndPersistSession,
-} from "../features/auth/services/auth-service";
+} from "@/features/auth/services/auth-service";
 
 export const hydrateAuthSession = createAsyncThunk(
   "auth/hydrateAuthSession",

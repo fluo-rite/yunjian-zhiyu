@@ -1,8 +1,8 @@
 import { Pressable, Text, View } from "react-native";
 
-import type { CardGroup } from "../api";
-import { formatCompactDateTimeLabel } from "../utils/library-formatters";
-import { groupListItemStyles as styles } from "./group-list-item.styles";
+import type { CardGroup } from "@/features/library/api";
+import { formatCompactDateTimeLabel } from "@/features/library/utils/library-formatters";
+import { groupListItemStyles as styles } from "@/features/library/components/group-list-item.styles";
 
 export function GroupListItem(props: {
   group: CardGroup;

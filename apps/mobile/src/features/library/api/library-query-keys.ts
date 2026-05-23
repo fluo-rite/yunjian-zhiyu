@@ -1,4 +1,4 @@
-import type { CardStatus, SourceStatus, SourceType } from "./library-schemas";
+import type { CardStatus, SourceStatus, SourceType } from "@/features/library/api/library-schemas";
 
 type CardListFilters = {
   page: number;

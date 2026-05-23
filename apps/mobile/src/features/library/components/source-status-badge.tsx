@@ -1,8 +1,8 @@
 import { Text, View } from "react-native";
 
-import type { SourceStatus } from "../api";
-import { getSourceStatusLabel } from "../utils/library-formatters";
-import { sourceStatusBadgeStyles as styles } from "./source-status-badge.styles";
+import type { SourceStatus } from "@/features/library/api";
+import { getSourceStatusLabel } from "@/features/library/utils/library-formatters";
+import { sourceStatusBadgeStyles as styles } from "@/features/library/components/source-status-badge.styles";
 
 export function SourceStatusBadge(props: { status: SourceStatus }) {
   return (

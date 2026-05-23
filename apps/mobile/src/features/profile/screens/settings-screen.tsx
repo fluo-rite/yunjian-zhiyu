@@ -2,12 +2,12 @@ import { Alert, ScrollView, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { logoutThunk, selectAuthUser, selectIsLoggingOut } from "../../../store/auth-slice";
-import { useAppDispatch, useAppSelector } from "../../../store/hooks";
-import { type RootStackParamList } from "../../../navigation/types";
-import { settingsScreenStyles as styles } from "./settings-screen.styles";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { logoutThunk, selectAuthUser, selectIsLoggingOut } from "@/store/auth-slice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { type RootStackParamList } from "@/navigation/types";
+import { settingsScreenStyles as styles } from "@/features/profile/screens/settings-screen.styles";
 
 export function SettingsScreen({
   navigation,

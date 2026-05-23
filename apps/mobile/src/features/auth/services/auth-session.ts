@@ -1,10 +1,10 @@
-import { type AuthUser, type TokenPair } from "../../../lib/api";
-import { asyncStorageAdapter } from "../../../lib/storage/async-storage-adapter";
+import { type AuthUser, type TokenPair } from "@/lib/api";
+import { asyncStorageAdapter } from "@/lib/storage/async-storage-adapter";
 import {
   readJsonValue,
   removeValue,
   writeJsonValue,
-} from "../../../lib/storage/json-storage";
+} from "@/lib/storage/json-storage";
 
 const AUTH_STORAGE_KEY = "yunjian.auth.session";
 

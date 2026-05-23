@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { apiClient } from "../../../lib/api-client";
+import { apiClient } from "@/lib/api-client";
 import {
   archiveCardResponseSchema,
   cardListResponseSchema,
@@ -12,7 +12,7 @@ import {
   type KnowledgeCard,
   type KnowledgeCardListResponse,
   type SourceType,
-} from "./library-schemas";
+} from "@/features/library/api/library-schemas";
 import {
   refreshAffectedGroups,
   refreshAffectedSources,
@@ -20,8 +20,8 @@ import {
   refreshCardLists,
   shouldRetryLibraryEntityQuery,
   removeCardDetail,
-} from "./library-cache";
-import { libraryQueryKeys } from "./library-query-keys";
+} from "@/features/library/api/library-cache";
+import { libraryQueryKeys } from "@/features/library/api/library-query-keys";
 
 const DEFAULT_CARD_PAGE = 1;
 const DEFAULT_CARD_PAGE_SIZE = 20;

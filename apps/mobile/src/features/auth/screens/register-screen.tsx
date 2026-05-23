@@ -2,16 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Field } from "../../../components/ui/field";
-import { PrimaryButton } from "../../../components/ui/primary-button";
+import { Field } from "@/components/ui/field";
+import { PrimaryButton } from "@/components/ui/primary-button";
 import {
   clearAuthError,
   registerThunk,
   selectAuthErrorMessage,
   selectIsSubmittingAuth,
-} from "../../../store/auth-slice";
-import { useAppDispatch, useAppSelector } from "../../../store/hooks";
-import { loginScreenStyles as styles } from "./login-screen.styles";
+} from "@/store/auth-slice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { loginScreenStyles as styles } from "@/features/auth/screens/login-screen.styles";
 
 export function RegisterScreen(props: { onBackToLogin: () => void }) {
   const dispatch = useAppDispatch();

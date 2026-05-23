@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { apiClient } from "../../../lib/api-client";
+import { apiClient } from "@/lib/api-client";
 import {
   cardGroupCardsResponseSchema,
   cardGroupListResponseSchema,
@@ -8,15 +8,15 @@ import {
   type CardGroup,
   type CardGroupCardsResponse,
   type CardGroupListResponse,
-} from "./library-schemas";
+} from "@/features/library/api/library-schemas";
 import {
   refreshGroupDetail,
   refreshGroupList,
   refreshGroupScope,
   removeGroupQueries,
   shouldRetryLibraryEntityQuery,
-} from "./library-cache";
-import { libraryQueryKeys } from "./library-query-keys";
+} from "@/features/library/api/library-cache";
+import { libraryQueryKeys } from "@/features/library/api/library-query-keys";
 
 export type CreateGroupInput = {
   name: string;

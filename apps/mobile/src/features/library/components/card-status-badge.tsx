@@ -1,8 +1,8 @@
 import { Text, View } from "react-native";
 
-import type { CardStatus } from "../api";
-import { getCardStatusLabel } from "../utils/library-formatters";
-import { cardStatusBadgeStyles as styles } from "./card-status-badge.styles";
+import type { CardStatus } from "@/features/library/api";
+import { getCardStatusLabel } from "@/features/library/utils/library-formatters";
+import { cardStatusBadgeStyles as styles } from "@/features/library/components/card-status-badge.styles";
 
 export function CardStatusBadge(props: { status: CardStatus }) {
   return (

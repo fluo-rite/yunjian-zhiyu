@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.8.1",
   "scripts": {
     "dev:mobile": "pnpm --dir apps/mobile start",
-    "dev:server": "uv run --project apps/server fastapi dev apps/server/app/main.py",
+    "dev:server": "uv run --project apps/server fastapi dev apps/server/app/main.py --host 0.0.0.0 --port 8000",
     "lint:mobile": "pnpm --dir apps/mobile lint",
     "lint:server": "uv run --project apps/server ruff check .",
     "test:server": "uv run --project apps/server pytest",

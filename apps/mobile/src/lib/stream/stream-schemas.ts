@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { messageSchema } from "../../features/sessions/api/session-schemas";
+import { messageSchema } from "@/features/sessions/api/session-schemas";
 
 export const statusEventSchema = z.object({
   phase: z.enum(["retrieving_knowledge", "searching_web", "assembling_answer"]),

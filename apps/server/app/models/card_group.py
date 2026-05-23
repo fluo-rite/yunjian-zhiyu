@@ -11,4 +11,4 @@ class CardGroup(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(100))
 
     user = relationship("User", back_populates="card_groups")
-    items = relationship("CardGroupItem", back_populates="group", cascade="all, delete-orphan")
+    items = relationship("CardGroupItem", back_populates="group", passive_deletes="all")

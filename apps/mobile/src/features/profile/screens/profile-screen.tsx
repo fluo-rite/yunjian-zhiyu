@@ -3,10 +3,10 @@ import { type NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { type RootStackParamList } from "../../../navigation/types";
-import { selectAuthUser } from "../../../store/auth-slice";
-import { useAppSelector } from "../../../store/hooks";
-import { profileScreenStyles as styles } from "./profile-screen.styles";
+import { type RootStackParamList } from "@/navigation/types";
+import { selectAuthUser } from "@/store/auth-slice";
+import { useAppSelector } from "@/store/hooks";
+import { profileScreenStyles as styles } from "@/features/profile/screens/profile-screen.styles";
 
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();

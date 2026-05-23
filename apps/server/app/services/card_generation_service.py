@@ -7,7 +7,7 @@ from functools import lru_cache
 from arq.connections import RedisSettings, create_pool
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.core.config import get_settings
 from app.core.db import SessionLocal, utc_now
@@ -113,9 +113,7 @@ def process_knowledge_source_sync(source_id: str) -> None:
             raw_content=source.raw_content,
         )
 
-        existing_cards = list(source.cards)
-        for card in existing_cards:
-            db.delete(card)
+        db.execute(delete(KnowledgeCard).where(KnowledgeCard.source_id == source.id))
         db.flush()
 
         for item in batch.cards:

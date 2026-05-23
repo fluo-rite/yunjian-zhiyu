@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radii, spacing, typography } from "../../theme/tokens";
+import { colors, radii, spacing, typography } from "@/theme/tokens";
 
 export const fieldStyles = StyleSheet.create({
   container: {

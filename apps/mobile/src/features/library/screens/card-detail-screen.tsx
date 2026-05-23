@@ -3,20 +3,20 @@ import { Alert, ScrollView, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type RootStackParamList } from "../../../navigation/types";
-import { useArchiveCardMutation, useCardDetailQuery, useDeleteCardMutation } from "../api";
-import { CardStatusBadge } from "../components/card-status-badge";
-import { EmptyState } from "../../../components/feedback/empty-state";
-import { ErrorState } from "../../../components/feedback/error-state";
-import { libraryCopy } from "../utils/library-copy";
-import { buildReadonlySourceDetailParams, buildSourceRelatedCardListParams } from "../utils/library-navigation";
-import { getCardDetailCapabilities } from "../utils/library-view-capabilities";
-import { defaultCardDetailMode } from "../utils/library-view-modes";
-import { formatDateTimeLabel, getSourceTypeLabel } from "../utils/library-formatters";
-import { getStableArray } from "../utils/library-state";
-import { cardDetailScreenStyles as styles } from "./card-detail-screen.styles";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { type RootStackParamList } from "@/navigation/types";
+import { useArchiveCardMutation, useCardDetailQuery, useDeleteCardMutation } from "@/features/library/api";
+import { CardStatusBadge } from "@/features/library/components/card-status-badge";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { ErrorState } from "@/components/feedback/error-state";
+import { libraryCopy } from "@/features/library/utils/library-copy";
+import { buildReadonlySourceDetailParams, buildSourceRelatedCardListParams } from "@/features/library/utils/library-navigation";
+import { getCardDetailCapabilities } from "@/features/library/utils/library-view-capabilities";
+import { defaultCardDetailMode } from "@/features/library/utils/library-view-modes";
+import { formatDateTimeLabel, getSourceTypeLabel } from "@/features/library/utils/library-formatters";
+import { getStableArray } from "@/features/library/utils/library-state";
+import { cardDetailScreenStyles as styles } from "@/features/library/screens/card-detail-screen.styles";
 
 function getCardTagKey(cardId: string, tag: string) {
   return `${cardId}:${tag}`;

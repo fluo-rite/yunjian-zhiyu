@@ -1,7 +1,7 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { Pressable, Text, View } from "react-native";
 
-import { screenHeaderStyles as styles } from "./screen-header.styles";
+import { screenHeaderStyles as styles } from "@/components/ui/screen-header.styles";
 
 export function ScreenHeader(props: {
   title: string;

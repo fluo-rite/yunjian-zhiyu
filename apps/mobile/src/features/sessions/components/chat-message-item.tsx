@@ -1,9 +1,9 @@
 import { memo, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 
-import { type Citation, type Message } from "../api";
-import { ChatMessageMarkdownBody } from "./chat-message-markdown-body";
-import { chatMessageItemStyles as styles } from "./chat-message-item.styles";
+import { type Citation, type Message } from "@/features/sessions/api";
+import { ChatMessageMarkdownBody } from "@/features/sessions/components/chat-message-markdown-body";
+import { chatMessageItemStyles as styles } from "@/features/sessions/components/chat-message-item.styles";
 
 export type ChatMessageItemProps = {
   message: Message;

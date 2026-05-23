@@ -2,12 +2,12 @@ import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 
-import { EmptyState } from "../../../components/feedback/empty-state";
-import { ErrorState } from "../../../components/feedback/error-state";
-import { type Message } from "../api";
-import { sessionCopy } from "../utils/session-copy";
-import { ChatMessageItem } from "./chat-message-item";
-import { chatMessageListStyles as styles } from "./chat-message-list.styles";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { ErrorState } from "@/components/feedback/error-state";
+import { type Message } from "@/features/sessions/api";
+import { sessionCopy } from "@/features/sessions/utils/session-copy";
+import { ChatMessageItem } from "@/features/sessions/components/chat-message-item";
+import { chatMessageListStyles as styles } from "@/features/sessions/components/chat-message-list.styles";
 
 export type ChatMessageListProps = {
   messages: Message[];

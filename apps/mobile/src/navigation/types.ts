@@ -3,7 +3,7 @@ import type {
   CardDetailMode,
   CardListMode,
   SourceDetailMode,
-} from "../features/library/utils/library-view-modes";
+} from "@/features/library/utils/library-view-modes";
 
 export type RootStackParamList = {
   Auth: undefined;

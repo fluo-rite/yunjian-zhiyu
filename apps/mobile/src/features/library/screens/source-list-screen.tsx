@@ -3,25 +3,25 @@ import { useMemo, useState } from "react";
 import { Alert, FlatList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type RootStackParamList } from "../../../navigation/types";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { type RootStackParamList } from "@/navigation/types";
 import {
   type KnowledgeSource,
   type SourceStatus,
   type SourceType,
   useSourcesQuery,
-} from "../api";
-import { EmptyState } from "../../../components/feedback/empty-state";
-import { ErrorState } from "../../../components/feedback/error-state";
-import { FilterChipRow, type FilterChipItem } from "../components/filter-chip-row";
-import { SessionImportHintModal } from "../components/session-import-hint-modal";
-import { SourceImportSheet } from "../components/source-import-sheet";
-import { SourceListItem } from "../components/source-list-item";
-import { libraryCopy } from "../utils/library-copy";
-import { getStableArray } from "../utils/library-state";
-import { pickSourceDocument } from "../utils/source-document-picker";
-import { sourceListScreenStyles as styles } from "./source-list-screen.styles";
+} from "@/features/library/api";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { ErrorState } from "@/components/feedback/error-state";
+import { FilterChipRow, type FilterChipItem } from "@/features/library/components/filter-chip-row";
+import { SessionImportHintModal } from "@/features/library/components/session-import-hint-modal";
+import { SourceImportSheet } from "@/features/library/components/source-import-sheet";
+import { SourceListItem } from "@/features/library/components/source-list-item";
+import { libraryCopy } from "@/features/library/utils/library-copy";
+import { getStableArray } from "@/features/library/utils/library-state";
+import { pickSourceDocument } from "@/features/library/utils/source-document-picker";
+import { sourceListScreenStyles as styles } from "@/features/library/screens/source-list-screen.styles";
 
 type SourceStatusFilterKey = "all" | SourceStatus;
 type SourceTypeFilterKey = "all" | SourceType;

@@ -43,4 +43,4 @@ class KnowledgeCard(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     user = relationship("User", back_populates="cards")
     source = relationship("KnowledgeSource", back_populates="cards")
-    group_items = relationship("CardGroupItem", back_populates="card", cascade="all, delete-orphan")
+    group_items = relationship("CardGroupItem", back_populates="card", passive_deletes="all")

@@ -7,10 +7,10 @@ import {
   useCreateChatMutation,
   useSendChatMessageMutation,
   type Message,
-} from "../api";
-import { useAssistantMessageStream } from "./use-assistant-message-stream";
-import { sessionCopy } from "../utils/session-copy";
-import { buildChatTitle, findLatestStreamingAssistantMessage } from "../utils/session-helpers";
+} from "@/features/sessions/api";
+import { useAssistantMessageStream } from "@/features/sessions/hooks/use-assistant-message-stream";
+import { sessionCopy } from "@/features/sessions/utils/session-copy";
+import { buildChatTitle, findLatestStreamingAssistantMessage } from "@/features/sessions/utils/session-helpers";
 
 const EMPTY_MESSAGES: Message[] = [];
 

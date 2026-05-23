@@ -1,4 +1,4 @@
-import { type KeyValueStorage } from "./key-value-storage";
+import { type KeyValueStorage } from "@/lib/storage/key-value-storage";
 
 export async function readJsonValue<T>(storage: KeyValueStorage, key: string) {
   const raw = await storage.getItem(key);

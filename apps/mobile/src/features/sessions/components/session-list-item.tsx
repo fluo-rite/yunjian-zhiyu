@@ -1,11 +1,11 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { Pressable, Text, View } from "react-native";
 
-import { colors } from "../../../theme/tokens";
-import { type Chat } from "../api";
-import { sessionCopy } from "../utils/session-copy";
-import { formatSessionUpdatedTime } from "../utils/session-helpers";
-import { sessionListItemStyles as styles } from "./session-list-item.styles";
+import { colors } from "@/theme/tokens";
+import { type Chat } from "@/features/sessions/api";
+import { sessionCopy } from "@/features/sessions/utils/session-copy";
+import { formatSessionUpdatedTime } from "@/features/sessions/utils/session-helpers";
+import { sessionListItemStyles as styles } from "@/features/sessions/components/session-list-item.styles";
 
 export function SessionListItem(props: {
   chat: Chat;

@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, spacing } from "../../../theme/tokens";
+import { colors, spacing } from "@/theme/tokens";
 
 export const chatScreenStyles = StyleSheet.create({
   screen: {

@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, shadows, spacing, typography } from "../../../theme/tokens";
+import { colors, shadows, spacing, typography } from "@/theme/tokens";
 
 export const selectionFooterStyles = StyleSheet.create({
   wrap: {

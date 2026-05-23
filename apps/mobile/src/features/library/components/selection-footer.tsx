@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { selectionFooterStyles as styles } from "./selection-footer.styles";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { selectionFooterStyles as styles } from "@/features/library/components/selection-footer.styles";
 
 export function SelectionFooter(props: {
   selectedCount: number;

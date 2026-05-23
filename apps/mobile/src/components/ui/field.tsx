@@ -1,7 +1,7 @@
 import { Text, TextInput, View } from "react-native";
 
-import { colors } from "../../theme/tokens";
-import { fieldStyles as styles } from "./field.styles";
+import { colors } from "@/theme/tokens";
+import { fieldStyles as styles } from "@/components/ui/field.styles";
 
 export function Field(props: {
   label: string;

@@ -1,6 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from "axios";
 
-import { resolveApiBaseUrl } from "../config/app-config";
+import { resolveApiBaseUrl } from "@/config/app-config";
 
 type TokenProvider = () => string | null | Promise<string | null>;
 type UnauthorizedHandler = () => void | Promise<void>;

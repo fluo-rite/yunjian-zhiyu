@@ -3,24 +3,24 @@ import { Alert, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Field } from "../../../components/ui/field";
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { ScreenHeader } from "../../../components/ui/screen-header";
-import { type RootStackParamList } from "../../../navigation/types";
+import { Field } from "@/components/ui/field";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { type RootStackParamList } from "@/navigation/types";
 import {
   useDeleteGroupMutation,
   useGroupCardsQuery,
   useGroupDetailQuery,
   useRemoveCardsFromGroupMutation,
   useRenameGroupMutation,
-} from "../api";
-import { CardListView } from "../components/card-list-view";
-import { EmptyState } from "../../../components/feedback/empty-state";
-import { ErrorState } from "../../../components/feedback/error-state";
-import { SelectionFooter } from "../components/selection-footer";
-import { formatDateTimeLabel } from "../utils/library-formatters";
-import { getStableArray, retainExistingIds } from "../utils/library-state";
-import { cardGroupDetailScreenStyles as styles } from "./card-group-detail-screen.styles";
+} from "@/features/library/api";
+import { CardListView } from "@/features/library/components/card-list-view";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { ErrorState } from "@/components/feedback/error-state";
+import { SelectionFooter } from "@/features/library/components/selection-footer";
+import { formatDateTimeLabel } from "@/features/library/utils/library-formatters";
+import { getStableArray, retainExistingIds } from "@/features/library/utils/library-state";
+import { cardGroupDetailScreenStyles as styles } from "@/features/library/screens/card-group-detail-screen.styles";
 
 export function CardGroupDetailScreen({
   navigation,

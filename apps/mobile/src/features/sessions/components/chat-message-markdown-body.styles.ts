@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from "react-native";
 
-import { colors, radii, spacing, typography } from "../../../theme/tokens";
+import { colors, radii, spacing, typography } from "@/theme/tokens";
 
 const monoFontFamily = Platform.select({
   ios: "Menlo",

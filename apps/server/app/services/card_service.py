@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Select, String, cast, func, or_, select
+from sqlalchemy import Select, String, cast, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.models.card import KnowledgeCard
@@ -12,6 +12,7 @@ from app.schemas.card import (
     CardListResponse,
     CardRead,
     ConfirmCardsResponse,
+    DeleteCardResponse,
 )
 from app.schemas.common import PaginationMeta
 
@@ -84,9 +85,18 @@ class CardService:
         ).scalar_one_or_none()
 
     @staticmethod
-    def delete(db: Session, card: KnowledgeCard) -> None:
+    def delete(db: Session, card: KnowledgeCard) -> DeleteCardResponse:
+        group_ids = db.execute(
+            select(CardGroupItem.group_id).where(CardGroupItem.card_id == card.id)
+        ).scalars().all()
+        source_ids = [card.source_id] if card.source_id is not None else []
         db.delete(card)
         db.commit()
+        return DeleteCardResponse(
+            deleted_card_id=card.id,
+            affected_source_ids=source_ids,
+            affected_group_ids=group_ids,
+        )
 
     @staticmethod
     def list_by_ids(db: Session, user: User, card_ids: list[str]) -> list[KnowledgeCard]:
@@ -107,13 +117,24 @@ class CardService:
 
     @staticmethod
     def confirm_many(db: Session, cards: list[KnowledgeCard]) -> ConfirmCardsResponse:
-        for card in cards:
-            card.status = "active"
-            db.add(card)
+        if not cards:
+            return ConfirmCardsResponse(items=[])
+
+        card_ids = [card.id for card in cards]
+        db.execute(
+            update(KnowledgeCard)
+            .where(KnowledgeCard.id.in_(card_ids))
+            .values(status="active")
+        )
         db.commit()
-        for card in cards:
-            db.refresh(card)
-        return ConfirmCardsResponse(items=[CardRead.model_validate(card) for card in cards])
+        refreshed_cards = (
+            db.execute(select(KnowledgeCard).where(KnowledgeCard.id.in_(card_ids)))
+            .scalars()
+            .all()
+        )
+        card_map = {card.id: card for card in refreshed_cards}
+        ordered_cards = [card_map[card_id] for card_id in card_ids if card_id in card_map]
+        return ConfirmCardsResponse(items=[CardRead.model_validate(card) for card in ordered_cards])
 
     @staticmethod
     def archive(db: Session, card: KnowledgeCard) -> ArchiveCardResponse:

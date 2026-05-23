@@ -8,8 +8,8 @@ import {
   type TextInputContentSizeChangeEventData,
 } from "react-native";
 
-import { colors } from "../../../theme/tokens";
-import { chatComposerStyles as styles } from "./chat-composer.styles";
+import { colors } from "@/theme/tokens";
+import { chatComposerStyles as styles } from "@/features/sessions/components/chat-composer.styles";
 
 const MIN_INPUT_HEIGHT = 24;
 const MAX_INPUT_HEIGHT = 120;

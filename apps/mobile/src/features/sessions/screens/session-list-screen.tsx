@@ -5,14 +5,14 @@ import { useState } from "react";
 import { Alert, Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { EmptyState } from "../../../components/feedback/empty-state";
-import { ErrorState } from "../../../components/feedback/error-state";
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { type RootStackParamList } from "../../../navigation/types";
-import { useChatsQuery, useDeleteChatMutation } from "../api";
-import { SessionListItem } from "../components/session-list-item";
-import { sessionCopy } from "../utils/session-copy";
-import { sessionListScreenStyles as styles } from "./session-list-screen.styles";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { ErrorState } from "@/components/feedback/error-state";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { type RootStackParamList } from "@/navigation/types";
+import { useChatsQuery, useDeleteChatMutation } from "@/features/sessions/api";
+import { SessionListItem } from "@/features/sessions/components/session-list-item";
+import { sessionCopy } from "@/features/sessions/utils/session-copy";
+import { sessionListScreenStyles as styles } from "@/features/sessions/screens/session-list-screen.styles";
 
 export function SessionListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();

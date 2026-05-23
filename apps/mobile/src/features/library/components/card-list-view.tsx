@@ -1,9 +1,9 @@
 import type { ReactElement } from "react";
 import { FlatList } from "react-native";
 
-import type { KnowledgeCard } from "../api";
-import { CardListItem, type CardListItemMode } from "./card-list-item";
-import { cardListViewStyles as styles } from "./card-list-view.styles";
+import type { KnowledgeCard } from "@/features/library/api";
+import { CardListItem, type CardListItemMode } from "@/features/library/components/card-list-item";
+import { cardListViewStyles as styles } from "@/features/library/components/card-list-view.styles";
 
 export function CardListView(props: {
   items: KnowledgeCard[];

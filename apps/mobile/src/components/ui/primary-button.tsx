@@ -1,7 +1,7 @@
 import { Ionicons, type IoniconsIconName } from "@react-native-vector-icons/ionicons";
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 
-import { colors, radii, spacing, typography } from "../../theme/tokens";
+import { colors, radii, spacing, typography } from "@/theme/tokens";
 
 export function PrimaryButton(props: {
   label: string;

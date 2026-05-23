@@ -1,4 +1,4 @@
-import type { CardDetailMode, CardListMode, SourceDetailMode } from "./library-view-modes";
+import type { CardDetailMode, CardListMode, SourceDetailMode } from "@/features/library/utils/library-view-modes";
 
 export function getCardListCapabilities(mode: CardListMode) {
   return {

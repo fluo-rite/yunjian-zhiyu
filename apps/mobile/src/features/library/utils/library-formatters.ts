@@ -4,7 +4,7 @@ import type {
   KnowledgeSource,
   SourceStatus,
   SourceType,
-} from "../api";
+} from "@/features/library/api";
 
 const cardStatusLabels: Record<CardStatus, string> = {
   pending: "待确认",

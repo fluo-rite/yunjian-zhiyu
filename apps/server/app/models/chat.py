@@ -11,4 +11,4 @@ class Chat(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     title: Mapped[str] = mapped_column(String(100))
 
     user = relationship("User", back_populates="chats")
-    messages = relationship("Message", back_populates="chat", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="chat", passive_deletes="all")

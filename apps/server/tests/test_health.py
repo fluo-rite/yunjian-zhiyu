@@ -2,11 +2,12 @@ import asyncio
 import json
 import threading
 import time
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi.testclient import TestClient
 
-from app.core.db import Base, SessionLocal, engine
+from app.core.db import Base, SessionLocal, engine, utc_now
 from app.main import app
 from app.agents.chat_agent.policy import build_web_search_decision_prompt
 from app.models.card import KnowledgeCard
@@ -16,6 +17,7 @@ from app.services.card_generation_service import (
     GeneratedKnowledgeCardBatch,
     process_knowledge_source_sync,
 )
+from app.services.retrieval_service import RerankedCardIds, RetrievalService, RetrievedCard
 from app.services.chat_generation_service import ChatTaskDispatcher, run_chat_generation
 from app.services.stream_adapter_service import StreamAdapterService
 from app.services.stream_store_service import StreamRecord
@@ -369,6 +371,27 @@ def _patch_chat_agent(
     monkeypatch.setattr("app.services.chat_generation_service.get_chat_agent", lambda: fake_agent)
 
 
+def _build_retrieved_card(card_id: str, *, title: str, content: str) -> RetrievedCard:
+    timestamp = utc_now()
+    card = KnowledgeCard(
+        id=card_id,
+        user_id="user-1",
+        source_id=None,
+        title=title,
+        content=content,
+        tags=["test"],
+        status="active",
+        source_type="manual_text",
+        embedding=None,
+        embedding_model=None,
+        embedding_updated_at=None,
+        content_hash=f"hash-{card_id}",
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    return RetrievedCard(card=card)
+
+
 def test_web_search_service_extracts_pages_from_json_text_payload() -> None:
     raw_result = {
         "content": [
@@ -472,6 +495,83 @@ def test_policy_marks_fresh_queries_and_search_fallback() -> None:
 
 
     """
+
+
+def test_retrieval_service_rerank_falls_back_to_fused_order_on_parse_error(monkeypatch) -> None:
+    class FakeStructuredModel:
+        def invoke(self, _prompt: str):
+            raise ValueError("Invalid JSON: trailing characters at line 2 column 1")
+
+    class FakeChatOpenAI:
+        def __init__(self, **_kwargs) -> None:
+            pass
+
+        def with_structured_output(self, _schema):
+            return FakeStructuredModel()
+
+    monkeypatch.setattr("app.services.retrieval_service.ChatOpenAI", FakeChatOpenAI)
+    monkeypatch.setattr(
+        "app.services.retrieval_service.get_settings",
+        lambda: SimpleNamespace(
+            rerank_base_url="https://example.com",
+            rerank_api_key="test-key",
+            rerank_model="test-rerank-model",
+            llm_timeout_seconds=30.0,
+        ),
+    )
+
+    service = RetrievalService()
+    candidates = [
+        _build_retrieved_card("card-1", title="First card", content="First content"),
+        _build_retrieved_card("card-2", title="Second card", content="Second content"),
+    ]
+
+    reranked = service._rerank_candidates(
+        query="How does FastAPI routing work?",
+        candidates=candidates,
+        limit=2,
+    )
+
+    assert [item.card.id for item in reranked] == ["card-1", "card-2"]
+
+
+def test_retrieval_service_rerank_filters_unknown_ids_and_appends_remaining_candidates(monkeypatch) -> None:
+    class FakeStructuredModel:
+        def invoke(self, _prompt: str):
+            return RerankedCardIds(card_ids=["card-2", "missing-card"])
+
+    class FakeChatOpenAI:
+        def __init__(self, **_kwargs) -> None:
+            pass
+
+        def with_structured_output(self, _schema):
+            return FakeStructuredModel()
+
+    monkeypatch.setattr("app.services.retrieval_service.ChatOpenAI", FakeChatOpenAI)
+    monkeypatch.setattr(
+        "app.services.retrieval_service.get_settings",
+        lambda: SimpleNamespace(
+            rerank_base_url="https://example.com",
+            rerank_api_key="test-key",
+            rerank_model="test-rerank-model",
+            llm_timeout_seconds=30.0,
+        ),
+    )
+
+    service = RetrievalService()
+    candidates = [
+        _build_retrieved_card("card-1", title="First card", content="First content"),
+        _build_retrieved_card("card-2", title="Second card", content="Second content"),
+        _build_retrieved_card("card-3", title="Third card", content="Third content"),
+    ]
+
+    reranked = service._rerank_candidates(
+        query="Which card is most relevant?",
+        candidates=candidates,
+        limit=3,
+    )
+
+    assert [item.card.id for item in reranked] == ["card-2", "card-1", "card-3"]
 
 def test_health_returns_ok() -> None:
     response = client.get("/health")
@@ -649,6 +749,51 @@ def test_card_confirm_archive_and_group_flow(monkeypatch) -> None:
     assert group_cards_after_remove.json()["items"] == []
 
 
+def test_delete_card_returns_affected_source_ids_and_group_ids(monkeypatch) -> None:
+    reset_database()
+    dispatcher = install_source_runtime_test_doubles(monkeypatch)
+    headers = create_user("delete-card@example.com", "delete-card-user")
+
+    source_response = client.post(
+        "/api/v1/knowledge-sources/from-text",
+        headers=headers,
+        json={"name": "待删除卡片来源", "content": "删除卡片时需要返回关联来源和分组。"},
+    )
+    source_id = source_response.json()["id"]
+    dispatcher.wait_for_idle()
+
+    source_cards = client.get(f"/api/v1/knowledge-sources/{source_id}/cards", headers=headers)
+    card_id = source_cards.json()["items"][0]["id"]
+
+    confirm_response = client.post(
+        "/api/v1/cards/confirm",
+        headers=headers,
+        json={"cardIds": [card_id]},
+    )
+    assert confirm_response.status_code == 200
+
+    group_response = client.post(
+        "/api/v1/card-groups",
+        headers=headers,
+        json={"name": "删除影响测试分组"},
+    )
+    assert group_response.status_code == 201, group_response.text
+    group_id = group_response.json()["id"]
+
+    add_response = client.post(
+        f"/api/v1/card-groups/{group_id}/cards",
+        headers=headers,
+        json={"cardIds": [card_id]},
+    )
+    assert add_response.status_code == 204
+
+    delete_response = client.delete(f"/api/v1/cards/{card_id}", headers=headers)
+    assert delete_response.status_code == 200, delete_response.text
+    assert delete_response.json()["deletedCardId"] == card_id
+    assert delete_response.json()["affectedSourceIds"] == [source_id]
+    assert delete_response.json()["affectedGroupIds"] == [group_id]
+
+
 def test_confirm_cards_confirms_multiple_pending_cards(monkeypatch) -> None:
     reset_database()
     dispatcher = install_source_runtime_test_doubles(monkeypatch)
@@ -716,6 +861,49 @@ def test_chats_crud_flow() -> None:
 
     delete_response = client.delete(f"/api/v1/chats/{chat_id}", headers=headers)
     assert delete_response.status_code == 204
+
+
+def test_delete_chat_with_messages_uses_db_cascade(monkeypatch) -> None:
+    reset_database()
+    dispatcher = install_chat_runtime_test_doubles(monkeypatch)
+    headers = create_user("delete-chat-msg@example.com", "delete-chat-msg-user")
+    chat_id = create_chat(headers, "Delete chat with messages")
+    user_id = client.get("/api/v1/auth/me", headers=headers).json()["id"]
+
+    card_id = insert_card(
+        user_id=user_id,
+        title="Delete chat cascade card",
+        content="Deleting a chat should rely on database cascade for messages.",
+        tags=["Chat", "Cascade"],
+    )
+    _patch_chat_agent(
+        monkeypatch,
+        card_id=card_id,
+        content="This chat contains persisted messages and should still delete cleanly.",
+    )
+
+    create_response = client.post(
+        f"/api/v1/chats/{chat_id}/messages",
+        headers=headers,
+        json={
+            "content": "Please create a persisted assistant reply before deletion.",
+            "options": {"useKnowledge": True, "useWebSearch": False},
+        },
+    )
+    assert create_response.status_code == 200, create_response.text
+
+    assistant_message_id = create_response.json()["assistantMessageId"]
+    with client.stream(
+        "GET",
+        f"/api/v1/chats/{chat_id}/messages/{assistant_message_id}/stream?lastEventId=0-0",
+        headers=headers,
+    ) as response:
+        payload = "".join(response.iter_text())
+    assert _parse_sse_events(payload)[-1]["event"] == "message.done"
+    dispatcher.wait_for_idle()
+
+    delete_response = client.delete(f"/api/v1/chats/{chat_id}", headers=headers)
+    assert delete_response.status_code == 204, delete_response.text
 
 
 def test_chat_message_creation_stream_and_history(monkeypatch) -> None:

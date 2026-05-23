@@ -1,4 +1,4 @@
-import type { RootStackParamList } from "../../../navigation/types";
+import type { RootStackParamList } from "@/navigation/types";
 
 export function buildSourceRelatedCardListParams(
   sourceId: string,

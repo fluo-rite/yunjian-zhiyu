@@ -1,5 +1,5 @@
-import type { Message } from "../api";
-import { sessionCopy } from "./session-copy";
+import type { Message } from "@/features/sessions/api";
+import { sessionCopy } from "@/features/sessions/utils/session-copy";
 
 export function buildChatTitle(content: string) {
   const normalized = content.trim().replace(/\s+/g, " ");

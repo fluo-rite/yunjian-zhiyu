@@ -1,7 +1,7 @@
 import { Modal, Pressable, Text, View } from "react-native";
 
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { sessionImportHintModalStyles as styles } from "./session-import-hint-modal.styles";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { sessionImportHintModalStyles as styles } from "@/features/library/components/session-import-hint-modal.styles";
 
 export function SessionImportHintModal(props: {
   visible: boolean;

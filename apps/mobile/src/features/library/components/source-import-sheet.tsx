@@ -1,8 +1,8 @@
 import { Modal, Pressable, Text, View } from "react-native";
 
-import { PrimaryButton } from "../../../components/ui/primary-button";
-import { libraryCopy } from "../utils/library-copy";
-import { sourceImportSheetStyles as styles } from "./source-import-sheet.styles";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { libraryCopy } from "@/features/library/utils/library-copy";
+import { sourceImportSheetStyles as styles } from "@/features/library/components/source-import-sheet.styles";
 
 export function SourceImportSheet(props: {
   visible: boolean;

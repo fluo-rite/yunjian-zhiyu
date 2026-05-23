@@ -4,13 +4,13 @@ import {
   register,
   type LoginPayload,
   type RegisterPayload,
-} from "../../../lib/api";
+} from "@/lib/api";
 import {
   clearPersistedSession,
   persistSession,
   readPersistedSession,
   type PersistedSession,
-} from "./auth-session";
+} from "@/features/auth/services/auth-session";
 
 export async function hydrateAuthSessionService() {
   const session = await readPersistedSession();

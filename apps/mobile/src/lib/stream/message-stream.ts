@@ -1,4 +1,4 @@
-import { resolveApiBaseUrl } from "../../config/app-config";
+import { resolveApiBaseUrl } from "@/config/app-config";
 import {
   errorEventSchema,
   messageAbortedEventSchema,
@@ -12,8 +12,8 @@ import {
   type MessageDoneEvent,
   type MessageStartEvent,
   type StatusEvent,
-} from "./stream-schemas";
-import { connectSse, type SseConnection } from "./sse-client";
+} from "@/lib/stream/stream-schemas";
+import { connectSse, type SseConnection } from "@/lib/stream/sse-client";
 
 export type AssistantMessageStreamEvent =
   | { type: "status"; id?: string; data: StatusEvent }

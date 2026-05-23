@@ -1,7 +1,7 @@
 import { type QueryClient } from "@tanstack/react-query";
 
-import { ApiError } from "../../../lib/api-client";
-import { libraryQueryKeys } from "./library-query-keys";
+import { ApiError } from "@/lib/api-client";
+import { libraryQueryKeys } from "@/features/library/api/library-query-keys";
 
 function uniqueIds(ids: readonly string[]) {
   return [...new Set(ids.filter(Boolean))];
