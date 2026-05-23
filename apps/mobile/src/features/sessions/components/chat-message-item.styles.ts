@@ -7,6 +7,12 @@ export const chatMessageItemStyles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
   },
+  rowSelectable: {
+    borderRadius: radii.xl,
+  },
+  rowSelectablePressed: {
+    opacity: 0.9,
+  },
   rowLeft: {
     justifyContent: "flex-start",
   },
@@ -23,6 +29,11 @@ export const chatMessageItemStyles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
+  bubbleSelected: {
+    borderWidth: 1,
+    borderColor: colors.accentPressed,
+    backgroundColor: colors.accentSoft,
+  },
   assistantBubble: {
     borderWidth: 1,
     borderColor: colors.borderSoft,
@@ -35,6 +46,9 @@ export const chatMessageItemStyles = StyleSheet.create({
     color: colors.textOnAccent,
     fontSize: typography.body,
     lineHeight: 24,
+  },
+  userTextSelected: {
+    color: colors.textPrimary,
   },
   statusText: {
     color: colors.textTertiary,
@@ -67,6 +81,18 @@ export const chatMessageItemStyles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.meta,
     fontWeight: "600",
+  },
+  selectionIndicator: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    backgroundColor: colors.accentSoft,
+  },
+  selectionIndicatorText: {
+    color: colors.accentPressed,
+    fontSize: typography.meta,
+    fontWeight: "700",
   },
   modalBackdrop: {
     flex: 1,

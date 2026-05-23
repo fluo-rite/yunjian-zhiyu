@@ -1,6 +1,13 @@
+import { type NavigatorScreenParams } from "@react-navigation/native";
+import type {
+  CardDetailMode,
+  CardListMode,
+  SourceDetailMode,
+} from "../features/library/utils/library-view-modes";
+
 export type RootStackParamList = {
   Auth: undefined;
-  MainTabs: undefined;
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Chat: {
     chatId: string;
     title: string;
@@ -8,6 +15,7 @@ export type RootStackParamList = {
   };
   CardList:
     | {
+        mode?: CardListMode;
         status?: "pending" | "active" | "archived";
         groupId?: string;
         groupName?: string;
@@ -18,6 +26,8 @@ export type RootStackParamList = {
     | undefined;
   CardDetail: {
     cardId: string;
+    mode?: CardDetailMode;
+    sourceContextId?: string;
   };
   CardGroupList: undefined;
   CardGroupDetail: {
@@ -38,8 +48,15 @@ export type RootStackParamList = {
   SourceDetail: {
     sourceId: string;
     sourceName?: string;
+    mode?: SourceDetailMode;
   };
   CreateSourceText: undefined;
+  CreateSourceDocument: {
+    fileUri: string;
+    fileName: string;
+    fileType: string | null;
+    fileSize: number | null;
+  };
   Account: undefined;
   Settings: undefined;
 };

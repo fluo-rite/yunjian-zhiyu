@@ -1,17 +1,26 @@
-import { useMemo, useState } from "react";
-import { FlatList, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useMemo, useState } from "react";
+import { Alert, FlatList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { PrimaryButton } from "../../../components/ui/primary-button";
 import { ScreenHeader } from "../../../components/ui/screen-header";
 import { type RootStackParamList } from "../../../navigation/types";
-import { type KnowledgeSource, type SourceStatus, type SourceType, useSourcesQuery } from "../api";
+import {
+  type KnowledgeSource,
+  type SourceStatus,
+  type SourceType,
+  useSourcesQuery,
+} from "../api";
 import { EmptyState } from "../components/empty-state";
 import { ErrorState } from "../components/error-state";
 import { FilterChipRow, type FilterChipItem } from "../components/filter-chip-row";
+import { SessionImportHintModal } from "../components/session-import-hint-modal";
+import { SourceImportSheet } from "../components/source-import-sheet";
 import { SourceListItem } from "../components/source-list-item";
 import { libraryCopy } from "../utils/library-copy";
 import { getStableArray } from "../utils/library-state";
+import { pickSourceDocument } from "../utils/source-document-picker";
 import { sourceListScreenStyles as styles } from "./source-list-screen.styles";
 
 type SourceStatusFilterKey = "all" | SourceStatus;
@@ -27,7 +36,7 @@ const sourceStatusItems: ReadonlyArray<FilterChipItem<SourceStatusFilterKey>> = 
 const sourceTypeItems: ReadonlyArray<FilterChipItem<SourceTypeFilterKey>> = [
   { key: "all", label: "全部类型" },
   { key: "manual_text", label: "文本" },
-  { key: "document", label: "文档" },
+  { key: "document", label: "文件" },
   { key: "messages", label: "消息" },
 ];
 
@@ -43,6 +52,8 @@ export function SourceListScreen({
   navigation,
   route,
 }: NativeStackScreenProps<RootStackParamList, "SourceList">) {
+  const [isImportSheetVisible, setIsImportSheetVisible] = useState(false);
+  const [isSessionHintVisible, setIsSessionHintVisible] = useState(false);
   const [statusFilter, setStatusFilter] = useState<SourceStatusFilterKey>(
     route.params?.status ?? "all",
   );
@@ -57,9 +68,53 @@ export function SourceListScreen({
   const sources = getStableArray(sourcesQuery.data?.items);
   const hasFilters = statusFilter !== "all" || sourceTypeFilter !== "all";
 
+  function openImportSheet() {
+    setIsImportSheetVisible(true);
+  }
+
+  function closeImportSheet() {
+    setIsImportSheetVisible(false);
+  }
+
+  function openSessionHint() {
+    setIsSessionHintVisible(true);
+  }
+
+  function closeSessionHint() {
+    setIsSessionHintVisible(false);
+  }
+
   function handleResetFilters() {
     setStatusFilter("all");
     setSourceTypeFilter("all");
+  }
+
+  async function handleImportFile() {
+    closeImportSheet();
+
+    try {
+      const file = await pickSourceDocument();
+
+      if (!file) {
+        return;
+      }
+
+      navigation.navigate("CreateSourceDocument", {
+        fileUri: file.fileUri,
+        fileName: file.fileName,
+        fileType: file.fileType,
+        fileSize: file.fileSize,
+      });
+    } catch (error) {
+      Alert.alert(
+        "文件选择失败",
+        error instanceof Error ? error.message : "暂时无法读取这个文件，请稍后再试。",
+      );
+    }
+  }
+
+  function handleImportFilePress() {
+    handleImportFile().catch(() => {});
   }
 
   const listHeaderComponent = useMemo(
@@ -69,11 +124,16 @@ export function SourceListScreen({
           <Text style={styles.heroTitle}>全部知识来源</Text>
           <Text style={styles.heroText}>查看不同资料的整理结果，并继续处理生成的卡片。</Text>
           {sourcesQuery.data?.pagination ? (
-            <Text style={styles.resultMeta}>
-              共 {sourcesQuery.data.pagination.total} 条来源
-            </Text>
+            <Text style={styles.resultMeta}>共 {sourcesQuery.data.pagination.total} 条来源</Text>
           ) : null}
         </View>
+
+        <PrimaryButton
+          iconName="cloud-upload-outline"
+          label={libraryCopy.sourceList.importContentAction}
+          onPress={openImportSheet}
+          style={styles.importButton}
+        />
 
         <View style={styles.filterCard}>
           <View style={styles.filterSection}>
@@ -96,7 +156,7 @@ export function SourceListScreen({
         </View>
       </View>
     ),
-    [sourcesQuery.data?.pagination, statusFilter, sourceTypeFilter],
+    [sourcesQuery.data?.pagination, sourceTypeFilter, statusFilter],
   );
 
   const listEmptyComponent = useMemo(() => {
@@ -124,27 +184,23 @@ export function SourceListScreen({
 
     return (
       <EmptyState
-        actionLabel={hasFilters ? libraryCopy.cardList.clearLocalFilters : libraryCopy.sourceList.importTextAction}
+        actionLabel={
+          hasFilters ? libraryCopy.cardList.clearLocalFilters : libraryCopy.sourceList.importContentAction
+        }
         description={
           hasFilters
             ? libraryCopy.sourceList.emptyFilteredDescription
             : libraryCopy.sourceList.emptyDefaultDescription
         }
-        onActionPress={hasFilters ? handleResetFilters : () => navigation.navigate("CreateSourceText")}
+        onActionPress={hasFilters ? handleResetFilters : openImportSheet}
         title={libraryCopy.sourceList.emptyTitle}
       />
     );
-  }, [hasFilters, navigation, sourcesQuery]);
+  }, [hasFilters, sourcesQuery]);
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
-      <ScreenHeader
-        onBack={() => navigation.goBack()}
-        onRightPress={() => navigation.navigate("CreateSourceText")}
-        rightLabel={libraryCopy.sourceList.importTextAction}
-        subtitle="资料来源"
-        title="知识来源"
-      />
+      <ScreenHeader onBack={() => navigation.goBack()} subtitle="资料来源" title="知识来源" />
 
       <FlatList<KnowledgeSource>
         contentContainerStyle={styles.content}
@@ -166,6 +222,31 @@ export function SourceListScreen({
           />
         )}
         showsVerticalScrollIndicator={false}
+      />
+
+      <SourceImportSheet
+        onClose={closeImportSheet}
+        onImportFile={handleImportFilePress}
+        onImportSession={() => {
+          closeImportSheet();
+          openSessionHint();
+        }}
+        onImportText={() => {
+          closeImportSheet();
+          navigation.navigate("CreateSourceText");
+        }}
+        visible={isImportSheetVisible}
+      />
+
+      <SessionImportHintModal
+        onClose={closeSessionHint}
+        onGoToSessions={() => {
+          closeSessionHint();
+          navigation.navigate("MainTabs", {
+            screen: "SessionsHome",
+          });
+        }}
+        visible={isSessionHintVisible}
       />
     </SafeAreaView>
   );

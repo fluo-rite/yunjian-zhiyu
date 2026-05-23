@@ -4,6 +4,7 @@ import { Alert, KeyboardAvoidingView, Platform, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScreenHeader } from "../../../components/ui/screen-header";
+import { useCreateSourceFromMessagesMutation } from "../../../features/library/api";
 import { type RootStackParamList } from "../../../navigation/types";
 import {
   type Message,
@@ -14,6 +15,7 @@ import {
 } from "../api";
 import { ChatComposer } from "../components/chat-composer";
 import { ChatMessageList } from "../components/chat-message-list";
+import { ChatSelectionActionBar } from "../components/chat-selection-action-bar";
 import { useAssistantMessageStream } from "../hooks/use-assistant-message-stream";
 import { chatScreenStyles as styles } from "./chat-screen.styles";
 
@@ -24,10 +26,21 @@ function buildChatTitle(content: string) {
   return normalized.slice(0, 20) || "新会话";
 }
 
+function buildMessageSourceName(chatTitle: string) {
+  return `${chatTitle.trim() || "未命名会话"} 对话摘录`;
+}
+
 function findLatestStreamingAssistantMessage(messages: Message[]) {
   return [...messages]
     .reverse()
     .find((message) => message.role === "assistant" && message.status === "streaming");
+}
+
+function getSelectedMessagePayload(messages: Message[], selectedIds: ReadonlySet<string>) {
+  return messages
+    .filter((message) => selectedIds.has(message.id))
+    .map((message) => message.content.trim())
+    .filter(Boolean);
 }
 
 export function ChatScreen({
@@ -39,13 +52,17 @@ export function ChatScreen({
   const [chatId, setChatId] = useState<string | null>(route.params.isNew ? null : route.params.chatId);
   const [chatTitle, setChatTitle] = useState(route.params.title);
   const [streamAssistantMessageId, setStreamAssistantMessageId] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
 
   const messagesQuery = useChatMessagesQuery(chatId);
   const createChatMutation = useCreateChatMutation();
   const sendChatMessageMutation = useSendChatMessageMutation();
   const abortChatMessageMutation = useAbortChatMessageMutation();
+  const createSourceFromMessagesMutation = useCreateSourceFromMessagesMutation();
   const stream = useAssistantMessageStream(chatId, streamAssistantMessageId);
   const messages = useMemo(() => messagesQuery.data?.items ?? EMPTY_MESSAGES, [messagesQuery.data]);
+  const selectedMessageIdSet = useMemo(() => new Set(selectedMessageIds), [selectedMessageIds]);
 
   useEffect(() => {
     const latestStreaming = findLatestStreamingAssistantMessage(messages);
@@ -62,16 +79,24 @@ export function ChatScreen({
     }
   }, [messages, stream.isStreaming, streamAssistantMessageId]);
 
+  useEffect(() => {
+    const existingIds = new Set(messages.map((message) => message.id));
+    setSelectedMessageIds((current) => current.filter((messageId) => existingIds.has(messageId)));
+  }, [messages]);
+
   const fallbackTitle = useMemo(() => (chatId ? "会话详情" : "新会话"), [chatId]);
-  const isSending = createChatMutation.isPending || sendChatMessageMutation.isPending || stream.isConnecting;
+  const isSending =
+    createChatMutation.isPending || sendChatMessageMutation.isPending || stream.isConnecting;
   const isStreaming = stream.isStreaming || abortChatMessageMutation.isPending;
+  const canEnterSelectionMode =
+    Boolean(chatId) && messages.length > 0 && !messagesQuery.isLoading && !isStreaming;
 
   useEffect(() => {
     if (!stream.terminalMessage && !stream.errorMessage) {
       return;
     }
 
-    void messagesQuery.refetch();
+    messagesQuery.refetch().catch(() => {});
   }, [messagesQuery, stream.errorMessage, stream.terminalMessage]);
 
   useEffect(() => {
@@ -81,6 +106,11 @@ export function ChatScreen({
 
     Alert.alert("消息中断", stream.errorMessage);
   }, [stream.errorMessage]);
+
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedMessageIds([]);
+  }
 
   async function ensureChatCreated(content: string) {
     if (chatId) {
@@ -98,7 +128,7 @@ export function ChatScreen({
   }
 
   async function handleSend(content: string) {
-    if (!content || isSending || isStreaming) {
+    if (!content || isSending || isStreaming || selectionMode) {
       return;
     }
 
@@ -118,7 +148,9 @@ export function ChatScreen({
     } catch (error) {
       Alert.alert(
         "发送失败",
-        error instanceof Error ? error.message : "这条消息暂时没有发送成功，请稍后再试。",
+        error instanceof Error
+          ? error.message
+          : "这条消息暂时没有发送成功，请稍后再试。",
       );
     }
   }
@@ -136,14 +168,78 @@ export function ChatScreen({
     } catch (error) {
       Alert.alert(
         "停止失败",
-        error instanceof Error ? error.message : "暂时无法停止这次生成，请稍后再试。",
+        error instanceof Error
+          ? error.message
+          : "暂时无法停止这次生成，请稍后再试。",
       );
     }
   }
 
+  function handleToggleSelect(message: Message) {
+    setSelectedMessageIds((current) =>
+      current.includes(message.id)
+        ? current.filter((messageId) => messageId !== message.id)
+        : [...current, message.id],
+    );
+  }
+
+  async function handleImportSelectedMessages() {
+    if (createSourceFromMessagesMutation.isPending) {
+      return;
+    }
+
+    const selectedMessages = getSelectedMessagePayload(messages, selectedMessageIdSet);
+
+    if (selectedMessages.length === 0) {
+      Alert.alert("无法导入", "请至少选择一条包含有效文本内容的消息。");
+      return;
+    }
+
+    try {
+      const created = await createSourceFromMessagesMutation.mutateAsync({
+        name: buildMessageSourceName(chatTitle || fallbackTitle),
+        messages: selectedMessages,
+      });
+
+      exitSelectionMode();
+      navigation.navigate("SourceDetail", {
+        sourceId: created.id,
+        sourceName: created.name,
+      });
+    } catch (error) {
+      Alert.alert(
+        "导入失败",
+        error instanceof Error
+          ? error.message
+          : "暂时无法将这些消息导入为知识来源，请稍后再试。",
+      );
+    }
+  }
+
+  function handleSelectionActionPress() {
+    if (selectionMode) {
+      exitSelectionMode();
+      return;
+    }
+
+    setSelectionMode(true);
+  }
+
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
-      <ScreenHeader onBack={() => navigation.goBack()} title={chatTitle || fallbackTitle} />
+      <ScreenHeader
+        onBack={() => {
+          if (selectionMode) {
+            exitSelectionMode();
+            return;
+          }
+
+          navigation.goBack();
+        }}
+        onRightPress={selectionMode || canEnterSelectionMode ? handleSelectionActionPress : undefined}
+        rightLabel={selectionMode ? "取消" : canEnterSelectionMode ? "选取消息" : undefined}
+        title={chatTitle || fallbackTitle}
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -157,6 +253,9 @@ export function ChatScreen({
           isError={messagesQuery.isError}
           isLoading={messagesQuery.isLoading && Boolean(chatId)}
           messages={messages}
+          onToggleSelect={selectionMode ? handleToggleSelect : undefined}
+          selectedIds={selectedMessageIdSet}
+          selectionMode={selectionMode}
           streamAssistantMessageId={streamAssistantMessageId}
           streamedContent={stream.streamedContent}
           terminalMessage={stream.terminalMessage}
@@ -171,13 +270,28 @@ export function ChatScreen({
           }}
           style={[styles.composerWrap, { paddingBottom: insets.bottom + 12 }]}
         >
-          <ChatComposer
-            isAborting={abortChatMessageMutation.isPending}
-            isSending={isSending}
-            isStreaming={isStreaming}
-            onAbort={handleAbort}
-            onSend={handleSend}
-          />
+          {selectionMode ? (
+            <ChatSelectionActionBar
+              isSubmitting={createSourceFromMessagesMutation.isPending}
+              onCancel={exitSelectionMode}
+              onSubmit={() => {
+                handleImportSelectedMessages().catch(() => {});
+              }}
+              selectedCount={selectedMessageIds.length}
+            />
+          ) : (
+            <ChatComposer
+              isAborting={abortChatMessageMutation.isPending}
+              isSending={isSending}
+              isStreaming={isStreaming}
+              onAbort={() => {
+                handleAbort().catch(() => {});
+              }}
+              onSend={(content) => {
+                handleSend(content).catch(() => {});
+              }}
+            />
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,6 +13,9 @@ import { EmptyState } from "../components/empty-state";
 import { ErrorState } from "../components/error-state";
 import { FilterChipRow, type FilterChipItem } from "../components/filter-chip-row";
 import { libraryCopy } from "../utils/library-copy";
+import { buildReadonlyCardDetailParams } from "../utils/library-navigation";
+import { getCardListCapabilities } from "../utils/library-view-capabilities";
+import { defaultCardListMode } from "../utils/library-view-modes";
 import { getStableArray } from "../utils/library-state";
 import { cardListScreenStyles as styles } from "./card-list-screen.styles";
 
@@ -33,29 +36,37 @@ export function CardListScreen({
   navigation,
   route,
 }: NativeStackScreenProps<RootStackParamList, "CardList">) {
+  const mode = route.params?.mode ?? defaultCardListMode;
+  const capabilities = getCardListCapabilities(mode);
   const [searchInput, setSearchInput] = useState(route.params?.keyword ?? "");
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey>(route.params?.status ?? "all");
 
   const cardsQuery = useCardsQuery({
-    status: toStatusFilterValue(statusFilter),
+    status: capabilities.showStatusFilter ? toStatusFilterValue(statusFilter) : undefined,
     sourceId: route.params?.sourceId,
     groupId: route.params?.groupId,
-    keyword: searchInput.trim() || undefined,
+    keyword: capabilities.showSearch ? searchInput.trim() || undefined : undefined,
   });
 
   const cards = getStableArray(cardsQuery.data?.items);
   const hasContextFilter = Boolean(route.params?.sourceId || route.params?.groupId);
   const hasLocalFilters = Boolean(searchInput.trim() || statusFilter !== "all");
-  const screenTitle = route.params?.sourceName
-    ? route.params.sourceName
-    : route.params?.groupName
-      ? route.params.groupName
-      : "知识卡片";
-  const screenSubtitle = route.params?.sourceName
-    ? "来源卡片"
-    : route.params?.groupName
-      ? "分组卡片"
-      : "全部卡片";
+  const screenTitle =
+    mode === "source_related"
+      ? "相关卡片"
+      : route.params?.sourceName
+        ? route.params.sourceName
+        : route.params?.groupName
+          ? route.params.groupName
+          : "知识卡片";
+  const screenSubtitle =
+    mode === "source_related"
+      ? "来自同一来源"
+      : route.params?.sourceName
+        ? "来源卡片"
+        : route.params?.groupName
+          ? "分组卡片"
+          : "全部卡片";
 
   function handleResetLocalFilters() {
     setSearchInput("");
@@ -66,39 +77,43 @@ export function CardListScreen({
     navigation.replace("CardList");
   }
 
-  const listHeaderComponent = useMemo(
-    () => (
-      <View style={styles.headerContent}>
-        <View style={styles.heroCard}>
-          <Text style={styles.heroTitle}>卡片列表</Text>
-          <Text style={styles.heroText}>搜索、筛选并继续浏览你整理过的内容。</Text>
-          {route.params?.sourceName ? (
-            <Text style={styles.contextText}>来源：{route.params.sourceName}</Text>
-          ) : null}
-          {route.params?.groupName ? (
-            <Text style={styles.contextText}>分组：{route.params.groupName}</Text>
-          ) : null}
-          {cardsQuery.data?.pagination ? (
-            <Text style={styles.resultMeta}>共 {cardsQuery.data.pagination.total} 张卡片</Text>
-          ) : null}
-        </View>
+  const listHeaderComponent = (
+    <View style={styles.headerContent}>
+      <View style={styles.heroCard}>
+        <Text style={styles.heroTitle}>{mode === "source_related" ? "相关卡片" : "卡片列表"}</Text>
+        <Text style={styles.heroText}>
+          {mode === "source_related"
+            ? "仅展示与当前卡片同源的卡片，方便快速浏览相关内容。"
+            : "搜索、筛选并继续浏览你整理过的内容。"}
+        </Text>
+        {capabilities.showHeroContext && route.params?.sourceName ? (
+          <Text style={styles.contextText}>来源：{route.params.sourceName}</Text>
+        ) : null}
+        {capabilities.showHeroContext && route.params?.groupName ? (
+          <Text style={styles.contextText}>分组：{route.params.groupName}</Text>
+        ) : null}
+        {cardsQuery.data?.pagination ? (
+          <Text style={styles.resultMeta}>共 {cardsQuery.data.pagination.total} 张卡片</Text>
+        ) : null}
+      </View>
 
+      {capabilities.showSearch || capabilities.showStatusFilter ? (
         <View style={styles.filterCard}>
-          <Field
-            label="搜索卡片"
-            onChangeText={setSearchInput}
-            placeholder="搜索标题、内容或标签"
-            value={searchInput}
-          />
-
-          <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>状态</Text>
-            <FilterChipRow
-              items={statusFilterItems}
-              onSelect={setStatusFilter}
-              selectedKey={statusFilter}
+          {capabilities.showSearch ? (
+            <Field
+              label="搜索卡片"
+              onChangeText={setSearchInput}
+              placeholder="搜索标题、内容或标签"
+              value={searchInput}
             />
-          </View>
+          ) : null}
+
+          {capabilities.showStatusFilter ? (
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>状态</Text>
+              <FilterChipRow items={statusFilterItems} onSelect={setStatusFilter} selectedKey={statusFilter} />
+            </View>
+          ) : null}
 
           {hasLocalFilters ? (
             <PrimaryButton
@@ -108,65 +123,56 @@ export function CardListScreen({
             />
           ) : null}
         </View>
-      </View>
-    ),
-    [
-      cardsQuery.data?.pagination,
-      hasLocalFilters,
-      route.params?.groupName,
-      route.params?.sourceName,
-      searchInput,
-      statusFilter,
-    ],
+      ) : null}
+    </View>
   );
 
-  const listEmptyComponent = useMemo(() => {
-    if (cardsQuery.isLoading) {
-      return (
-        <EmptyState
-          description={libraryCopy.cardList.loadingDescription}
-          title={libraryCopy.cardList.loadingTitle}
-        />
-      );
-    }
-
-    if (cardsQuery.isError) {
-      return (
-        <ErrorState
-          description={cardsQuery.error instanceof Error ? cardsQuery.error.message : libraryCopy.loadFailed}
-          onRetry={() => cardsQuery.refetch()}
-          retryLabel={libraryCopy.retry}
-          title={libraryCopy.cardList.errorTitle}
-        />
-      );
-    }
-
-    return (
-      <EmptyState
-        actionLabel={
-          hasContextFilter
+  const listEmptyComponent = cardsQuery.isLoading ? (
+    <EmptyState description={libraryCopy.cardList.loadingDescription} title={libraryCopy.cardList.loadingTitle} />
+  ) : cardsQuery.isError ? (
+    <ErrorState
+      description={cardsQuery.error instanceof Error ? cardsQuery.error.message : libraryCopy.loadFailed}
+      onRetry={() => cardsQuery.refetch()}
+      retryLabel={libraryCopy.retry}
+      title={libraryCopy.cardList.errorTitle}
+    />
+  ) : (
+    <EmptyState
+      actionLabel={
+        mode === "manage"
+          ? hasContextFilter
             ? libraryCopy.cardList.showAllCards
             : hasLocalFilters
               ? libraryCopy.cardList.clearLocalFilters
               : undefined
-        }
-        description={
-          hasContextFilter || hasLocalFilters
+          : undefined
+      }
+      description={
+        mode === "source_related"
+          ? "当前来源下还没有其他可浏览的卡片。"
+          : hasContextFilter || hasLocalFilters
             ? libraryCopy.cardList.emptyFilteredDescription
             : libraryCopy.cardList.emptyDefaultDescription
-        }
-        onActionPress={hasContextFilter ? handleResetAllFilters : hasLocalFilters ? handleResetLocalFilters : undefined}
-        title={libraryCopy.cardList.emptyTitle}
-      />
-    );
-  }, [cardsQuery, hasContextFilter, hasLocalFilters]);
+      }
+      onActionPress={
+        mode === "manage"
+          ? hasContextFilter
+            ? handleResetAllFilters
+            : hasLocalFilters
+              ? handleResetLocalFilters
+              : undefined
+          : undefined
+      }
+      title={libraryCopy.cardList.emptyTitle}
+    />
+  );
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
       <ScreenHeader
         onBack={() => navigation.goBack()}
-        onRightPress={hasContextFilter ? handleResetAllFilters : undefined}
-        rightLabel={hasContextFilter ? libraryCopy.cardList.showAllCards : undefined}
+        onRightPress={capabilities.showResetAll && hasContextFilter ? handleResetAllFilters : undefined}
+        rightLabel={capabilities.showResetAll && hasContextFilter ? libraryCopy.cardList.showAllCards : undefined}
         subtitle={screenSubtitle}
         title={screenTitle}
       />
@@ -175,7 +181,12 @@ export function CardListScreen({
         items={cards}
         ListEmptyComponent={listEmptyComponent}
         ListHeaderComponent={listHeaderComponent}
-        onPressItem={(card) => navigation.navigate("CardDetail", { cardId: card.id })}
+        onPressItem={(card) =>
+          navigation.navigate(
+            "CardDetail",
+            mode === "source_related" ? buildReadonlyCardDetailParams(card.id) : { cardId: card.id },
+          )
+        }
         onRefresh={() => cardsQuery.refetch()}
         refreshing={cardsQuery.isRefetching}
       />

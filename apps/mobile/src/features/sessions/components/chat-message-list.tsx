@@ -16,11 +16,17 @@ export type ChatMessageListProps = {
   streamedContent?: string;
   terminalMessage?: Message | null;
   ephemeralPhaseLabel?: string | null;
+  selectionMode?: boolean;
+  selectedIds?: ReadonlySet<string>;
+  onToggleSelect?: (message: Message) => void;
 };
 
-const ESTIMATED_ITEM_SIZE = 180;
 const BOTTOM_STICKY_THRESHOLD = 120;
 const AUTO_SCROLL_INTERVAL_MS = 100;
+
+function ListSeparator() {
+  return <View style={styles.itemSeparator} />;
+}
 
 function ChatMessageListComponent({
   messages,
@@ -32,6 +38,9 @@ function ChatMessageListComponent({
   streamedContent,
   terminalMessage,
   ephemeralPhaseLabel,
+  selectionMode,
+  selectedIds,
+  onToggleSelect,
 }: ChatMessageListProps) {
   const listRef = useRef<FlashListRef<Message> | null>(null);
   const isNearBottomRef = useRef(true);
@@ -48,6 +57,8 @@ function ChatMessageListComponent({
       streamedContent,
       terminalMessage,
       ephemeralPhaseLabel,
+      selectionMode,
+      selectedIds,
     }),
     [
       composerSpacerHeight,
@@ -55,6 +66,8 @@ function ChatMessageListComponent({
       errorMessage,
       isError,
       isLoading,
+      selectedIds,
+      selectionMode,
       streamAssistantMessageId,
       streamedContent,
       terminalMessage,
@@ -70,23 +83,17 @@ function ChatMessageListComponent({
     scrollTimerRef.current = null;
   }
 
-  function scheduleAutoScroll() {
-    if (scrollTimerRef.current !== null) {
-      return;
-    }
-
-    scrollTimerRef.current = setTimeout(() => {
-      scrollTimerRef.current = null;
-      listRef.current?.scrollToEnd({ animated: messages.length > 0 });
-    }, AUTO_SCROLL_INTERVAL_MS);
-  }
-
   useEffect(() => {
     if (!isNearBottomRef.current) {
       return;
     }
 
-    scheduleAutoScroll();
+    if (!selectionMode && scrollTimerRef.current === null) {
+      scrollTimerRef.current = setTimeout(() => {
+        scrollTimerRef.current = null;
+        listRef.current?.scrollToEnd({ animated: messages.length > 0 });
+      }, AUTO_SCROLL_INTERVAL_MS);
+    }
 
     return () => {
       cancelScheduledAutoScroll();
@@ -96,6 +103,7 @@ function ChatMessageListComponent({
     lastMessage?.content,
     lastMessage?.id,
     messages.length,
+    selectionMode,
     streamedContent,
     terminalMessage,
   ]);
@@ -132,7 +140,7 @@ function ChatMessageListComponent({
         {isLoading ? (
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>正在加载会话</Text>
-            <Text style={styles.infoText}>请稍候，我们正在同步当前对话内容。</Text>
+            <Text style={styles.infoText}>请稍等，我们正在同步当前对话内容。</Text>
           </View>
         ) : null}
 
@@ -150,9 +158,8 @@ function ChatMessageListComponent({
     <FlashList
       contentContainerStyle={styles.contentContainer}
       data={messages}
-      estimatedItemSize={ESTIMATED_ITEM_SIZE}
       extraData={listExtraData}
-      ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+      ItemSeparatorComponent={ListSeparator}
       keyboardShouldPersistTaps="handled"
       keyExtractor={(item) => item.id}
       ListFooterComponent={<View style={[styles.footerSpacer, { height: composerSpacerHeight }]} />}
@@ -172,6 +179,15 @@ function ChatMessageListComponent({
           <ChatMessageItem
             ephemeralStatusLabel={isCurrentStreamTarget ? ephemeralPhaseLabel : null}
             message={renderedMessage}
+            onPress={
+              selectionMode && onToggleSelect
+                ? () => {
+                    onToggleSelect(renderedMessage);
+                  }
+                : undefined
+            }
+            selected={selectedIds?.has(renderedMessage.id) ?? false}
+            selectionMode={selectionMode}
           />
         );
       }}

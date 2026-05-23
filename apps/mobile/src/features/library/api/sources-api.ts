@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { resolveApiBaseUrl } from "../../../config/app-config";
 import { apiClient } from "../../../lib/api-client";
+import { store } from "../../../store";
 import {
   knowledgeSourceCardsResponseSchema,
   knowledgeSourceDetailSchema,
@@ -34,6 +36,18 @@ export type ListSourcesParams = {
 export type CreateSourceFromTextInput = {
   name: string;
   content: string;
+};
+
+export type CreateSourceFromMessagesInput = {
+  name: string;
+  messages: string[];
+};
+
+export type CreateSourceFromDocumentInput = {
+  name: string;
+  fileUri: string;
+  fileName: string;
+  fileType: string | null;
 };
 
 export type DeleteSourceInput = {
@@ -84,6 +98,74 @@ export async function createSourceFromText(
   return knowledgeSourceSchema.parse(response);
 }
 
+export async function createSourceFromMessages(
+  payload: CreateSourceFromMessagesInput,
+): Promise<KnowledgeSource> {
+  const response = await apiClient.post("/knowledge-sources/from-messages", {
+    body: payload,
+  });
+
+  return knowledgeSourceSchema.parse(response);
+}
+
+function normalizeUploadFileUri(fileUri: string) {
+  if (/^[a-z]+:\/\//i.test(fileUri)) {
+    return fileUri;
+  }
+
+  return `file://${fileUri}`;
+}
+
+export async function createSourceFromDocument(
+  payload: CreateSourceFromDocumentInput,
+): Promise<KnowledgeSource> {
+  const accessToken = store.getState().auth.tokens?.accessToken;
+
+  if (!accessToken) {
+    throw new Error("登录状态已失效，请重新登录后再试。");
+  }
+
+  const formData = new FormData();
+  formData.append("name", payload.name);
+  formData.append(
+    "file",
+    {
+      uri: normalizeUploadFileUri(payload.fileUri),
+      name: payload.fileName,
+      type: payload.fileType ?? "application/octet-stream",
+    } as any,
+  );
+
+  const response = await fetch(`${resolveApiBaseUrl()}/knowledge-sources/from-document`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: formData,
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const responseBody = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    if (
+      responseBody &&
+      typeof responseBody === "object" &&
+      "detail" in responseBody &&
+      typeof responseBody.detail === "string"
+    ) {
+      throw new Error(responseBody.detail);
+    }
+
+    throw new Error(`上传失败 (${response.status})`);
+  }
+
+  return knowledgeSourceSchema.parse(responseBody);
+}
+
 export async function deleteSource(payload: DeleteSourceInput): Promise<void> {
   await apiClient.delete(`/knowledge-sources/${payload.sourceId}`, {
     body: {
@@ -128,6 +210,28 @@ export function useCreateSourceFromTextMutation() {
 
   return useMutation({
     mutationFn: createSourceFromText,
+    onSuccess: async () => {
+      await refreshSourceLists(queryClient);
+    },
+  });
+}
+
+export function useCreateSourceFromMessagesMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createSourceFromMessages,
+    onSuccess: async () => {
+      await refreshSourceLists(queryClient);
+    },
+  });
+}
+
+export function useCreateSourceFromDocumentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createSourceFromDocument,
     onSuccess: async () => {
       await refreshSourceLists(queryClient);
     },

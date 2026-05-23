@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -16,7 +16,14 @@ import { CardListView } from "../components/card-list-view";
 import { EmptyState } from "../components/empty-state";
 import { ErrorState } from "../components/error-state";
 import { SourceStatusBadge } from "../components/source-status-badge";
-import { countCardsByStatus, formatDateTimeLabel, getSourceTypeLabel } from "../utils/library-formatters";
+import { getSourceDetailCapabilities } from "../utils/library-view-capabilities";
+import { defaultSourceDetailMode } from "../utils/library-view-modes";
+import {
+  countCardsByStatus,
+  formatDateTimeLabel,
+  getSourceStatusLabel,
+  getSourceTypeLabel,
+} from "../utils/library-formatters";
 import { getStableArray, retainExistingIds } from "../utils/library-state";
 import { sourceDetailScreenStyles as styles } from "./source-detail-screen.styles";
 
@@ -24,8 +31,11 @@ export function SourceDetailScreen({
   navigation,
   route,
 }: NativeStackScreenProps<RootStackParamList, "SourceDetail">) {
+  const mode = route.params.mode ?? defaultSourceDetailMode;
+  const capabilities = getSourceDetailCapabilities(mode);
+
   const sourceQuery = useSourceDetailQuery(route.params.sourceId);
-  const sourceCardsQuery = useSourceCardsQuery(route.params.sourceId);
+  const sourceCardsQuery = useSourceCardsQuery(capabilities.showGeneratedCards ? route.params.sourceId : null);
   const confirmCardsMutation = useConfirmCardsMutation();
   const deleteSourceMutation = useDeleteSourceMutation();
   const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
@@ -103,26 +113,26 @@ export function SourceDetailScreen({
     ]);
   }
 
-  const listHeaderComponent = useMemo(() => {
-    if (!source) {
-      return null;
-    }
-
-    return (
-      <View style={styles.headerContent}>
-        <View style={styles.heroCard}>
-          <View style={styles.heroHeader}>
-            <View style={styles.heroCopy}>
-              <Text style={styles.heroTitle}>{source.name}</Text>
-              <Text style={styles.heroMeta}>
-                {getSourceTypeLabel(source.sourceType)} · 最近更新 {formatDateTimeLabel(source.updatedAt)}
-              </Text>
-            </View>
-            <SourceStatusBadge status={source.status} />
+  const headerContent = !source ? null : (
+    <View style={styles.headerContent}>
+      <View style={styles.heroCard}>
+        <View style={styles.heroHeader}>
+          <View style={styles.heroCopy}>
+            <Text style={styles.heroTitle}>{source.name}</Text>
+            <Text style={styles.heroMeta}>
+              {getSourceTypeLabel(source.sourceType)} · 最近更新 {formatDateTimeLabel(source.updatedAt)}
+            </Text>
           </View>
-          <Text style={styles.heroText}>查看原始内容、卡片结果，以及当前需要确认的内容。</Text>
+          <SourceStatusBadge status={source.status} />
         </View>
+        <Text style={styles.heroText}>
+          {mode === "card_source_readonly"
+            ? "这里展示当前卡片对应的来源内容和基础信息。"
+            : "查看原始内容、卡片结果，以及当前需要确认的内容。"}
+        </Text>
+      </View>
 
+      {capabilities.showGeneratedCards ? (
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>待确认</Text>
@@ -137,12 +147,22 @@ export function SourceDetailScreen({
             <Text style={styles.statValue}>{cardCounts.archived}</Text>
           </View>
         </View>
+      ) : null}
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>原始内容</Text>
-          <Text style={styles.sectionText}>{source.rawContent}</Text>
-        </View>
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>原始内容</Text>
+        <Text style={styles.sectionText}>{source.rawContent}</Text>
+      </View>
 
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>来源信息</Text>
+        <Text style={styles.sectionText}>来源类型：{getSourceTypeLabel(source.sourceType)}</Text>
+        <Text style={styles.sectionText}>来源状态：{getSourceStatusLabel(source.status)}</Text>
+        <Text style={styles.sectionText}>创建时间：{formatDateTimeLabel(source.createdAt)}</Text>
+        <Text style={styles.sectionText}>更新时间：{formatDateTimeLabel(source.updatedAt)}</Text>
+      </View>
+
+      {capabilities.showManageActions ? (
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>来源管理</Text>
           <Text style={styles.sectionText}>
@@ -155,58 +175,44 @@ export function SourceDetailScreen({
               variant="secondary"
             />
             <PrimaryButton
-              label={
-                deleteSourceMutation.isPending
-                  ? "处理中…"
-                  : cards.length > 0
-                    ? "删除来源与卡片"
-                    : "删除来源"
-              }
+              label={deleteSourceMutation.isPending ? "处理中…" : cards.length > 0 ? "删除来源与卡片" : "删除来源"}
               onPress={() => handleDeleteSource(cards.length > 0)}
             />
           </View>
         </View>
+      ) : null}
 
-        {pendingCards.length > 0 ? (
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>待确认卡片</Text>
-            <Text style={styles.sectionText}>选中需要保留的卡片后，可一次性确认加入卡片库。</Text>
-            <View style={styles.actionRow}>
-              <PrimaryButton
-                label={selectedPendingIds.length === pendingCards.length ? "清空选择" : "全选待确认"}
-                onPress={selectedPendingIds.length === pendingCards.length ? handleClearSelection : handleSelectAllPending}
-                variant="secondary"
-              />
-              <PrimaryButton
-                disabled={selectedPendingIds.length === 0 || confirmCardsMutation.isPending}
-                label={confirmCardsMutation.isPending ? "确认中…" : `确认选中 (${selectedPendingIds.length})`}
-                onPress={handleConfirmSelected}
-              />
-            </View>
+      {capabilities.showPendingConfirm && pendingCards.length > 0 ? (
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>待确认卡片</Text>
+          <Text style={styles.sectionText}>选中需要保留的卡片后，可一次性确认加入卡片库。</Text>
+          <View style={styles.actionRow}>
+            <PrimaryButton
+              label={selectedPendingIds.length === pendingCards.length ? "清空选择" : "全选待确认"}
+              onPress={selectedPendingIds.length === pendingCards.length ? handleClearSelection : handleSelectAllPending}
+              variant="secondary"
+            />
+            <PrimaryButton
+              disabled={selectedPendingIds.length === 0 || confirmCardsMutation.isPending}
+              label={confirmCardsMutation.isPending ? "确认中…" : `确认选中 (${selectedPendingIds.length})`}
+              onPress={handleConfirmSelected}
+            />
           </View>
-        ) : null}
+        </View>
+      ) : null}
 
+      {capabilities.showGeneratedCards ? (
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>卡片列表</Text>
           <Text style={styles.sectionCaption}>共 {cards.length} 张</Text>
         </View>
-      </View>
-    );
-  }, [
-    cardCounts.active,
-    cardCounts.archived,
-    cardCounts.pending,
-    cards.length,
-    confirmCardsMutation.isPending,
-    deleteSourceMutation.isPending,
-    pendingCards.length,
-    selectedPendingIds.length,
-    source,
-  ]);
+      ) : null}
+    </View>
+  );
 
   const listEmptyComponent = useMemo(() => {
     if (sourceQuery.isLoading || sourceCardsQuery.isLoading) {
-      return <EmptyState description="请稍候，我们正在同步来源详情与卡片内容。" title="正在加载来源" />;
+      return <EmptyState description="请稍等，我们正在同步来源详情与卡片内容。" title="正在加载来源" />;
     }
 
     if (sourceQuery.isError || sourceCardsQuery.isError) {
@@ -243,17 +249,55 @@ export function SourceDetailScreen({
     );
   }, [sourceCardsQuery, sourceQuery]);
 
+  if (mode === "card_source_readonly") {
+    return (
+      <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
+        <ScreenHeader
+          onBack={() => navigation.goBack()}
+          subtitle="卡片来源"
+          title={route.params.sourceName ?? source?.name ?? "知识来源详情"}
+        />
+
+        {sourceQuery.isLoading ? (
+          <View style={styles.scrollContent}>
+            <EmptyState description="请稍等，我们正在加载来源详情。" title="正在加载来源" />
+          </View>
+        ) : null}
+
+        {sourceQuery.isError ? (
+          <View style={styles.scrollContent}>
+            <ErrorState
+              description={sourceQuery.error instanceof Error ? sourceQuery.error.message : "暂时无法读取当前来源，请稍后再试。"}
+              onRetry={() => sourceQuery.refetch()}
+              retryLabel="重新加载"
+              title="来源加载失败"
+            />
+          </View>
+        ) : null}
+
+        {source ? (
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {headerContent}
+          </ScrollView>
+        ) : null}
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
       <ScreenHeader
         onBack={() => navigation.goBack()}
-        onRightPress={() =>
-          navigation.navigate("CardList", {
-            sourceId: route.params.sourceId,
-            sourceName: route.params.sourceName,
-          })
+        onRightPress={
+          capabilities.showJumpToFilteredCards
+            ? () =>
+                navigation.navigate("CardList", {
+                  sourceId: route.params.sourceId,
+                  sourceName: route.params.sourceName,
+                })
+            : undefined
         }
-        rightLabel="筛选卡片"
+        rightLabel={capabilities.showJumpToFilteredCards ? "筛选卡片" : undefined}
         subtitle="来源详情"
         title={route.params.sourceName ?? source?.name ?? "知识来源详情"}
       />
@@ -262,9 +306,14 @@ export function SourceDetailScreen({
         isItemSelectable={(card) => card.status === "pending"}
         items={cards}
         ListEmptyComponent={listEmptyComponent}
-        ListHeaderComponent={listHeaderComponent}
+        ListHeaderComponent={headerContent}
         mode="selectable"
-        onPressItem={(card) => navigation.navigate("CardDetail", { cardId: card.id })}
+        onPressItem={(card) =>
+          navigation.navigate("CardDetail", {
+            cardId: card.id,
+            sourceContextId: route.params.sourceId,
+          })
+        }
         onRefresh={() => {
           sourceQuery.refetch();
           sourceCardsQuery.refetch();

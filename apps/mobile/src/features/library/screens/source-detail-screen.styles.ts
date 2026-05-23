@@ -7,6 +7,10 @@ export const sourceDetailScreenStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  scrollContent: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
   headerContent: {
     gap: spacing.lg,
   },
@@ -92,11 +96,6 @@ export const sourceDetailScreenStyles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.body,
     lineHeight: 22,
-  },
-  previewItem: {
-    color: colors.textPrimary,
-    fontSize: typography.caption,
-    lineHeight: 20,
   },
   actionRow: {
     gap: spacing.md,

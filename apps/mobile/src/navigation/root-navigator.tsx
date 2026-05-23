@@ -11,6 +11,7 @@ import { CardGroupDetailScreen } from "../features/library/screens/card-group-de
 import { CardGroupListScreen } from "../features/library/screens/card-group-list-screen";
 import { CardListScreen } from "../features/library/screens/card-list-screen";
 import { CreateSourceTextScreen } from "../features/library/screens/create-source-text-screen";
+import { CreateSourceDocumentScreen } from "../features/library/screens/create-source-document-screen";
 import { GroupCardPickerScreen } from "../features/library/screens/group-card-picker-screen";
 import { SourceDetailScreen } from "../features/library/screens/source-detail-screen";
 import { SourceListScreen } from "../features/library/screens/source-list-screen";
@@ -76,6 +77,7 @@ export function RootNavigator() {
             <Stack.Screen component={SourceListScreen} name="SourceList" />
             <Stack.Screen component={SourceDetailScreen} name="SourceDetail" />
             <Stack.Screen component={CreateSourceTextScreen} name="CreateSourceText" />
+            <Stack.Screen component={CreateSourceDocumentScreen} name="CreateSourceDocument" />
             <Stack.Screen component={AccountScreen} name="Account" />
             <Stack.Screen component={SettingsScreen} name="Settings" />
           </>

@@ -11,6 +11,9 @@ import { CardStatusBadge } from "../components/card-status-badge";
 import { EmptyState } from "../components/empty-state";
 import { ErrorState } from "../components/error-state";
 import { libraryCopy } from "../utils/library-copy";
+import { buildReadonlySourceDetailParams, buildSourceRelatedCardListParams } from "../utils/library-navigation";
+import { getCardDetailCapabilities } from "../utils/library-view-capabilities";
+import { defaultCardDetailMode } from "../utils/library-view-modes";
 import { formatDateTimeLabel, getSourceTypeLabel } from "../utils/library-formatters";
 import { getStableArray } from "../utils/library-state";
 import { cardDetailScreenStyles as styles } from "./card-detail-screen.styles";
@@ -23,11 +26,17 @@ export function CardDetailScreen({
   navigation,
   route,
 }: NativeStackScreenProps<RootStackParamList, "CardDetail">) {
+  const mode = route.params.mode ?? defaultCardDetailMode;
+  const capabilities = getCardDetailCapabilities(mode);
+  const sourceContextId = route.params.sourceContextId;
+
   const cardQuery = useCardDetailQuery(route.params.cardId);
   const archiveCardMutation = useArchiveCardMutation();
   const deleteCardMutation = useDeleteCardMutation();
   const card = cardQuery.data;
   const tagPreview = useMemo(() => getStableArray(card?.tags), [card?.tags]);
+  const showSourceLink =
+    capabilities.showSourceLink && Boolean(card?.sourceId) && (!sourceContextId || sourceContextId !== card?.sourceId);
 
   async function handleArchiveCard() {
     if (!card || card.status !== "active" || archiveCardMutation.isPending) {
@@ -81,15 +90,20 @@ export function CardDetailScreen({
       <ScreenHeader
         onBack={() => navigation.goBack()}
         onRightPress={
-          card?.sourceId
-            ? () =>
-                navigation.navigate("SourceDetail", {
-                  sourceId: card.sourceId,
-                })
+          showSourceLink && card?.sourceId
+            ? () => {
+                const sourceId = card.sourceId;
+
+                if (!sourceId) {
+                  return;
+                }
+
+                navigation.navigate("SourceDetail", buildReadonlySourceDetailParams(sourceId));
+              }
             : undefined
         }
-        rightLabel={card?.sourceId ? libraryCopy.cardDetail.sourceDetailAction : undefined}
-        subtitle="卡片详情"
+        rightLabel={showSourceLink ? libraryCopy.cardDetail.sourceDetailAction : undefined}
+        subtitle={mode === "source_related_readonly" ? "卡片内容" : "卡片详情"}
         title={card?.title ?? "知识卡片详情"}
       />
 
@@ -150,46 +164,52 @@ export function CardDetailScreen({
             <Text style={styles.infoLabel}>更新时间</Text>
             <Text style={styles.infoValue}>{formatDateTimeLabel(card.updatedAt)}</Text>
 
-            {card.sourceId ? (
+            {capabilities.showRelatedCardsLink && card.sourceId ? (
               <PrimaryButton
                 label={libraryCopy.cardDetail.sourceCardsAction}
-                onPress={() =>
-                  navigation.navigate("CardList", {
-                    sourceId: card.sourceId,
-                  })
-                }
+                onPress={() => {
+                  const sourceId = card.sourceId;
+
+                  if (!sourceId) {
+                    return;
+                  }
+
+                  navigation.navigate("CardList", buildSourceRelatedCardListParams(sourceId));
+                }}
                 variant="secondary"
               />
             ) : null}
           </View>
 
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>{libraryCopy.cardDetail.operationsTitle}</Text>
-            <Text style={styles.sectionText}>{libraryCopy.cardDetail.operationsDescription}</Text>
+          {capabilities.showOperations ? (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>{libraryCopy.cardDetail.operationsTitle}</Text>
+              <Text style={styles.sectionText}>{libraryCopy.cardDetail.operationsDescription}</Text>
 
-            <View style={styles.actionRow}>
-              {card.status === "active" ? (
+              <View style={styles.actionRow}>
+                {card.status === "active" ? (
+                  <PrimaryButton
+                    disabled={archiveCardMutation.isPending}
+                    label={archiveCardMutation.isPending ? libraryCopy.cardDetail.archivePendingAction : libraryCopy.cardDetail.archiveAction}
+                    iconName="archive-outline"
+                    onPress={handleArchiveCard}
+                  />
+                ) : null}
+
+                {card.status === "archived" ? (
+                  <PrimaryButton disabled label={libraryCopy.cardDetail.archivedAction} iconName="archive" variant="secondary" />
+                ) : null}
+
                 <PrimaryButton
-                  disabled={archiveCardMutation.isPending}
-                  label={archiveCardMutation.isPending ? libraryCopy.cardDetail.archivePendingAction : libraryCopy.cardDetail.archiveAction}
-                  iconName="archive-outline"
-                  onPress={handleArchiveCard}
+                  disabled={deleteCardMutation.isPending}
+                  label={deleteCardMutation.isPending ? libraryCopy.cardDetail.deletePendingAction : libraryCopy.cardDetail.deleteAction}
+                  iconName="trash-outline"
+                  onPress={handleDeleteCard}
+                  variant="secondary"
                 />
-              ) : null}
-
-              {card.status === "archived" ? (
-                <PrimaryButton disabled label={libraryCopy.cardDetail.archivedAction} iconName="archive" variant="secondary" />
-              ) : null}
-
-              <PrimaryButton
-                disabled={deleteCardMutation.isPending}
-                label={deleteCardMutation.isPending ? libraryCopy.cardDetail.deletePendingAction : libraryCopy.cardDetail.deleteAction}
-                iconName="trash-outline"
-                onPress={handleDeleteCard}
-                variant="secondary"
-              />
+              </View>
             </View>
-          </View>
+          ) : null}
         </ScrollView>
       ) : null}
     </SafeAreaView>

@@ -26,6 +26,11 @@ export function ScreenHeader(props: {
       )}
 
       <View style={styles.center}>
+        {props.subtitle ? (
+          <Text numberOfLines={1} style={styles.subtitle}>
+            {props.subtitle}
+          </Text>
+        ) : null}
         <Text numberOfLines={1} style={styles.title}>
           {props.title}
         </Text>

@@ -9,6 +9,9 @@ export type ChatMessageItemProps = {
   message: Message;
   renderMode?: "plain" | "markdown";
   ephemeralStatusLabel?: string | null;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onPress?: () => void;
 };
 
 function getCitationTypeLabel(citation: Citation) {
@@ -31,6 +34,9 @@ function ChatMessageItemComponent({
   message,
   renderMode,
   ephemeralStatusLabel,
+  selectionMode,
+  selected,
+  onPress,
 }: ChatMessageItemProps) {
   const [isCitationModalVisible, setIsCitationModalVisible] = useState(false);
   const isUser = message.role === "user";
@@ -43,47 +49,79 @@ function ChatMessageItemComponent({
       ? "正在生成回复…"
       : null;
 
-  return (
-    <>
-      <View style={[styles.row, isUser ? styles.rowRight : styles.rowLeft]}>
-        <View style={styles.bubbleWrap}>
-          <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-            {shouldRenderMarkdown ? (
-              assistantContent ? <ChatMessageMarkdownBody content={assistantContent} /> : null
-            ) : (
-              <Text style={styles.userText}>{message.content}</Text>
-            )}
+  const canOpenCitation = !selectionMode && !isUser && citations.length > 0;
+  const rowContent = (
+    <View style={[styles.row, isUser ? styles.rowRight : styles.rowLeft]}>
+      <View style={styles.bubbleWrap}>
+        <View
+          style={[
+            styles.bubble,
+            isUser ? styles.userBubble : styles.assistantBubble,
+            selectionMode && selected ? styles.bubbleSelected : null,
+          ]}
+        >
+          {shouldRenderMarkdown ? (
+            assistantContent ? <ChatMessageMarkdownBody content={assistantContent} /> : null
+          ) : (
+            <Text style={[styles.userText, selectionMode && selected ? styles.userTextSelected : null]}>
+              {message.content}
+            </Text>
+          )}
 
-            {!isUser && assistantFallbackText ? (
-              <Text style={styles.statusText}>{assistantFallbackText}</Text>
-            ) : null}
+          {!isUser && assistantFallbackText ? (
+            <Text style={styles.statusText}>{assistantFallbackText}</Text>
+          ) : null}
 
-            {!isUser && ephemeralStatusLabel ? (
-              <Text style={styles.streamingStatusText}>{ephemeralStatusLabel}</Text>
-            ) : null}
+          {!isUser && ephemeralStatusLabel ? (
+            <Text style={styles.streamingStatusText}>{ephemeralStatusLabel}</Text>
+          ) : null}
 
-            {!isUser && message.status === "failed" ? (
-              <Text style={styles.errorText}>{message.errorMessage || "这次回复没有成功完成。"}</Text>
-            ) : null}
+          {!isUser && message.status === "failed" ? (
+            <Text style={styles.errorText}>{message.errorMessage || "这次回复没有成功完成。"}</Text>
+          ) : null}
 
-            {!isUser && message.status === "aborted" ? (
-              <Text style={styles.statusText}>本次生成已停止。</Text>
-            ) : null}
-          </View>
-
-          {!isUser && citations.length > 0 ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                setIsCitationModalVisible(true);
-              }}
-              style={({ pressed }) => [styles.citationTrigger, pressed && styles.citationTriggerPressed]}
-            >
-              <Text style={styles.citationTriggerText}>查看引用内容</Text>
-            </Pressable>
+          {!isUser && message.status === "aborted" ? (
+            <Text style={styles.statusText}>本次生成已停止。</Text>
           ) : null}
         </View>
+
+        {selectionMode ? (
+          <View style={styles.selectionIndicator}>
+            <Text style={styles.selectionIndicatorText}>{selected ? "已选中" : "点击选中"}</Text>
+          </View>
+        ) : null}
+
+        {canOpenCitation ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setIsCitationModalVisible(true);
+            }}
+            style={({ pressed }) => [styles.citationTrigger, pressed && styles.citationTriggerPressed]}
+          >
+            <Text style={styles.citationTriggerText}>查看引用内容</Text>
+          </Pressable>
+        ) : null}
       </View>
+    </View>
+  );
+
+  return (
+    <>
+      {selectionMode ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onPress}
+          style={({ pressed }) => [
+            styles.rowSelectable,
+            pressed ? styles.rowSelectablePressed : null,
+          ]}
+        >
+          {rowContent}
+        </Pressable>
+      ) : (
+        rowContent
+      )}
 
       <Modal
         animationType="fade"

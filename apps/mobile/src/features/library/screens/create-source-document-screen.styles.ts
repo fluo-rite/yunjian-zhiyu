@@ -2,18 +2,14 @@ import { StyleSheet } from "react-native";
 
 import { colors, radii, shadows, spacing, typography } from "../../../theme/tokens";
 
-export const sourceListScreenStyles = StyleSheet.create({
+export const createSourceDocumentScreenStyles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
   },
   content: {
-    flexGrow: 1,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxl,
-    gap: spacing.lg,
-  },
-  headerContent: {
     gap: spacing.lg,
   },
   heroCard: {
@@ -33,14 +29,7 @@ export const sourceListScreenStyles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 22,
   },
-  resultMeta: {
-    color: colors.textTertiary,
-    fontSize: typography.meta,
-  },
-  importButton: {
-    width: "100%",
-  },
-  filterCard: {
+  formCard: {
     gap: spacing.lg,
     borderWidth: 1,
     borderColor: colors.borderSoft,
@@ -48,12 +37,25 @@ export const sourceListScreenStyles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: spacing.xl,
   },
-  filterSection: {
+  fileCard: {
     gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surfaceMuted,
+    padding: spacing.lg,
   },
-  filterLabel: {
+  fileName: {
+    color: colors.textPrimary,
+    fontSize: typography.body,
+    fontWeight: "700",
+  },
+  fileMeta: {
     color: colors.textSecondary,
     fontSize: typography.caption,
-    fontWeight: "700",
+    lineHeight: 18,
+  },
+  actionRow: {
+    gap: spacing.md,
   },
 });

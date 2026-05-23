@@ -33,6 +33,13 @@ export const screenHeaderStyles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    gap: spacing.xs,
+  },
+  subtitle: {
+    color: colors.textTertiary,
+    fontSize: typography.meta,
+    fontWeight: "600",
+    textAlign: "center",
   },
   title: {
     color: colors.textPrimary,
