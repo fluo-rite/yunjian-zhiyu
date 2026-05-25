@@ -57,7 +57,6 @@ class Settings(BaseSettings):
     rerank_base_url: str | None = None
     rerank_api_key: str | None = None
     rerank_model: str | None = None
-    retrieval_rerank_provider: str = "dedicated"
     retrieval_rerank_timeout_seconds: float = 15.0
     retrieval_rerank_min_score: float = 0.2
     web_search_url: str | None = None
@@ -111,7 +110,6 @@ class Settings(BaseSettings):
                 and self.rerank_api_key
                 and self.rerank_model
             ),
-            "retrievalRerankProvider": self.retrieval_rerank_provider,
             "retrievalRerankTimeoutSeconds": self.retrieval_rerank_timeout_seconds,
             "retrievalRerankMinScore": self.retrieval_rerank_min_score,
             "webSearchUrl": self.web_search_url,

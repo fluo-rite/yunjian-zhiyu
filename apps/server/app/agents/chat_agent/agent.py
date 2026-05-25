@@ -9,12 +9,12 @@ from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 
 from app.agents.chat_agent.output import build_citations
-from app.agents.chat_agent.policy import (
-    WebSearchDecision,
+from app.agents.chat_agent.policy import WebSearchDecision
+from app.agents.chat_agent.prompt_builder import (
+    ChatPromptBuilder,
     build_retrieval_query_rewrite_prompt,
     build_web_search_decision_prompt,
 )
-from app.agents.chat_agent.prompt_builder import ChatPromptBuilder
 from app.agents.chat_agent.state import ChatAgentState, WebContext
 from app.schemas.message import CitationRead, MessageRead
 from app.services.retrieval_service import get_retrieval_service
@@ -342,8 +342,13 @@ class ChatAgent:
             "retrieval query:",
             "rewritten query:",
             "query:",
+            "改写后的查询:",
             "改写后的查询：",
+            "检索查询:",
             "检索查询：",
+            "检索词:",
+            "检索词：",
+            "查询:",
             "查询：",
         )
         lowered = candidate.lower()

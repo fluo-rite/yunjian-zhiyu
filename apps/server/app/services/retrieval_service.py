@@ -140,12 +140,11 @@ class RetrievalService:
             for candidate in rerank_candidates
         ]
         logger.info(
-            "knowledge_rerank_started: query=%r candidate_count=%s fused_top_ids=%s limit=%s provider=%s",
+            "knowledge_rerank_started: query=%r candidate_count=%s fused_top_ids=%s limit=%s",
             query,
             len(rerank_candidates),
             [candidate.card.id for candidate in rerank_candidates[:limit]],
             limit,
-            settings.retrieval_rerank_provider,
         )
 
         outcome = get_rerank_service().rerank(

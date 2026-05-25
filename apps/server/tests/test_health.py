@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.core.db import Base, SessionLocal, engine, utc_now
 from app.main import app
-from app.agents.chat_agent.policy import (
+from app.agents.chat_agent.prompt_builder import (
     build_retrieval_query_rewrite_prompt,
     build_web_search_decision_prompt,
 )
@@ -21,6 +21,8 @@ from app.services.card_generation_service import (
     GeneratedKnowledgeCardBatch,
     process_knowledge_source_sync,
 )
+from app.services.knowledge_ingestion.prompt_builder import build_card_extraction_prompt
+from app.services.knowledge_ingestion.types import RuntimeChunk
 from app.services.rerank_service import RerankExecutionResult, RerankedItem
 from app.services.retrieval_service import RetrievalService, RetrievedCard
 from app.services.chat_generation_service import ChatTaskDispatcher, run_chat_generation
@@ -522,7 +524,6 @@ def test_retrieval_service_rerank_falls_back_to_fused_order_when_provider_fails(
     monkeypatch.setattr(
         "app.services.retrieval_service.get_settings",
         lambda: SimpleNamespace(
-            retrieval_rerank_provider="dedicated",
             retrieval_rerank_min_score=0.2,
         ),
     )
@@ -557,7 +558,6 @@ def test_retrieval_service_rerank_returns_empty_when_all_scores_are_below_thresh
     monkeypatch.setattr(
         "app.services.retrieval_service.get_settings",
         lambda: SimpleNamespace(
-            retrieval_rerank_provider="dedicated",
             retrieval_rerank_min_score=0.2,
         ),
     )
@@ -593,7 +593,6 @@ def test_retrieval_service_rerank_keeps_only_candidates_above_threshold(monkeypa
     monkeypatch.setattr(
         "app.services.retrieval_service.get_settings",
         lambda: SimpleNamespace(
-            retrieval_rerank_provider="dedicated",
             retrieval_rerank_min_score=0.4,
         ),
     )
@@ -1329,8 +1328,9 @@ def test_retrieval_query_rewrite_prompt_uses_recent_history() -> None:
     )
 
     assert "SSR" in prompt
-    assert "Return plain text only." in prompt
-    assert "Do not return JSON." in prompt
+    assert "只输出一行纯文本" in prompt
+    assert "不要输出 JSON" in prompt
+    assert "不要仿照历史消息格式输出" in prompt
 
 
 def test_retrieval_query_rewrite_normalizer_rejects_json_and_strips_labels() -> None:
@@ -1339,6 +1339,32 @@ def test_retrieval_query_rewrite_normalizer_rejects_json_and_strips_labels() -> 
         == "SSR 的原理是什么"
     )
     assert (
+        ChatAgent._normalize_retrieval_query("改写后的查询：SSR 的原理是什么", fallback="它的原理是什么？")
+        == "SSR 的原理是什么"
+    )
+    assert (
         ChatAgent._normalize_retrieval_query('{"retrieval_query":"SSR 的原理是什么"}', fallback="它的原理是什么？")
         == "它的原理是什么？"
     )
+
+
+def test_card_extraction_prompt_uses_chinese_constraints_and_context() -> None:
+    prompt = build_card_extraction_prompt(
+        source_name="SSR 讨论",
+        chunk=RuntimeChunk(
+            chunk_id="chunk-1",
+            source_type="messages",
+            text="它可以减少首屏白屏时间。",
+            current_heading="渲染策略",
+            parent_heading="前端性能",
+            previous_text="SSR 是服务端渲染，会在服务端先生成 HTML。",
+            question_text="SSR 有什么优势？",
+            answer_text="它可以减少首屏白屏时间。",
+        ),
+    )
+
+    assert "你是一个知识沉淀助手" in prompt
+    assert "前文上下文（仅用于代词消解和补全主语，不要机械复制原文）" in prompt
+    assert "来源名称：SSR 讨论" in prompt
+    assert "问题：SSR 有什么优势？" in prompt
+    assert "回答：它可以减少首屏白屏时间。" in prompt
