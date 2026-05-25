@@ -11,6 +11,7 @@ export type ChatMessageItemProps = {
   ephemeralStatusLabel?: string | null;
   selectionMode?: boolean;
   selected?: boolean;
+  selectionLabel?: string | null;
   onPress?: () => void;
 };
 
@@ -36,6 +37,7 @@ function ChatMessageItemComponent({
   ephemeralStatusLabel,
   selectionMode,
   selected,
+  selectionLabel,
   onPress,
 }: ChatMessageItemProps) {
   const [isCitationModalVisible, setIsCitationModalVisible] = useState(false);
@@ -85,9 +87,9 @@ function ChatMessageItemComponent({
           ) : null}
         </View>
 
-        {selectionMode ? (
+        {selectionMode && selectionLabel ? (
           <View style={styles.selectionIndicator}>
-            <Text style={styles.selectionIndicatorText}>{selected ? "已选中" : "点击选中"}</Text>
+            <Text style={styles.selectionIndicatorText}>{selectionLabel}</Text>
           </View>
         ) : null}
 

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from io import BytesIO
-
-from pypdf import PdfReader
 from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.orm import Session
 
+from app.models.chat import Chat
 from app.models.card import KnowledgeCard
 from app.models.knowledge_source import KnowledgeSource
+from app.models.message import Message
 from app.models.user import User
 from app.schemas.common import PaginationMeta
 from app.schemas.knowledge_source import (
@@ -23,9 +22,14 @@ from app.schemas.knowledge_source import (
     LinkedCardPreview,
 )
 from app.services.card_generation_service import get_knowledge_source_task_dispatcher
+from app.services.knowledge_ingestion.parse import get_document_parse_service
 
 
 class KnowledgeSourceNotFoundError(RuntimeError):
+    pass
+
+
+class InvalidKnowledgeSourceMessagesError(RuntimeError):
     pass
 
 
@@ -69,14 +73,56 @@ class KnowledgeSourceService:
         user: User,
         payload: CreateKnowledgeSourceFromMessagesRequest,
     ) -> KnowledgeSourceRead:
-        messages = [item.strip() for item in payload.messages if item.strip()]
+        message_ids = [item.strip() for item in payload.message_ids if item.strip()]
+        message_ids = list(dict.fromkeys(message_ids))
+        if not message_ids:
+            raise InvalidKnowledgeSourceMessagesError("No valid message ids were provided.")
+
+        selected_messages = (
+            db.execute(
+                select(Message)
+                .join(Chat, Chat.id == Message.chat_id)
+                .where(
+                    Message.id.in_(message_ids),
+                    Chat.user_id == user.id,
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if len(selected_messages) != len(message_ids):
+            raise InvalidKnowledgeSourceMessagesError("One or more messages were not found.")
+
+        ordered_messages = sorted(selected_messages, key=lambda item: (item.created_at, item.id))
+        message_snapshots = [
+            {
+                "id": message.id,
+                "chatId": message.chat_id,
+                "role": message.role,
+                "content": message.content.strip(),
+                "createdAt": message.created_at.isoformat(),
+            }
+            for message in ordered_messages
+            if message.content.strip()
+        ]
+        if not message_snapshots:
+            raise InvalidKnowledgeSourceMessagesError("Selected messages are empty.")
+
+        raw_content = "\n\n".join(
+            f"{'用户' if item['role'] == 'user' else '助手'}：{item['content']}"
+            for item in message_snapshots
+        )
         source = KnowledgeSource(
             user_id=user.id,
             name=payload.name.strip(),
             source_type="messages",
-            raw_content="\n\n".join(messages),
+            raw_content=raw_content,
             status="processing",
-            source_metadata={"messageCount": len(messages)},
+            source_metadata={
+                "messageCount": len(message_snapshots),
+                "messageIds": [item["id"] for item in message_snapshots],
+                "messages": message_snapshots,
+            },
         )
         db.add(source)
         db.commit()
@@ -262,12 +308,12 @@ class KnowledgeSourceService:
         mime_type: str | None,
         content_bytes: bytes,
     ) -> DocumentPayload:
-        normalized_mime = (mime_type or "").lower()
-        lowered_filename = filename.lower()
-        if normalized_mime == "application/pdf" or lowered_filename.endswith(".pdf"):
-            raw_content = KnowledgeSourceService._extract_pdf_text(content_bytes)
-        else:
-            raw_content = content_bytes.decode("utf-8")
+        parsed = get_document_parse_service().parse_document_bytes(
+            filename=filename,
+            mime_type=mime_type,
+            content_bytes=content_bytes,
+        )
+        raw_content = "\n\n".join(block.text for block in parsed.blocks if block.text.strip())
 
         return DocumentPayload(
             name=name.strip(),
@@ -275,11 +321,7 @@ class KnowledgeSourceService:
             source_metadata={
                 "filename": filename,
                 "mimeType": mime_type,
+                "parserUsed": parsed.parser_used,
+                "parsedBlocks": [block.to_metadata() for block in parsed.blocks],
             },
         )
-
-    @staticmethod
-    def _extract_pdf_text(content_bytes: bytes) -> str:
-        reader = PdfReader(BytesIO(content_bytes))
-        text = "\n".join((page.extract_text() or "").strip() for page in reader.pages)
-        return text.strip()

@@ -38,7 +38,7 @@ export type CreateSourceFromTextInput = {
 
 export type CreateSourceFromMessagesInput = {
   name: string;
-  messages: string[];
+  messageIds: string[];
 };
 
 export type CreateSourceFromDocumentInput = {

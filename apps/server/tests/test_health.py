@@ -9,7 +9,11 @@ from fastapi.testclient import TestClient
 
 from app.core.db import Base, SessionLocal, engine, utc_now
 from app.main import app
-from app.agents.chat_agent.policy import build_web_search_decision_prompt
+from app.agents.chat_agent.policy import (
+    build_retrieval_query_rewrite_prompt,
+    build_web_search_decision_prompt,
+)
+from app.agents.chat_agent.agent import ChatAgent
 from app.models.card import KnowledgeCard
 from app.schemas.message import CitationRead
 from app.services.card_generation_service import (
@@ -17,7 +21,8 @@ from app.services.card_generation_service import (
     GeneratedKnowledgeCardBatch,
     process_knowledge_source_sync,
 )
-from app.services.retrieval_service import RerankedCardIds, RetrievalService, RetrievedCard
+from app.services.rerank_service import RerankExecutionResult, RerankedItem
+from app.services.retrieval_service import RetrievalService, RetrievedCard
 from app.services.chat_generation_service import ChatTaskDispatcher, run_chat_generation
 from app.services.stream_adapter_service import StreamAdapterService
 from app.services.stream_store_service import StreamRecord
@@ -190,22 +195,28 @@ class FakeSourceTaskDispatcher:
 
 
 class FakeCardGenerationService:
-    def generate_cards(self, *, source_name: str, source_type: str, raw_content: str) -> GeneratedKnowledgeCardBatch:
+    def generate_cards_for_chunk(self, *, source_name: str, chunk) -> GeneratedKnowledgeCardBatch:
         _ = source_name
         return GeneratedKnowledgeCardBatch(
             cards=[
                 GeneratedKnowledgeCard(
-                    title=f"{source_type} 核心知识 1",
-                    content=raw_content.strip(),
+                    title=f"{chunk.source_type} 核心知识 1",
+                    content=chunk.text.strip(),
                     tags=["backend", "test"],
                 ),
                 GeneratedKnowledgeCard(
-                    title=f"{source_type} 核心知识 2",
-                    content=f"补充知识：{raw_content.strip()}",
+                    title=f"{chunk.source_type} 核心知识 2",
+                    content=f"补充知识：{chunk.text.strip()}",
                     tags=["followup"],
                 ),
             ]
         )
+
+    def generate_cards_for_chunks(self, *, source_name: str, chunks: list) -> list[GeneratedKnowledgeCardBatch]:
+        return [
+            self.generate_cards_for_chunk(source_name=source_name, chunk=chunk)
+            for chunk in chunks
+        ]
 
     @staticmethod
     def content_hash(content: str) -> str:
@@ -497,26 +508,22 @@ def test_policy_marks_fresh_queries_and_search_fallback() -> None:
     """
 
 
-def test_retrieval_service_rerank_falls_back_to_fused_order_on_parse_error(monkeypatch) -> None:
-    class FakeStructuredModel:
-        def invoke(self, _prompt: str):
-            raise ValueError("Invalid JSON: trailing characters at line 2 column 1")
+def test_retrieval_service_rerank_falls_back_to_fused_order_when_provider_fails(monkeypatch) -> None:
+    class FakeRerankService:
+        def rerank(self, **_kwargs):
+            return RerankExecutionResult(
+                items=[],
+                provider="fused_order",
+                fallback_to_fused=True,
+                fallback_reason="dedicated:timeout | llm_fallback:invalid json",
+            )
 
-    class FakeChatOpenAI:
-        def __init__(self, **_kwargs) -> None:
-            pass
-
-        def with_structured_output(self, _schema):
-            return FakeStructuredModel()
-
-    monkeypatch.setattr("app.services.retrieval_service.ChatOpenAI", FakeChatOpenAI)
+    monkeypatch.setattr("app.services.retrieval_service.get_rerank_service", lambda: FakeRerankService())
     monkeypatch.setattr(
         "app.services.retrieval_service.get_settings",
         lambda: SimpleNamespace(
-            rerank_base_url="https://example.com",
-            rerank_api_key="test-key",
-            rerank_model="test-rerank-model",
-            llm_timeout_seconds=30.0,
+            retrieval_rerank_provider="dedicated",
+            retrieval_rerank_min_score=0.2,
         ),
     )
 
@@ -535,26 +542,59 @@ def test_retrieval_service_rerank_falls_back_to_fused_order_on_parse_error(monke
     assert [item.card.id for item in reranked] == ["card-1", "card-2"]
 
 
-def test_retrieval_service_rerank_filters_unknown_ids_and_appends_remaining_candidates(monkeypatch) -> None:
-    class FakeStructuredModel:
-        def invoke(self, _prompt: str):
-            return RerankedCardIds(card_ids=["card-2", "missing-card"])
+def test_retrieval_service_rerank_returns_empty_when_all_scores_are_below_threshold(monkeypatch) -> None:
+    class FakeRerankService:
+        def rerank(self, **_kwargs):
+            return RerankExecutionResult(
+                items=[
+                    RerankedItem(card_id="card-2", score=0.18),
+                    RerankedItem(card_id="card-1", score=0.1),
+                ],
+                provider="dedicated",
+            )
 
-    class FakeChatOpenAI:
-        def __init__(self, **_kwargs) -> None:
-            pass
-
-        def with_structured_output(self, _schema):
-            return FakeStructuredModel()
-
-    monkeypatch.setattr("app.services.retrieval_service.ChatOpenAI", FakeChatOpenAI)
+    monkeypatch.setattr("app.services.retrieval_service.get_rerank_service", lambda: FakeRerankService())
     monkeypatch.setattr(
         "app.services.retrieval_service.get_settings",
         lambda: SimpleNamespace(
-            rerank_base_url="https://example.com",
-            rerank_api_key="test-key",
-            rerank_model="test-rerank-model",
-            llm_timeout_seconds=30.0,
+            retrieval_rerank_provider="dedicated",
+            retrieval_rerank_min_score=0.2,
+        ),
+    )
+
+    service = RetrievalService()
+    candidates = [
+        _build_retrieved_card("card-1", title="First card", content="First content"),
+        _build_retrieved_card("card-2", title="Second card", content="Second content"),
+    ]
+
+    reranked = service._rerank_candidates(
+        query="Which card is most relevant?",
+        candidates=candidates,
+        limit=2,
+    )
+
+    assert reranked == []
+
+
+def test_retrieval_service_rerank_keeps_only_candidates_above_threshold(monkeypatch) -> None:
+    class FakeRerankService:
+        def rerank(self, **_kwargs):
+            return RerankExecutionResult(
+                items=[
+                    RerankedItem(card_id="card-2", score=0.93),
+                    RerankedItem(card_id="card-3", score=0.47),
+                    RerankedItem(card_id="card-1", score=0.12),
+                ],
+                provider="dedicated",
+            )
+
+    monkeypatch.setattr("app.services.retrieval_service.get_rerank_service", lambda: FakeRerankService())
+    monkeypatch.setattr(
+        "app.services.retrieval_service.get_settings",
+        lambda: SimpleNamespace(
+            retrieval_rerank_provider="dedicated",
+            retrieval_rerank_min_score=0.4,
         ),
     )
 
@@ -571,7 +611,7 @@ def test_retrieval_service_rerank_filters_unknown_ids_and_appends_remaining_cand
         limit=3,
     )
 
-    assert [item.card.id for item in reranked] == ["card-2", "card-1", "card-3"]
+    assert [item.card.id for item in reranked] == ["card-2", "card-3"]
 
 def test_health_returns_ok() -> None:
     response = client.get("/health")
@@ -844,6 +884,102 @@ def test_knowledge_source_from_document_accepts_upload(monkeypatch) -> None:
     assert detail_response.status_code == 200
     assert detail_response.json()["sourceType"] == "document"
     assert "FastAPI 的响应模型" in detail_response.json()["rawContent"]
+
+
+def test_knowledge_source_from_document_returns_400_when_pdf_is_not_usable(monkeypatch) -> None:
+    from app.services.knowledge_ingestion.parse import DocumentParseError
+
+    reset_database()
+    headers = create_user("bad-document@example.com", "bad-document-user")
+
+    class FakeDocumentParseService:
+        def parse_document_bytes(self, **_kwargs):
+            raise DocumentParseError("Unable to extract usable text from the PDF.")
+
+    monkeypatch.setattr(
+        "app.services.knowledge_source_service.get_document_parse_service",
+        lambda: FakeDocumentParseService(),
+    )
+
+    response = client.post(
+        "/api/v1/knowledge-sources/from-document",
+        headers=headers,
+        data={"name": "Broken PDF"},
+        files={"file": ("broken.pdf", b"%PDF-broken", "application/pdf")},
+    )
+    assert response.status_code == 400, response.text
+    assert response.json()["detail"] == "Unable to extract usable text from the PDF."
+
+
+def test_knowledge_source_from_document_rejects_unsupported_file_type() -> None:
+    reset_database()
+    headers = create_user("unsupported-document@example.com", "unsupported-document-user")
+
+    response = client.post(
+        "/api/v1/knowledge-sources/from-document",
+        headers=headers,
+        data={"name": "Unsupported spreadsheet"},
+        files={
+            "file": (
+                "report.xlsx",
+                b"PK\x03\x04fake-xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert response.status_code == 400, response.text
+    assert response.json()["detail"] == "Only pdf, txt, md, and markdown files are supported."
+
+
+def test_knowledge_source_from_document_rejects_invalid_utf8_text_file() -> None:
+    reset_database()
+    headers = create_user("invalid-text-document@example.com", "invalid-text-document-user")
+
+    response = client.post(
+        "/api/v1/knowledge-sources/from-document",
+        headers=headers,
+        data={"name": "Broken text"},
+        files={"file": ("broken.txt", b"\xff\xfe\x00\x00", "text/plain")},
+    )
+    assert response.status_code == 400, response.text
+    assert response.json()["detail"] == "Unable to decode the uploaded text file as UTF-8."
+
+
+def test_knowledge_source_processing_marks_source_failed_when_no_cards_are_generated(monkeypatch) -> None:
+    reset_database()
+    dispatcher = install_source_runtime_test_doubles(monkeypatch)
+    headers = create_user("empty-card-source@example.com", "empty-card-source-user")
+
+    class EmptyCardGenerationService:
+        def generate_cards_for_chunk(self, **_kwargs):
+            return GeneratedKnowledgeCardBatch(cards=[])
+
+        def generate_cards_for_chunks(self, *, chunks: list, **_kwargs):
+            return [GeneratedKnowledgeCardBatch(cards=[]) for _ in chunks]
+
+    monkeypatch.setattr(
+        "app.services.card_generation_service.get_card_generation_service",
+        lambda: EmptyCardGenerationService(),
+    )
+
+    response = client.post(
+        "/api/v1/knowledge-sources/from-text",
+        headers=headers,
+        json={"name": "No cards source", "content": "This content should produce no cards in the fake generator."},
+    )
+    assert response.status_code == 202, response.text
+    source_id = response.json()["id"]
+    dispatcher.wait_for_idle()
+
+    detail_response = client.get(f"/api/v1/knowledge-sources/{source_id}", headers=headers)
+    assert detail_response.status_code == 200, detail_response.text
+    assert detail_response.json()["status"] == "failed"
+    assert (
+        detail_response.json()["failureReason"]
+        == "No knowledge cards were generated from the source content."
+    )
+    assert detail_response.json()["processingMeta"]["generatedCardCount"] == 0
+    assert detail_response.json()["processingMeta"]["finalCardCount"] == 0
 
 
 def test_chats_crud_flow() -> None:
@@ -1181,3 +1317,28 @@ def test_chat_message_abort_preserves_partial_content(monkeypatch) -> None:
     assert final_message["status"] == "aborted"
     assert final_message["content"] != ""
     dispatcher.wait_for_idle()
+
+
+def test_retrieval_query_rewrite_prompt_uses_recent_history() -> None:
+    prompt = build_retrieval_query_rewrite_prompt(
+        query="它的原理是什么？",
+        pre_messages=[
+            SimpleNamespace(role="user", content="什么是 SSR？"),
+            SimpleNamespace(role="assistant", content="SSR 是服务端渲染。"),
+        ],
+    )
+
+    assert "SSR" in prompt
+    assert "Return plain text only." in prompt
+    assert "Do not return JSON." in prompt
+
+
+def test_retrieval_query_rewrite_normalizer_rejects_json_and_strips_labels() -> None:
+    assert (
+        ChatAgent._normalize_retrieval_query("retrieval query: SSR 的原理是什么", fallback="它的原理是什么？")
+        == "SSR 的原理是什么"
+    )
+    assert (
+        ChatAgent._normalize_retrieval_query('{"retrieval_query":"SSR 的原理是什么"}', fallback="它的原理是什么？")
+        == "它的原理是什么？"
+    )

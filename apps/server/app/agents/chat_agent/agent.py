@@ -9,7 +9,11 @@ from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 
 from app.agents.chat_agent.output import build_citations
-from app.agents.chat_agent.policy import WebSearchDecision, build_web_search_decision_prompt
+from app.agents.chat_agent.policy import (
+    WebSearchDecision,
+    build_retrieval_query_rewrite_prompt,
+    build_web_search_decision_prompt,
+)
 from app.agents.chat_agent.prompt_builder import ChatPromptBuilder
 from app.agents.chat_agent.state import ChatAgentState, WebContext
 from app.schemas.message import CitationRead, MessageRead
@@ -63,6 +67,14 @@ class ChatAgent:
         base_url: str,
         timeout_seconds: float,
     ) -> None:
+        self._retrieval_query_rewrite_model = ChatOpenAI(
+            model=model_name,
+            api_key=api_key,
+            base_url=base_url,
+            temperature=0,
+            timeout=timeout_seconds,
+            max_retries=2,
+        )
         self._web_search_decision_model = ChatOpenAI(
             model=model_name,
             api_key=api_key,
@@ -120,13 +132,35 @@ class ChatAgent:
         return {
             "user_id": user_id,
             "original_user_message": user_message.strip(),
+            "retrieval_query": user_message.strip(),
             "use_knowledge": use_knowledge,
             "use_web_search": use_web_search,
             "pre_conversation_messages": self._to_history_messages(pre_messages),
+            "pre_messages": pre_messages,
             "retrieved_cards": [],
             "searched_contexts": [],
             "used_web_search": False,
         }
+
+    def _rewrite_retrieval_query_node(self, state: ChatAgentState) -> ChatAgentState:
+        if not state.get("use_knowledge"):
+            return {"retrieval_query": state["original_user_message"]}
+
+        try:
+            response = self._retrieval_query_rewrite_model.invoke(
+                build_retrieval_query_rewrite_prompt(
+                    query=state["original_user_message"],
+                    pre_messages=state.get("pre_messages", []),
+                )
+            )
+            rewritten = self._normalize_retrieval_query(
+                self._extract_text(response.content),
+                fallback=state["original_user_message"],
+            )
+        except Exception:
+            rewritten = state["original_user_message"]
+
+        return {"retrieval_query": rewritten or state["original_user_message"]}
 
     def _retrieve_knowledge_node(self, state: ChatAgentState) -> ChatAgentState:
         if not state.get("use_knowledge"):
@@ -142,7 +176,7 @@ class ChatAgent:
         )
         cards = get_retrieval_service().retrieve_knowledge_cards(
             user_id=state["user_id"],
-            query=state["original_user_message"],
+            query=state.get("retrieval_query", state["original_user_message"]),
             limit=5,
         )
         return {"retrieved_cards": cards}
@@ -246,12 +280,14 @@ class ChatAgent:
 
     def _build_graph(self):
         workflow = StateGraph(ChatAgentState)
+        workflow.add_node("rewrite_retrieval_query", self._rewrite_retrieval_query_node)
         workflow.add_node("retrieve_knowledge", self._retrieve_knowledge_node)
         workflow.add_node("search_web", self._search_web_node)
         workflow.add_node("assemble_context", self._assemble_context_node)
         workflow.add_node("stream_reply", self._stream_reply_node)
 
-        workflow.add_edge(START, "retrieve_knowledge")
+        workflow.add_edge(START, "rewrite_retrieval_query")
+        workflow.add_edge("rewrite_retrieval_query", "retrieve_knowledge")
         workflow.add_edge("retrieve_knowledge", "search_web")
         workflow.add_edge("search_web", "assemble_context")
         workflow.add_edge("assemble_context", "stream_reply")
@@ -287,3 +323,35 @@ class ChatAgent:
         if isinstance(text_attr, str):
             return text_attr
         return ""
+
+    @staticmethod
+    def _normalize_retrieval_query(value: str, *, fallback: str) -> str:
+        candidate = value.strip()
+        if not candidate:
+            return fallback
+
+        if candidate.startswith("```"):
+            candidate = candidate.strip("`").strip()
+        if candidate.lower().startswith("json"):
+            candidate = candidate[4:].strip()
+        if candidate.startswith("{") and candidate.endswith("}"):
+            return fallback
+
+        prefixes = (
+            "retrieval_query:",
+            "retrieval query:",
+            "rewritten query:",
+            "query:",
+            "改写后的查询：",
+            "检索查询：",
+            "查询：",
+        )
+        lowered = candidate.lower()
+        for prefix in prefixes:
+            if lowered.startswith(prefix.lower()):
+                candidate = candidate[len(prefix) :].strip()
+                break
+
+        if not candidate or len(candidate) > 300:
+            return fallback
+        return candidate

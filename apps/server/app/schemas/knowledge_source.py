@@ -31,18 +31,18 @@ class CreateKnowledgeSourceFromMessagesRequest(CamelModel):
         json_schema_extra={
             "example": {
                 "name": "FastAPI 对话摘录",
-                "messages": [
-                    "FastAPI 推荐使用 APIRouter 按领域拆分路由。",
-                    "依赖注入可以把鉴权和数据库会话从 handler 中抽离出去。",
+                "messageIds": [
+                    "a7d91e3e-3c5f-4f5d-bbb7-2a65b7e55a31",
+                    "c4dfdcb5-f68e-44c4-9f9b-30aef5d8a682",
                 ],
             }
         }
     )
 
     name: str = Field(min_length=1, max_length=200, examples=["FastAPI 对话摘录"])
-    messages: list[str] = Field(
+    message_ids: list[str] = Field(
         min_length=1,
-        examples=[["FastAPI 推荐使用 APIRouter 按领域拆分路由。"]],
+        examples=[["a7d91e3e-3c5f-4f5d-bbb7-2a65b7e55a31"]],
     )
 
 
@@ -76,6 +76,8 @@ class KnowledgeSourceListResponse(CamelModel):
 class KnowledgeSourceDetailRead(KnowledgeSourceRead):
     raw_content: str
     source_metadata: dict | None = None
+    failure_reason: str | None = None
+    processing_meta: dict | None = None
 
 
 class KnowledgeSourceCardsResponse(CamelModel):

@@ -19,7 +19,9 @@ from app.schemas.knowledge_source import (
     KnowledgeSourceRead,
     KnowledgeSourceStatus,
 )
+from app.services.knowledge_ingestion.parse import DocumentParseError
 from app.services.knowledge_source_service import (
+    InvalidKnowledgeSourceMessagesError,
     KnowledgeSourceNotFoundError,
     KnowledgeSourceService,
 )
@@ -49,7 +51,10 @@ async def create_source_from_messages(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> KnowledgeSourceRead:
-    return await KnowledgeSourceService.create_from_messages(db, current_user, payload)
+    try:
+        return await KnowledgeSourceService.create_from_messages(db, current_user, payload)
+    except InvalidKnowledgeSourceMessagesError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
 
 @router.post(
@@ -64,14 +69,17 @@ async def create_source_from_document(
     current_user: User = Depends(get_current_user),
 ) -> KnowledgeSourceRead:
     content_bytes = await file.read()
-    return await KnowledgeSourceService.create_from_document(
-        db,
-        current_user,
-        name=name,
-        filename=file.filename or "document",
-        mime_type=file.content_type,
-        content_bytes=content_bytes,
-    )
+    try:
+        return await KnowledgeSourceService.create_from_document(
+            db,
+            current_user,
+            name=name,
+            filename=file.filename or "document",
+            mime_type=file.content_type,
+            content_bytes=content_bytes,
+        )
+    except DocumentParseError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
 
 @router.get("", response_model=KnowledgeSourceListResponse)

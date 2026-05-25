@@ -4,7 +4,10 @@ import { Alert } from "react-native";
 import { useCreateSourceFromMessagesMutation, type KnowledgeSource } from "@/features/library/api";
 import { type Message } from "@/features/sessions/api";
 import { sessionCopy } from "@/features/sessions/utils/session-copy";
-import { buildMessageSourceName, getSelectedMessagePayload } from "@/features/sessions/utils/session-helpers";
+import {
+  buildMessageSourceName,
+  getSelectedRangeMeta,
+} from "@/features/sessions/utils/session-helpers";
 
 export function useChatSelectionController(args: {
   chatId: string | null;
@@ -16,21 +19,35 @@ export function useChatSelectionController(args: {
   onImported: (source: KnowledgeSource) => void;
 }) {
   const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  const [rangeStartMessageId, setRangeStartMessageId] = useState<string | null>(null);
+  const [rangeEndMessageId, setRangeEndMessageId] = useState<string | null>(null);
 
   const createSourceFromMessagesMutation = useCreateSourceFromMessagesMutation();
-  const selectedMessageIdSet = useMemo(() => new Set(selectedMessageIds), [selectedMessageIds]);
   const canEnterSelectionMode =
     Boolean(args.chatId) && args.messages.length > 0 && !args.isMessagesLoading && !args.isStreaming;
+  const rangeMeta = useMemo(
+    () => getSelectedRangeMeta(args.messages, rangeStartMessageId, rangeEndMessageId),
+    [args.messages, rangeEndMessageId, rangeStartMessageId],
+  );
+  const selectedMessageIds = rangeMeta.selectedMessageIds;
+  const selectedMessageIdSet = useMemo(() => new Set(selectedMessageIds), [selectedMessageIds]);
 
   useEffect(() => {
     const existingIds = new Set(args.messages.map((message) => message.id));
-    setSelectedMessageIds((current) => current.filter((messageId) => existingIds.has(messageId)));
-  }, [args.messages]);
+
+    if (
+      (rangeStartMessageId && !existingIds.has(rangeStartMessageId)) ||
+      (rangeEndMessageId && !existingIds.has(rangeEndMessageId))
+    ) {
+      setRangeStartMessageId(null);
+      setRangeEndMessageId(null);
+    }
+  }, [args.messages, rangeEndMessageId, rangeStartMessageId]);
 
   function exitSelectionMode() {
     setSelectionMode(false);
-    setSelectedMessageIds([]);
+    setRangeStartMessageId(null);
+    setRangeEndMessageId(null);
   }
 
   function toggleSelectionMode() {
@@ -43,11 +60,19 @@ export function useChatSelectionController(args: {
   }
 
   function toggleSelect(message: Message) {
-    setSelectedMessageIds((current) =>
-      current.includes(message.id)
-        ? current.filter((messageId) => messageId !== message.id)
-        : [...current, message.id],
-    );
+    if (!rangeStartMessageId) {
+      setRangeStartMessageId(message.id);
+      setRangeEndMessageId(null);
+      return;
+    }
+
+    if (!rangeEndMessageId) {
+      setRangeEndMessageId(message.id);
+      return;
+    }
+
+    setRangeStartMessageId(message.id);
+    setRangeEndMessageId(null);
   }
 
   async function importSelectedMessages() {
@@ -55,9 +80,7 @@ export function useChatSelectionController(args: {
       return;
     }
 
-    const selectedMessages = getSelectedMessagePayload(args.messages, selectedMessageIdSet);
-
-    if (selectedMessages.length === 0) {
+    if (!rangeStartMessageId || !rangeEndMessageId || selectedMessageIds.length === 0) {
       Alert.alert(sessionCopy.chat.importEmptyTitle, sessionCopy.chat.importEmptyDescription);
       return;
     }
@@ -65,7 +88,7 @@ export function useChatSelectionController(args: {
     try {
       const created = await createSourceFromMessagesMutation.mutateAsync({
         name: buildMessageSourceName(args.chatTitle || args.fallbackTitle),
-        messages: selectedMessages,
+        messageIds: selectedMessageIds,
       });
 
       exitSelectionMode();
@@ -82,6 +105,10 @@ export function useChatSelectionController(args: {
     selectionMode,
     selectedMessageIds,
     selectedMessageIdSet,
+    rangeStartMessageId,
+    rangeEndMessageId,
+    rangeStatus: rangeMeta.status,
+    selectedCount: rangeMeta.selectedCount,
     canEnterSelectionMode,
     isImporting: createSourceFromMessagesMutation.isPending,
     exitSelectionMode,

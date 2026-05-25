@@ -21,6 +21,8 @@ export type ChatMessageListProps = {
   ephemeralPhaseLabel?: string | null;
   selectionMode?: boolean;
   selectedIds?: ReadonlySet<string>;
+  rangeStartMessageId?: string | null;
+  rangeEndMessageId?: string | null;
   onToggleSelect?: (message: Message) => void;
 };
 
@@ -43,6 +45,8 @@ function ChatMessageListComponent({
   ephemeralPhaseLabel,
   selectionMode,
   selectedIds,
+  rangeStartMessageId,
+  rangeEndMessageId,
   onToggleSelect,
 }: ChatMessageListProps) {
   const listRef = useRef<FlashListRef<Message> | null>(null);
@@ -62,6 +66,8 @@ function ChatMessageListComponent({
       ephemeralPhaseLabel,
       selectionMode,
       selectedIds,
+      rangeStartMessageId,
+      rangeEndMessageId,
     }),
     [
       composerSpacerHeight,
@@ -74,8 +80,46 @@ function ChatMessageListComponent({
       streamAssistantMessageId,
       streamedContent,
       terminalMessage,
+      rangeStartMessageId,
+      rangeEndMessageId,
     ],
   );
+
+  function getSelectionLabel(messageId: string) {
+    if (!selectionMode) {
+      return null;
+    }
+
+    const isStart = rangeStartMessageId === messageId;
+    const isEnd = rangeEndMessageId === messageId;
+    const isSelected = selectedIds?.has(messageId) ?? false;
+
+    if (isStart && isEnd) {
+      return sessionCopy.chat.selectionSingleItemLabel;
+    }
+
+    if (isStart) {
+      return sessionCopy.chat.selectionStartItemLabel;
+    }
+
+    if (isEnd) {
+      return sessionCopy.chat.selectionEndItemLabel;
+    }
+
+    if (isSelected) {
+      return sessionCopy.chat.selectionRangeItemLabel;
+    }
+
+    if (!rangeStartMessageId) {
+      return sessionCopy.chat.selectionStartPromptLabel;
+    }
+
+    if (!rangeEndMessageId) {
+      return sessionCopy.chat.selectionEndPromptLabel;
+    }
+
+    return sessionCopy.chat.selectionRestartPromptLabel;
+  }
 
   function cancelScheduledAutoScroll() {
     if (scrollTimerRef.current === null) {
@@ -189,6 +233,7 @@ function ChatMessageListComponent({
                   }
                 : undefined
             }
+            selectionLabel={getSelectionLabel(renderedMessage.id)}
             selected={selectedIds?.has(renderedMessage.id) ?? false}
             selectionMode={selectionMode}
           />

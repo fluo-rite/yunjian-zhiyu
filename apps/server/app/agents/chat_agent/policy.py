@@ -3,11 +3,45 @@ from __future__ import annotations
 from pydantic import AliasChoices, BaseModel, Field
 
 from app.schemas.card import CardRead
+from app.schemas.message import MessageRead
 
 
 class WebSearchDecision(BaseModel):
     should_search_web: bool = Field(
         validation_alias=AliasChoices("should_search_web", "is_search_needed")
+    )
+
+
+def build_retrieval_query_rewrite_prompt(*, query: str, pre_messages: list[MessageRead]) -> str:
+    if pre_messages:
+        history_lines = [
+            f"- {message.role}: {message.content.strip()}"
+            for message in pre_messages[-8:]
+            if message.content.strip()
+        ]
+        history_block = "\n".join(history_lines) if history_lines else "(none)"
+    else:
+        history_block = "(none)"
+
+    return "\n".join(
+        [
+            "You rewrite the current user message into a retrieval-friendly search query.",
+            "Return plain text only.",
+            "Do not return JSON.",
+            "Do not wrap the result in markdown or code fences.",
+            "Do not prefix the result with labels such as retrieval_query, rewritten query, query, or explanation.",
+            "Do not imitate the message history format.",
+            "Rules:",
+            "- Use the recent conversation only to resolve pronouns, omitted subjects, and elliptical references.",
+            "- If the current user message is already self-contained, keep it unchanged.",
+            "- Do not answer the question.",
+            "- Do not add facts that are not present in the user message or recent conversation.",
+            "- Keep the rewritten query concise and suitable for semantic and keyword retrieval.",
+            "- Output exactly one rewritten query string and nothing else.",
+            "Recent conversation:",
+            history_block,
+            f"Current user message:\n{query.strip()}",
+        ]
     )
 
 

@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from functools import lru_cache
 import logging
 
-from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, Field
 from sqlalchemy import Select, String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
@@ -15,6 +13,7 @@ from app.core.db import SessionLocal
 from app.models.card import KnowledgeCard
 from app.schemas.card import CardRead
 from app.services.embedding_service import get_embedding_service
+from app.services.rerank_service import RerankCandidateView, get_rerank_service
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -25,10 +24,6 @@ class RetrievedCard:
     dense_rank: int | None = None
     sparse_rank: int | None = None
     fused_score: float = 0.0
-
-
-class RerankedCardIds(BaseModel):
-    card_ids: list[str] = Field(default_factory=list, max_length=20)
 
 
 class RetrievalService:
@@ -138,94 +133,72 @@ class RetrievalService:
             return []
 
         settings = get_settings()
-        if not settings.rerank_base_url or not settings.rerank_api_key or not settings.rerank_model:
+        candidate_count = min(len(candidates), max(limit * 3, limit))
+        rerank_candidates = candidates[:candidate_count]
+        rerank_views = [
+            self._build_rerank_candidate_view(candidate)
+            for candidate in rerank_candidates
+        ]
+        logger.info(
+            "knowledge_rerank_started: query=%r candidate_count=%s fused_top_ids=%s limit=%s provider=%s",
+            query,
+            len(rerank_candidates),
+            [candidate.card.id for candidate in rerank_candidates[:limit]],
+            limit,
+            settings.retrieval_rerank_provider,
+        )
+
+        outcome = get_rerank_service().rerank(
+            query=query,
+            candidates=rerank_views,
+            limit=limit,
+        )
+
+        if outcome.fallback_to_fused:
             logger.warning(
-                "knowledge_rerank_fallback_triggered: rerank service not configured; using fused order. query=%r candidate_count=%s limit=%s",
+                "knowledge_rerank_fallback_triggered: query=%r candidate_count=%s fused_top_ids=%s limit=%s fallback_reason=%s",
                 query,
-                len(candidates),
+                len(rerank_candidates),
+                [candidate.card.id for candidate in rerank_candidates[:limit]],
                 limit,
+                outcome.fallback_reason,
             )
-            return candidates[:limit]
+            return rerank_candidates[:limit]
 
-        rerank_model = ChatOpenAI(
-            model=settings.rerank_model,
-            api_key=settings.rerank_api_key,
-            base_url=settings.rerank_base_url,
-            timeout=settings.llm_timeout_seconds,
-            temperature=0,
-            max_retries=2,
-        ).with_structured_output(RerankedCardIds)
+        filtered_items = [
+            item for item in outcome.items if item.score >= settings.retrieval_rerank_min_score
+        ]
+        logger.info(
+            "knowledge_rerank_completed: query=%r candidate_count=%s provider=%s reranked_top_ids=%s rerank_scores=%s threshold=%s threshold_filtered_empty=%s",
+            query,
+            len(rerank_candidates),
+            outcome.provider,
+            [item.card_id for item in outcome.items[:limit]],
+            {item.card_id: round(item.score, 4) for item in outcome.items[:limit]},
+            settings.retrieval_rerank_min_score,
+            not filtered_items,
+        )
+        if not filtered_items:
+            return []
 
-        prompt = self._build_rerank_prompt(query=query, candidates=candidates, limit=limit)
-
-        try:
-            response = rerank_model.invoke(prompt)
-        except Exception as error:
-            logger.warning(
-                "knowledge_rerank_fallback_triggered: rerank invocation failed; using fused order. query=%r candidate_count=%s limit=%s error_type=%s error=%s",
-                query,
-                len(candidates),
-                limit,
-                type(error).__name__,
-                error,
-            )
-            return candidates[:limit]
-
-        candidate_map = {candidate.card.id: candidate for candidate in candidates}
-        reranked = [candidate_map[card_id] for card_id in response.card_ids if card_id in candidate_map]
-
-        if not reranked:
-            logger.warning(
-                "knowledge_rerank_fallback_triggered: rerank returned no valid ids; using fused order. query=%r candidate_count=%s limit=%s",
-                query,
-                len(candidates),
-                limit,
-            )
-            return candidates[:limit]
-
-        seen_ids = {candidate.card.id for candidate in reranked}
-        for candidate in candidates:
-            if candidate.card.id not in seen_ids:
-                reranked.append(candidate)
-
+        candidate_map = {candidate.card.id: candidate for candidate in rerank_candidates}
+        reranked = [
+            candidate_map[item.card_id]
+            for item in filtered_items
+            if item.card_id in candidate_map
+        ]
         return reranked[:limit]
 
     @staticmethod
-    def _build_rerank_prompt(*, query: str, candidates: list[RetrievedCard], limit: int) -> str:
-        candidate_count = max(limit * 3, limit)
-        option_lines: list[str] = []
-
-        for index, candidate in enumerate(candidates[:candidate_count], start=1):
-            tags = ", ".join(candidate.card.tags) if candidate.card.tags else "(none)"
-            content_excerpt = candidate.card.content.strip().replace("\n", " ")
-            if len(content_excerpt) > 400:
-                content_excerpt = f"{content_excerpt[:400].rstrip()}..."
-
-            option_lines.append(
-                "\n".join(
-                    [
-                        f"Candidate #{index}",
-                        f"ID: {candidate.card.id}",
-                        f"Title: {candidate.card.title}",
-                        f"Tags: {tags}",
-                        f"Content excerpt: {content_excerpt}",
-                    ]
-                )
-            )
-
-        options = "\n\n".join(option_lines)
-
-        return (
-            "You are reranking candidate knowledge cards for a user query.\n"
-            'Return only valid JSON in this exact shape: {"card_ids":["<id1>","<id2>"]}\n'
-            "Rules:\n"
-            "- Only return IDs from the candidate list.\n"
-            "- Do not add explanations.\n"
-            "- Do not wrap the JSON in markdown.\n"
-            "- Do not output any extra fields.\n"
-            f"- Return at most {limit} ids.\n\n"
-            f"User query:\n{query.strip()}\n\n"
-            f"Candidate cards:\n{options}\n"
+    def _build_rerank_candidate_view(candidate: RetrievedCard) -> RerankCandidateView:
+        normalized_excerpt = " ".join(candidate.card.content.strip().split())
+        if len(normalized_excerpt) > 240:
+            normalized_excerpt = f"{normalized_excerpt[:240].rstrip()}..."
+        return RerankCandidateView(
+            card_id=candidate.card.id,
+            title=candidate.card.title.strip(),
+            tags=candidate.card.tags or [],
+            content_excerpt=normalized_excerpt,
         )
 
 

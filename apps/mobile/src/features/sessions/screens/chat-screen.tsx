@@ -90,6 +90,8 @@ export function ChatScreen({
               ? selectionController.toggleSelect
               : undefined
           }
+          rangeEndMessageId={selectionController.rangeEndMessageId}
+          rangeStartMessageId={selectionController.rangeStartMessageId}
           selectedIds={selectionController.selectedMessageIdSet}
           selectionMode={selectionController.selectionMode}
           streamAssistantMessageId={sessionController.streamAssistantMessageId}
@@ -113,7 +115,8 @@ export function ChatScreen({
               onSubmit={() => {
                 selectionController.importSelectedMessages().catch(() => {});
               }}
-              selectedCount={selectionController.selectedMessageIds.length}
+              rangeStatus={selectionController.rangeStatus}
+              selectedCount={selectionController.selectedCount}
             />
           ) : (
             <ChatComposer

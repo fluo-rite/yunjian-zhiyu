@@ -24,6 +24,8 @@ class KnowledgeSource(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     raw_content: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), default="processing", index=True)
     source_metadata: Mapped[dict | None] = mapped_column("source_meta", JSON, nullable=True)
+    failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    processing_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     user = relationship("User", back_populates="knowledge_sources")
     cards = relationship("KnowledgeCard", back_populates="source", passive_deletes="all")
