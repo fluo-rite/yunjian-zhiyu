@@ -1,31 +1,23 @@
-import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
+﻿import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useEffect } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { enableScreens } from "react-native-screens";
 
+import { CardDetailScreen } from "@/features/library/cards/screens/card-detail-screen";
+import { CardListScreen } from "@/features/library/cards/screens/card-list-screen";
+import { CardGroupDetailScreen } from "@/features/library/groups/screens/card-group-detail-screen";
+import { CardGroupListScreen } from "@/features/library/groups/screens/card-group-list-screen";
+import { GroupCardPickerScreen } from "@/features/library/groups/screens/group-card-picker-screen";
+import { CreateSourceDocumentScreen } from "@/features/library/sources/screens/create-source-document-screen";
+import { CreateSourceTextScreen } from "@/features/library/sources/screens/create-source-text-screen";
+import { SourceDetailScreen } from "@/features/library/sources/screens/source-detail-screen";
+import { SourceListScreen } from "@/features/library/sources/screens/source-list-screen";
 import { AccountScreen } from "@/features/profile/screens/account-screen";
 import { SettingsScreen } from "@/features/profile/screens/settings-screen";
-import { CardDetailScreen } from "@/features/library/screens/card-detail-screen";
-import { CardGroupDetailScreen } from "@/features/library/screens/card-group-detail-screen";
-import { CardGroupListScreen } from "@/features/library/screens/card-group-list-screen";
-import { CardListScreen } from "@/features/library/screens/card-list-screen";
-import { CreateSourceTextScreen } from "@/features/library/screens/create-source-text-screen";
-import { CreateSourceDocumentScreen } from "@/features/library/screens/create-source-document-screen";
-import { GroupCardPickerScreen } from "@/features/library/screens/group-card-picker-screen";
-import { SourceDetailScreen } from "@/features/library/screens/source-detail-screen";
-import { SourceListScreen } from "@/features/library/screens/source-list-screen";
-import { ChatScreen } from "@/features/sessions/screens/chat-screen";
-import {
-  hydrateAuthSession,
-  selectIsAuthenticated,
-  selectIsHydrating,
-} from "@/store/auth-slice";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { ChatScreen } from "@/features/sessions/chat/screens/chat-screen";
 import { AuthStackNavigator } from "@/navigation/auth-stack";
 import { MainTabNavigator } from "@/navigation/main-tabs";
 import { type RootStackParamList } from "@/navigation/types";
+import { colors } from "@/theme/tokens";
 
 enableScreens();
 
@@ -43,25 +35,7 @@ const navigationTheme = {
   },
 };
 
-export function RootNavigator() {
-  const dispatch = useAppDispatch();
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const isHydrating = useAppSelector(selectIsHydrating);
-
-  useEffect(() => {
-    dispatch(hydrateAuthSession());
-  }, [dispatch]);
-
-  if (isHydrating) {
-    return (
-      <View style={styles.loadingScreen}>
-        <ActivityIndicator color={colors.accentPressed} size="large" />
-        <Text style={styles.loadingTitle}>正在恢复登录状态</Text>
-        <Text style={styles.loadingText}>稍等一下，我们正在检查本地会话是否仍然有效。</Text>
-      </View>
-    );
-  }
-
+export function RootNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -88,25 +62,3 @@ export function RootNavigator() {
     </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingScreen: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.xxl,
-  },
-  loadingTitle: {
-    color: colors.textPrimary,
-    fontSize: typography.section,
-    fontWeight: "700",
-  },
-  loadingText: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 22,
-    textAlign: "center",
-  },
-});

@@ -1,11 +1,11 @@
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+﻿import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 
 import { LibraryHomeScreen } from "@/features/library/screens/library-home-screen";
 import { ProfileScreen } from "@/features/profile/screens/profile-screen";
-import { SessionListScreen } from "@/features/sessions/screens/session-list-screen";
-import { colors, radii, spacing, typography } from "@/theme/tokens";
+import { SessionListScreen } from "@/features/sessions/session-list/screens/session-list-screen";
 import { type MainTabParamList } from "@/navigation/types";
+import { colors, radii, spacing, typography } from "@/theme/tokens";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 

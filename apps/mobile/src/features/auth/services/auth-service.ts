@@ -4,7 +4,7 @@ import {
   register,
   type LoginPayload,
   type RegisterPayload,
-} from "@/lib/api";
+} from "@/features/auth/api";
 import {
   clearPersistedSession,
   persistSession,

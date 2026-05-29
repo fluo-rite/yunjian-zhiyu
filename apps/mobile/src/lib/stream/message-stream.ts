@@ -1,11 +1,5 @@
 import { resolveApiBaseUrl } from "@/config/app-config";
 import {
-  errorEventSchema,
-  messageAbortedEventSchema,
-  messageDeltaEventSchema,
-  messageDoneEventSchema,
-  messageStartEventSchema,
-  statusEventSchema,
   type ErrorEvent,
   type MessageAbortedEvent,
   type MessageDeltaEvent,
@@ -13,6 +7,15 @@ import {
   type MessageStartEvent,
   type StatusEvent,
 } from "@/lib/stream/stream-schemas";
+import {
+  decodeErrorEvent,
+  decodeMessageAbortedEvent,
+  decodeMessageDeltaEventLight,
+  decodeMessageDoneEvent,
+  decodeMessageStartEvent,
+  decodeStatusEvent,
+  isStreamContractError,
+} from "@/lib/stream/stream-decoders";
 import { connectSse, type SseConnection } from "@/lib/stream/sse-client";
 
 export type AssistantMessageStreamEvent =
@@ -48,51 +51,71 @@ export function connectAssistantMessageStream(
     onError: options.onError,
     onClose: options.onClose,
     onEvent(event) {
-      switch (event.event) {
-        case "status":
-          options.onEvent({
-            type: "status",
-            id: event.id,
-            data: statusEventSchema.parse(JSON.parse(event.data)),
-          });
+      try {
+        switch (event.event) {
+          case "status":
+            options.onEvent({
+              type: "status",
+              id: event.id,
+              data: decodeStatusEvent(event.data),
+            });
+            return;
+          case "message.start":
+            options.onEvent({
+              type: "message.start",
+              id: event.id,
+              data: decodeMessageStartEvent(event.data),
+            });
+            return;
+          case "message.delta": {
+            const decoded = decodeMessageDeltaEventLight(event.data);
+
+            if (!decoded) {
+              if (__DEV__) {
+                // Delta events are high-frequency; ignore malformed payloads outside development.
+                console.warn(`Ignored invalid SSE delta payload for event "${event.event}".`);
+              }
+              return;
+            }
+
+            options.onEvent({
+              type: "message.delta",
+              id: event.id,
+              data: decoded,
+            });
+            return;
+          }
+          case "message.done":
+            options.onEvent({
+              type: "message.done",
+              id: event.id,
+              data: decodeMessageDoneEvent(event.data),
+            });
+            return;
+          case "message.aborted":
+            options.onEvent({
+              type: "message.aborted",
+              id: event.id,
+              data: decodeMessageAbortedEvent(event.data),
+            });
+            return;
+          case "error":
+            options.onEvent({
+              type: "error",
+              id: event.id,
+              data: decodeErrorEvent(event.data),
+            });
+            return;
+          default:
+            return;
+        }
+      } catch (error) {
+        if (isStreamContractError(error)) {
+          options.onError?.(new Error(`Invalid SSE payload for event "${event.event}".`));
           return;
-        case "message.start":
-          options.onEvent({
-            type: "message.start",
-            id: event.id,
-            data: messageStartEventSchema.parse(JSON.parse(event.data)),
-          });
-          return;
-        case "message.delta":
-          options.onEvent({
-            type: "message.delta",
-            id: event.id,
-            data: messageDeltaEventSchema.parse(JSON.parse(event.data)),
-          });
-          return;
-        case "message.done":
-          options.onEvent({
-            type: "message.done",
-            id: event.id,
-            data: messageDoneEventSchema.parse(JSON.parse(event.data)),
-          });
-          return;
-        case "message.aborted":
-          options.onEvent({
-            type: "message.aborted",
-            id: event.id,
-            data: messageAbortedEventSchema.parse(JSON.parse(event.data)),
-          });
-          return;
-        case "error":
-          options.onEvent({
-            type: "error",
-            id: event.id,
-            data: errorEventSchema.parse(JSON.parse(event.data)),
-          });
-          return;
-        default:
-          return;
+        }
+
+        throw error;
       }
     },
   });

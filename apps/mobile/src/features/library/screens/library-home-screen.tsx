@@ -3,7 +3,6 @@ import { type NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { PrimaryButton } from "@/components/ui/primary-button";
 import { type RootStackParamList } from "@/navigation/types";
 import { libraryHomeScreenStyles as styles } from "@/features/library/screens/library-home-screen.styles";
 

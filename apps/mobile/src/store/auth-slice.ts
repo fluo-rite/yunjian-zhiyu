@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-import { type AuthResponse, type AuthUser, type TokenPair } from "@/lib/api";
+import { type AuthResponse, type AuthUser, type TokenPair } from "@/features/auth/api";
 import { type PersistedSession } from "@/features/auth/services/auth-session";
 import type { RootState } from "@/store/index";
 import {

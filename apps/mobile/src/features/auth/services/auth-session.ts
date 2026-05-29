@@ -1,4 +1,4 @@
-import { type AuthUser, type TokenPair } from "@/lib/api";
+import { type AuthUser, type TokenPair } from "@/features/auth/api";
 import { asyncStorageAdapter } from "@/lib/storage/async-storage-adapter";
 import {
   readJsonValue,
