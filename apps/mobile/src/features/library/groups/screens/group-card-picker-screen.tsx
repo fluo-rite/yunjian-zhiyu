@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { Alert, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -8,16 +8,22 @@ import { ErrorState } from "@/components/feedback/error-state";
 import { Field } from "@/components/ui/field";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
+  createAllCardsListMutationContext,
   type CardStatus,
   useAddCardsToGroupMutation,
-  useCardsQuery,
+  useInfiniteCardsQuery,
 } from "@/features/library/api";
+import { flattenInfiniteItems } from "@/lib/query/infinite-query";
 import { CardListView } from "@/features/library/shared/components/card-list-view";
 import { FilterChipRow, type FilterChipItem } from "@/features/library/shared/components/filter-chip-row";
 import { SelectionFooter } from "@/features/library/shared/components/selection-footer";
 import { getStableArray, retainExistingIds } from "@/features/library/utils/library-state";
 import { type RootStackParamList } from "@/navigation/types";
 import { groupCardPickerScreenStyles as styles } from "@/features/library/groups/screens/group-card-picker-screen.styles";
+
+const footerContainerStyle = { alignItems: "center", paddingBottom: 24, paddingTop: 8 } as const;
+const footerHintTextStyle = { color: "#64748B" } as const;
+const footerHintSpacingStyle = { color: "#64748B", marginTop: 8 } as const;
 
 type StatusFilterKey = "all" | CardStatus;
 
@@ -40,13 +46,17 @@ export function GroupCardPickerScreen({
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const cardsQuery = useCardsQuery({
+  const cardsQuery = useInfiniteCardsQuery({
+    keyword: searchInput.trim() || undefined,
+    status: toStatusFilterValue(statusFilter),
+  });
+  const currentCardMutationContext = createAllCardsListMutationContext({
     keyword: searchInput.trim() || undefined,
     status: toStatusFilterValue(statusFilter),
   });
   const addCardsMutation = useAddCardsToGroupMutation();
 
-  const allCards = getStableArray(cardsQuery.data?.items);
+  const allCards = getStableArray(flattenInfiniteItems(cardsQuery.data));
   const existingCardIds = useMemo(() => route.params.existingCardIds ?? [], [route.params.existingCardIds]);
   const existingCardIdSet = useMemo(() => new Set(existingCardIds), [existingCardIds]);
   const availableCards = useMemo(
@@ -95,7 +105,7 @@ export function GroupCardPickerScreen({
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>{route.params.groupName ?? "添加卡片到分组"}</Text>
           <Text style={styles.heroText}>从卡片库中选择内容，加入当前分组。</Text>
-          {cardsQuery.data?.pagination ? (
+          {cardsQuery.data?.pages[0]?.pagination ? (
             <Text style={styles.resultMeta}>
               可添加 {availableCards.length} 张
               {hiddenExistingCount > 0 ? `，其中 ${hiddenExistingCount} 张已在分组中` : ""}
@@ -122,7 +132,14 @@ export function GroupCardPickerScreen({
         </View>
       </View>
     ),
-    [availableCards.length, cardsQuery.data?.pagination, hiddenExistingCount, route.params.groupName, searchInput, statusFilter],
+    [
+      availableCards.length,
+      cardsQuery.data?.pages,
+      hiddenExistingCount,
+      route.params.groupName,
+      searchInput,
+      statusFilter,
+    ],
   );
 
   const listEmptyComponent = useMemo(() => {
@@ -168,9 +185,33 @@ export function GroupCardPickerScreen({
         <CardListView
           items={availableCards}
           ListEmptyComponent={listEmptyComponent}
+          ListFooterComponent={
+            availableCards.length > 0 ? (
+              <View style={footerContainerStyle}>
+                {cardsQuery.isFetchingNextPage ? (
+                  <>
+                    <ActivityIndicator />
+                    <Text style={footerHintSpacingStyle}>正在加载更多卡片…</Text>
+                  </>
+                ) : !cardsQuery.hasNextPage ? (
+                  <Text style={footerHintTextStyle}>没有更多卡片了</Text>
+                ) : null}
+              </View>
+            ) : null
+          }
           ListHeaderComponent={listHeaderComponent}
           mode="selectable"
-          onPressItem={(card) => navigation.navigate("CardDetail", { cardId: card.id })}
+          onEndReached={() => {
+            if (cardsQuery.hasNextPage && !cardsQuery.isFetchingNextPage) {
+              cardsQuery.fetchNextPage().catch(() => {});
+            }
+          }}
+          onPressItem={(card) =>
+            navigation.navigate("CardDetail", {
+              cardId: card.id,
+              cardMutationContext: currentCardMutationContext,
+            })
+          }
           onRefresh={() => cardsQuery.refetch()}
           onToggleSelect={(card) => handleToggleSelect(card.id)}
           refreshing={cardsQuery.isRefetching}

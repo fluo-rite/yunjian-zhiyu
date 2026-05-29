@@ -38,12 +38,6 @@ export const confirmCardsResponseSchema = z.object({
 
 export const archiveCardResponseSchema = cardSchema;
 
-export const deleteCardResponseSchema = z.object({
-  deletedCardId: z.string(),
-  affectedSourceIds: z.array(z.string()),
-  affectedGroupIds: z.array(z.string()),
-});
-
 export const cardGroupSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -88,7 +82,6 @@ export type SourceStatus = z.infer<typeof sourceStatusSchema>;
 export type KnowledgeCard = z.infer<typeof cardSchema>;
 export type KnowledgeCardListResponse = z.infer<typeof cardListResponseSchema>;
 export type ConfirmCardsResponse = z.infer<typeof confirmCardsResponseSchema>;
-export type DeleteCardResponse = z.infer<typeof deleteCardResponseSchema>;
 export type CardGroup = z.infer<typeof cardGroupSchema>;
 export type CardGroupListResponse = z.infer<typeof cardGroupListResponseSchema>;
 export type CardGroupCardsResponse = z.infer<typeof cardGroupCardsResponseSchema>;

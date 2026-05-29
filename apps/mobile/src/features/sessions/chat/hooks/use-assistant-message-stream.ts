@@ -26,7 +26,7 @@ const initialState: StreamState = {
 };
 
 export function useAssistantMessageStream(
-  chatId: string | null,
+  sessionId: string | null,
   assistantMessageId: string | null,
 ) {
   const accessToken = useAppSelector(selectAccessToken);
@@ -72,7 +72,7 @@ export function useAssistantMessageStream(
   }, [flushPendingDelta]);
 
   useEffect(() => {
-    if (!chatId || !assistantMessageId || !accessToken) {
+    if (!sessionId || !assistantMessageId || !accessToken) {
       pendingDeltaRef.current = "";
       cancelDeltaFlush();
       setState(initialState);
@@ -93,7 +93,7 @@ export function useAssistantMessageStream(
     });
 
     const connection = connectAssistantMessageStream({
-      chatId,
+      sessionId,
       assistantMessageId,
       accessToken,
       onEvent(event) {
@@ -196,11 +196,18 @@ export function useAssistantMessageStream(
       cancelDeltaFlush();
       connection.close();
     };
-  }, [accessToken, assistantMessageId, cancelDeltaFlush, chatId, flushPendingDelta, scheduleDeltaFlush]);
+  }, [
+    accessToken,
+    assistantMessageId,
+    cancelDeltaFlush,
+    flushPendingDelta,
+    scheduleDeltaFlush,
+    sessionId,
+  ]);
 
   const isStreaming = useMemo(() => {
-    return Boolean(chatId && assistantMessageId) && !state.terminalMessage && !state.errorMessage;
-  }, [assistantMessageId, chatId, state.errorMessage, state.terminalMessage]);
+    return Boolean(sessionId && assistantMessageId) && !state.terminalMessage && !state.errorMessage;
+  }, [assistantMessageId, sessionId, state.errorMessage, state.terminalMessage]);
 
   return {
     ...state,

@@ -21,14 +21,14 @@ export function ChatScreen({
   const [composerHeight, setComposerHeight] = useState(112);
 
   const sessionController = useChatSessionController({
-    initialChatId: route.params.chatId,
+    initialSessionId: route.params.sessionId,
     initialTitle: route.params.title,
     isNew: route.params.isNew,
   });
 
   const selectionController = useChatSelectionController({
-    chatId: sessionController.chatId,
-    chatTitle: sessionController.chatTitle,
+    sessionId: sessionController.sessionId,
+    sessionTitle: sessionController.sessionTitle,
     fallbackTitle: sessionController.fallbackTitle,
     isMessagesLoading: sessionController.messagesQuery.isLoading,
     isStreaming: sessionController.isStreaming,
@@ -66,7 +66,7 @@ export function ChatScreen({
             : undefined
         }
         rightLabel={rightLabel}
-        title={sessionController.chatTitle || sessionController.fallbackTitle}
+        title={sessionController.sessionTitle || sessionController.fallbackTitle}
       />
 
       <KeyboardAvoidingView
@@ -83,7 +83,10 @@ export function ChatScreen({
               : undefined
           }
           isError={sessionController.messagesQuery.isError}
-          isLoading={sessionController.messagesQuery.isLoading && Boolean(sessionController.chatId)}
+          isLoading={
+            sessionController.messagesQuery.isLoading &&
+            Boolean(sessionController.sessionId)
+          }
           messages={sessionController.messages}
           onToggleSelect={
             selectionController.selectionMode

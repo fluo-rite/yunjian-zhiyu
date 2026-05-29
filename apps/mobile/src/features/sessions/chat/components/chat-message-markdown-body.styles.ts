@@ -142,7 +142,7 @@ export const chatMessageMarkdownStyles = {
   },
   link: {
     color: colors.accentPressed,
-    textDecorationLine: "none",
+    textDecorationLine: "none" as const,
   },
   strong: {
     color: colors.textPrimary,

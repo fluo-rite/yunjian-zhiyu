@@ -827,10 +827,10 @@ def test_delete_card_returns_affected_source_ids_and_group_ids(monkeypatch) -> N
     assert add_response.status_code == 204
 
     delete_response = client.delete(f"/api/v1/cards/{card_id}", headers=headers)
-    assert delete_response.status_code == 200, delete_response.text
-    assert delete_response.json()["deletedCardId"] == card_id
-    assert delete_response.json()["affectedSourceIds"] == [source_id]
-    assert delete_response.json()["affectedGroupIds"] == [group_id]
+    assert delete_response.status_code == 204, delete_response.text
+
+    card_response = client.get(f"/api/v1/cards/{card_id}", headers=headers)
+    assert card_response.status_code == 404
 
 
 def test_confirm_cards_confirms_multiple_pending_cards(monkeypatch) -> None:

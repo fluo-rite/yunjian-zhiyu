@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { LIBRARY_QUERY_STALE_TIME } from "@/lib/query/query-defaults";
 import {
   cardGroupCardsResponseSchema,
   cardGroupListResponseSchema,
@@ -10,7 +11,9 @@ import {
   type CardGroupListResponse,
 } from "@/features/library/api/library-schemas";
 import {
-  refreshGroupDetail,
+  patchGroupDetail,
+  patchGroupListItem,
+  removeCardsFromCurrentGroupList,
   refreshGroupList,
   refreshGroupScope,
   removeGroupQueries,
@@ -89,6 +92,7 @@ export function useGroupsQuery() {
   return useQuery({
     queryKey: libraryQueryKeys.groupList(),
     queryFn: listGroups,
+    staleTime: LIBRARY_QUERY_STALE_TIME,
   });
 }
 
@@ -99,6 +103,7 @@ export function useGroupDetailQuery(groupId: string | null) {
       : libraryQueryKeys.groupDetail("pending"),
     queryFn: () => getGroup(groupId as string),
     enabled: Boolean(groupId),
+    staleTime: LIBRARY_QUERY_STALE_TIME,
     retry: shouldRetryLibraryEntityQuery,
   });
 }
@@ -110,6 +115,7 @@ export function useGroupCardsQuery(groupId: string | null) {
       : libraryQueryKeys.groupCards("pending"),
     queryFn: () => listGroupCards(groupId as string),
     enabled: Boolean(groupId),
+    staleTime: LIBRARY_QUERY_STALE_TIME,
     retry: shouldRetryLibraryEntityQuery,
   });
 }
@@ -130,11 +136,9 @@ export function useRenameGroupMutation() {
 
   return useMutation({
     mutationFn: renameGroup,
-    onSuccess: async (_, payload) => {
-      await Promise.all([
-        refreshGroupList(queryClient),
-        refreshGroupDetail(queryClient, payload.groupId),
-      ]);
+    onSuccess: (group) => {
+      patchGroupDetail(queryClient, group);
+      patchGroupListItem(queryClient, group);
     },
   });
 }
@@ -167,8 +171,8 @@ export function useRemoveCardsFromGroupMutation() {
 
   return useMutation({
     mutationFn: removeCardsFromGroup,
-    onSuccess: async (_, payload) => {
-      await refreshGroupScope(queryClient, payload.groupId);
+    onSuccess: (_, payload) => {
+      removeCardsFromCurrentGroupList(queryClient, payload.groupId, payload.cardIds);
     },
   });
 }

@@ -7,15 +7,15 @@ export const paginationSchema = z.object({
   hasMore: z.boolean(),
 });
 
-export const chatSchema = z.object({
+export const sessionSchema = z.object({
   id: z.string(),
   title: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
-export const chatListResponseSchema = z.object({
-  items: z.array(chatSchema),
+export const sessionListResponseSchema = z.object({
+  items: z.array(sessionSchema),
   pagination: paginationSchema,
 });
 
@@ -38,7 +38,7 @@ export const messageMetadataSchema = z
   })
   .passthrough();
 
-export const messageSchema = z.object({
+const rawMessageSchema = z.object({
   id: z.string(),
   chatId: z.string(),
   role: z.enum(["user", "assistant"]),
@@ -49,25 +49,30 @@ export const messageSchema = z.object({
   createdAt: z.string(),
 });
 
+export const messageSchema = rawMessageSchema.transform(({ chatId, ...message }) => ({
+  ...message,
+  sessionId: chatId,
+}));
+
 export const messageListResponseSchema = z.object({
   items: z.array(messageSchema),
 });
 
-export const createChatMessageResponseSchema = z.object({
+export const createSessionMessageResponseSchema = z.object({
   userMessageId: z.string(),
   assistantMessageId: z.string(),
 });
 
-export const abortChatMessageResponseSchema = z.object({
+export const abortSessionMessageResponseSchema = z.object({
   assistantMessageId: z.string(),
   status: z.literal("aborting"),
 });
 
-export type Chat = z.infer<typeof chatSchema>;
-export type ChatListResponse = z.infer<typeof chatListResponseSchema>;
+export type Session = z.infer<typeof sessionSchema>;
+export type SessionListResponse = z.infer<typeof sessionListResponseSchema>;
 export type Citation = z.infer<typeof citationSchema>;
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 export type Message = z.infer<typeof messageSchema>;
 export type MessageListResponse = z.infer<typeof messageListResponseSchema>;
-export type CreateChatMessageResponse = z.infer<typeof createChatMessageResponseSchema>;
-export type AbortChatMessageResponse = z.infer<typeof abortChatMessageResponseSchema>;
+export type CreateSessionMessageResponse = z.infer<typeof createSessionMessageResponseSchema>;
+export type AbortSessionMessageResponse = z.infer<typeof abortSessionMessageResponseSchema>;

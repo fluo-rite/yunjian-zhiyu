@@ -7,11 +7,16 @@ export const statusEventSchema = z.object({
   label: z.string(),
 });
 
-export const messageStartEventSchema = z.object({
+export const messageStartEventSchema = z
+  .object({
   messageId: z.string(),
-  chatId: z.string(),
+    chatId: z.string(),
   role: z.literal("assistant"),
-});
+  })
+  .transform(({ chatId, ...event }) => ({
+    ...event,
+    sessionId: chatId,
+  }));
 
 export const messageDeltaEventSchema = z.object({
   messageId: z.string(),
@@ -26,12 +31,17 @@ export const messageAbortedEventSchema = z.object({
   message: messageSchema,
 });
 
-export const errorEventSchema = z.object({
-  message: z.string(),
-  chatId: z.string(),
-  messageId: z.string().nullable().optional(),
-  finalMessage: messageSchema.nullable().optional(),
-});
+export const errorEventSchema = z
+  .object({
+    message: z.string(),
+    chatId: z.string(),
+    messageId: z.string().nullable().optional(),
+    finalMessage: messageSchema.nullable().optional(),
+  })
+  .transform(({ chatId, ...event }) => ({
+    ...event,
+    sessionId: chatId,
+  }));
 
 export type StatusEvent = z.infer<typeof statusEventSchema>;
 export type MessageStartEvent = z.infer<typeof messageStartEventSchema>;

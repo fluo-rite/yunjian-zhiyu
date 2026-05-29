@@ -1,21 +1,5 @@
-import type { CardStatus, SourceStatus, SourceType } from "@/features/library/api/library-schemas";
-
-type CardListFilters = {
-  page: number;
-  pageSize: number;
-  status?: CardStatus;
-  sourceType?: SourceType;
-  sourceId?: string;
-  groupId?: string;
-  keyword?: string;
-};
-
-type SourceListFilters = {
-  page: number;
-  pageSize: number;
-  status?: SourceStatus;
-  sourceType?: SourceType;
-};
+import type { CardListFilters } from "@/features/library/api/card-query-filters";
+import type { SourceListFilters } from "@/features/library/api/source-query-filters";
 
 export const libraryQueryKeys = {
   all: ["library"] as const,

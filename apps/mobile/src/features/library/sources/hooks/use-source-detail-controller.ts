@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  createSourceCardsMutationContext,
   useConfirmCardsMutation,
   useDeleteSourceMutation,
   type KnowledgeCard,
@@ -48,7 +49,10 @@ export function useSourceDetailController({ sourceId, source, cards, pendingCard
 
     try {
       const confirmedCount = selectedPendingIds.length;
-      await confirmCardsMutation.mutateAsync({ cardIds: selectedPendingIds });
+      await confirmCardsMutation.mutateAsync({
+        cardIds: selectedPendingIds,
+        context: createSourceCardsMutationContext(sourceId),
+      });
       setSelectedPendingIds([]);
       Alert.alert("确认完成", `已确认 ${confirmedCount} 张卡片。`);
     } catch (error) {

@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -8,7 +8,12 @@ import { ErrorState } from "@/components/feedback/error-state";
 import { Field } from "@/components/ui/field";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { ScreenHeader } from "@/components/ui/screen-header";
-import { type CardStatus, useCardsQuery } from "@/features/library/api";
+import {
+  createAllCardsListMutationContext,
+  type CardStatus,
+  useInfiniteCardsQuery,
+} from "@/features/library/api";
+import { flattenInfiniteItems } from "@/lib/query/infinite-query";
 import { CardListView } from "@/features/library/shared/components/card-list-view";
 import { FilterChipRow, type FilterChipItem } from "@/features/library/shared/components/filter-chip-row";
 import { buildReadonlyCardDetailParams } from "@/features/library/utils/library-navigation";
@@ -18,6 +23,10 @@ import { libraryCopy } from "@/features/library/utils/library-copy";
 import { getStableArray } from "@/features/library/utils/library-state";
 import { type RootStackParamList } from "@/navigation/types";
 import { cardListScreenStyles as styles } from "@/features/library/cards/screens/card-list-screen.styles";
+
+const footerContainerStyle = { alignItems: "center", paddingBottom: 24, paddingTop: 8 } as const;
+const footerHintTextStyle = { color: "#64748B" } as const;
+const footerHintSpacingStyle = { color: "#64748B", marginTop: 8 } as const;
 
 type StatusFilterKey = "all" | CardStatus;
 
@@ -41,14 +50,20 @@ export function CardListScreen({
   const [searchInput, setSearchInput] = useState(route.params?.keyword ?? "");
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey>(route.params?.status ?? "all");
 
-  const cardsQuery = useCardsQuery({
+  const cardsQuery = useInfiniteCardsQuery({
+    groupId: route.params?.groupId,
+    keyword: capabilities.showSearch ? searchInput.trim() || undefined : undefined,
+    sourceId: route.params?.sourceId,
+    status: capabilities.showStatusFilter ? toStatusFilterValue(statusFilter) : undefined,
+  });
+  const currentCardMutationContext = createAllCardsListMutationContext({
     groupId: route.params?.groupId,
     keyword: capabilities.showSearch ? searchInput.trim() || undefined : undefined,
     sourceId: route.params?.sourceId,
     status: capabilities.showStatusFilter ? toStatusFilterValue(statusFilter) : undefined,
   });
 
-  const cards = getStableArray(cardsQuery.data?.items);
+  const cards = getStableArray(flattenInfiniteItems(cardsQuery.data));
   const hasContextFilter = Boolean(route.params?.sourceId || route.params?.groupId);
   const hasLocalFilters = Boolean(searchInput.trim() || statusFilter !== "all");
   const screenTitle =
@@ -92,8 +107,8 @@ export function CardListScreen({
         {capabilities.showHeroContext && route.params?.groupName ? (
           <Text style={styles.contextText}>分组：{route.params.groupName}</Text>
         ) : null}
-        {cardsQuery.data?.pagination ? (
-          <Text style={styles.resultMeta}>共 {cardsQuery.data.pagination.total} 张卡片</Text>
+        {cardsQuery.data?.pages[0]?.pagination ? (
+          <Text style={styles.resultMeta}>共 {cardsQuery.data.pages[0].pagination.total} 张卡片</Text>
         ) : null}
       </View>
 
@@ -180,11 +195,38 @@ export function CardListScreen({
       <CardListView
         items={cards}
         ListEmptyComponent={listEmptyComponent}
+        ListFooterComponent={
+          cards.length > 0 ? (
+            <View style={footerContainerStyle}>
+              {cardsQuery.isFetchingNextPage ? (
+                <>
+                  <ActivityIndicator />
+                  <Text style={footerHintSpacingStyle}>正在加载更多卡片…</Text>
+                </>
+              ) : !cardsQuery.hasNextPage ? (
+                <Text style={footerHintTextStyle}>没有更多卡片了</Text>
+              ) : null}
+            </View>
+          ) : null
+        }
         ListHeaderComponent={listHeaderComponent}
+        onEndReached={() => {
+          if (cardsQuery.hasNextPage && !cardsQuery.isFetchingNextPage) {
+            cardsQuery.fetchNextPage().catch(() => {});
+          }
+        }}
         onPressItem={(card) =>
           navigation.navigate(
             "CardDetail",
-            mode === "source_related" ? buildReadonlyCardDetailParams(card.id) : { cardId: card.id },
+            mode === "source_related"
+              ? buildReadonlyCardDetailParams(card.id, {
+                  cardMutationContext: currentCardMutationContext,
+                  sourceContextId: route.params?.sourceId,
+                })
+              : {
+                  cardId: card.id,
+                  cardMutationContext: currentCardMutationContext,
+                },
           )
         }
         onRefresh={() => cardsQuery.refetch()}

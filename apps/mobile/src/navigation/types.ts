@@ -1,4 +1,5 @@
 import { type NavigatorScreenParams } from "@react-navigation/native";
+import type { CardMutationContext } from "@/features/library/api/card-mutation-context";
 import type {
   CardDetailMode,
   CardListMode,
@@ -9,7 +10,7 @@ export type RootStackParamList = {
   Auth: undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Chat: {
-    chatId: string;
+    sessionId: string;
     title: string;
     isNew?: boolean;
   };
@@ -27,6 +28,7 @@ export type RootStackParamList = {
   CardDetail: {
     cardId: string;
     mode?: CardDetailMode;
+    cardMutationContext?: CardMutationContext;
     sourceContextId?: string;
   };
   CardGroupList: undefined;

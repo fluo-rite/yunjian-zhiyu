@@ -3,20 +3,21 @@ import { Alert, ScrollView, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { PrimaryButton } from "@/components/ui/primary-button";
-import { ScreenHeader } from "@/components/ui/screen-header";
-import { type RootStackParamList } from "@/navigation/types";
-import { useArchiveCardMutation, useCardDetailQuery, useDeleteCardMutation } from "@/features/library/api";
-import { CardStatusBadge } from "@/features/library/cards/components/card-status-badge";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { ErrorState } from "@/components/feedback/error-state";
-import { libraryCopy } from "@/features/library/utils/library-copy";
-import { buildReadonlySourceDetailParams, buildSourceRelatedCardListParams } from "@/features/library/utils/library-navigation";
-import { getCardDetailCapabilities } from "@/features/library/utils/library-view-capabilities";
-import { defaultCardDetailMode } from "@/features/library/utils/library-view-modes";
-import { formatDateTimeLabel, getSourceTypeLabel } from "@/features/library/utils/library-formatters";
-import { getStableArray } from "@/features/library/utils/library-state";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { useArchiveCardMutation, useCardDetailQuery, useDeleteCardMutation } from "@/features/library/api";
+import { cardDetailOnlyMutationContext } from "@/features/library/api/card-mutation-context";
+import { CardStatusBadge } from "@/features/library/cards/components/card-status-badge";
 import { cardDetailScreenStyles as styles } from "@/features/library/cards/screens/card-detail-screen.styles";
+import { formatDateTimeLabel, getSourceTypeLabel } from "@/features/library/utils/library-formatters";
+import { buildReadonlySourceDetailParams, buildSourceRelatedCardListParams } from "@/features/library/utils/library-navigation";
+import { getStableArray } from "@/features/library/utils/library-state";
+import { getCardDetailCapabilities } from "@/features/library/utils/library-view-capabilities";
+import { libraryCopy } from "@/features/library/utils/library-copy";
+import { defaultCardDetailMode } from "@/features/library/utils/library-view-modes";
+import { type RootStackParamList } from "@/navigation/types";
 
 function getCardTagKey(cardId: string, tag: string) {
   return `${cardId}:${tag}`;
@@ -28,6 +29,8 @@ export function CardDetailScreen({
 }: NativeStackScreenProps<RootStackParamList, "CardDetail">) {
   const mode = route.params.mode ?? defaultCardDetailMode;
   const capabilities = getCardDetailCapabilities(mode);
+  const cardMutationContext =
+    route.params.cardMutationContext ?? cardDetailOnlyMutationContext;
   const sourceContextId = route.params.sourceContextId;
 
   const cardQuery = useCardDetailQuery(route.params.cardId);
@@ -36,7 +39,9 @@ export function CardDetailScreen({
   const card = cardQuery.data;
   const tagPreview = useMemo(() => getStableArray(card?.tags), [card?.tags]);
   const showSourceLink =
-    capabilities.showSourceLink && Boolean(card?.sourceId) && (!sourceContextId || sourceContextId !== card?.sourceId);
+    capabilities.showSourceLink &&
+    Boolean(card?.sourceId) &&
+    (!sourceContextId || sourceContextId !== card?.sourceId);
 
   async function handleArchiveCard() {
     if (!card || card.status !== "active" || archiveCardMutation.isPending) {
@@ -44,7 +49,10 @@ export function CardDetailScreen({
     }
 
     try {
-      await archiveCardMutation.mutateAsync(card.id);
+      await archiveCardMutation.mutateAsync({
+        cardId: card.id,
+        context: cardMutationContext,
+      });
       Alert.alert(libraryCopy.actionCompleted, libraryCopy.cardDetail.archiveSuccessMessage);
     } catch (error) {
       Alert.alert(
@@ -59,30 +67,37 @@ export function CardDetailScreen({
       return;
     }
 
-    Alert.alert(libraryCopy.cardDetail.deleteConfirmTitle, libraryCopy.cardDetail.deleteConfirmDescription, [
-      { text: libraryCopy.cancel, style: "cancel" },
-      {
-        text: libraryCopy.deleteConfirm,
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteCardMutation.mutateAsync(card.id);
+    Alert.alert(
+      libraryCopy.cardDetail.deleteConfirmTitle,
+      libraryCopy.cardDetail.deleteConfirmDescription,
+      [
+        { text: libraryCopy.cancel, style: "cancel" },
+        {
+          text: libraryCopy.deleteConfirm,
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteCardMutation.mutateAsync({
+                cardId: card.id,
+                context: cardMutationContext,
+              });
 
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-              return;
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+                return;
+              }
+
+              navigation.replace("CardList");
+            } catch (error) {
+              Alert.alert(
+                libraryCopy.cardDetail.deleteFailureTitle,
+                error instanceof Error ? error.message : libraryCopy.loadFailed,
+              );
             }
-
-            navigation.replace("CardList");
-          } catch (error) {
-            Alert.alert(
-              libraryCopy.cardDetail.deleteFailureTitle,
-              error instanceof Error ? error.message : libraryCopy.loadFailed,
-            );
-          }
+          },
         },
-      },
-    ]);
+      ],
+    );
   }
 
   return (
@@ -109,14 +124,21 @@ export function CardDetailScreen({
 
       {cardQuery.isLoading ? (
         <View style={styles.stateWrap}>
-          <EmptyState description={libraryCopy.cardDetail.loadingDescription} title={libraryCopy.cardDetail.loadingTitle} />
+          <EmptyState
+            description={libraryCopy.cardDetail.loadingDescription}
+            title={libraryCopy.cardDetail.loadingTitle}
+          />
         </View>
       ) : null}
 
       {cardQuery.isError ? (
         <View style={styles.stateWrap}>
           <ErrorState
-            description={cardQuery.error instanceof Error ? cardQuery.error.message : libraryCopy.cardDetail.errorDescription}
+            description={
+              cardQuery.error instanceof Error
+                ? cardQuery.error.message
+                : libraryCopy.cardDetail.errorDescription
+            }
             onRetry={() => cardQuery.refetch()}
             retryLabel={libraryCopy.retry}
             title={libraryCopy.cardDetail.errorTitle}
@@ -131,7 +153,7 @@ export function CardDetailScreen({
               <View style={styles.heroCopy}>
                 <Text style={styles.heroTitle}>{card.title}</Text>
                 <Text style={styles.heroMeta}>
-                  {getSourceTypeLabel(card.sourceType)} · 最近更�?{formatDateTimeLabel(card.updatedAt)}
+                  {getSourceTypeLabel(card.sourceType)} · 最近更新 {formatDateTimeLabel(card.updatedAt)}
                 </Text>
               </View>
               <CardStatusBadge status={card.status} />
@@ -190,20 +212,33 @@ export function CardDetailScreen({
                 {card.status === "active" ? (
                   <PrimaryButton
                     disabled={archiveCardMutation.isPending}
-                    label={archiveCardMutation.isPending ? libraryCopy.cardDetail.archivePendingAction : libraryCopy.cardDetail.archiveAction}
                     iconName="archive-outline"
+                    label={
+                      archiveCardMutation.isPending
+                        ? libraryCopy.cardDetail.archivePendingAction
+                        : libraryCopy.cardDetail.archiveAction
+                    }
                     onPress={handleArchiveCard}
                   />
                 ) : null}
 
                 {card.status === "archived" ? (
-                  <PrimaryButton disabled label={libraryCopy.cardDetail.archivedAction} iconName="archive" variant="secondary" />
+                  <PrimaryButton
+                    disabled
+                    iconName="archive"
+                    label={libraryCopy.cardDetail.archivedAction}
+                    variant="secondary"
+                  />
                 ) : null}
 
                 <PrimaryButton
                   disabled={deleteCardMutation.isPending}
-                  label={deleteCardMutation.isPending ? libraryCopy.cardDetail.deletePendingAction : libraryCopy.cardDetail.deleteAction}
                   iconName="trash-outline"
+                  label={
+                    deleteCardMutation.isPending
+                      ? libraryCopy.cardDetail.deletePendingAction
+                      : libraryCopy.cardDetail.deleteAction
+                  }
                   onPress={handleDeleteCard}
                   variant="secondary"
                 />
@@ -215,4 +250,3 @@ export function CardDetailScreen({
     </SafeAreaView>
   );
 }
-

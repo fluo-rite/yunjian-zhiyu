@@ -1,13 +1,13 @@
 import type { Message } from "@/features/sessions/api";
 import { sessionCopy } from "@/features/sessions/utils/session-copy";
 
-export function buildChatTitle(content: string) {
+export function buildSessionTitle(content: string) {
   const normalized = content.trim().replace(/\s+/g, " ");
   return normalized.slice(0, 20) || sessionCopy.chat.newChatTitle;
 }
 
-export function buildMessageSourceName(chatTitle: string) {
-  return `${chatTitle.trim() || sessionCopy.chat.unnamedChatTitle} 对话摘录`;
+export function buildMessageSourceName(sessionTitle: string) {
+  return `${sessionTitle.trim() || sessionCopy.chat.unnamedChatTitle} 对话摘录`;
 }
 
 export function findLatestStreamingAssistantMessage(messages: Message[]) {

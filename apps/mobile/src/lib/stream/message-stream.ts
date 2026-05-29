@@ -27,7 +27,7 @@ export type AssistantMessageStreamEvent =
   | { type: "error"; id?: string; data: ErrorEvent };
 
 export type AssistantMessageStreamOptions = {
-  chatId: string;
+  sessionId: string;
   assistantMessageId: string;
   accessToken?: string | null;
   lastEventId?: string | null;
@@ -36,16 +36,16 @@ export type AssistantMessageStreamOptions = {
   onClose?: () => void;
 };
 
-function buildStreamUrl(chatId: string, assistantMessageId: string) {
+function buildStreamUrl(sessionId: string, assistantMessageId: string) {
   const baseUrl = resolveApiBaseUrl().replace(/\/+$/, "");
-  return `${baseUrl}/chats/${chatId}/messages/${assistantMessageId}/stream`;
+  return `${baseUrl}/chats/${sessionId}/messages/${assistantMessageId}/stream`;
 }
 
 export function connectAssistantMessageStream(
   options: AssistantMessageStreamOptions,
 ): SseConnection {
   return connectSse({
-    url: buildStreamUrl(options.chatId, options.assistantMessageId),
+    url: buildStreamUrl(options.sessionId, options.assistantMessageId),
     accessToken: options.accessToken,
     lastEventId: options.lastEventId,
     onError: options.onError,

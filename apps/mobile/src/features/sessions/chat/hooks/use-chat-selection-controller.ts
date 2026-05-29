@@ -10,8 +10,8 @@ import {
 } from "@/features/sessions/utils/session-helpers";
 
 export function useChatSelectionController(args: {
-  chatId: string | null;
-  chatTitle: string;
+  sessionId: string | null;
+  sessionTitle: string;
   fallbackTitle: string;
   messages: Message[];
   isMessagesLoading: boolean;
@@ -24,7 +24,10 @@ export function useChatSelectionController(args: {
 
   const createSourceFromMessagesMutation = useCreateSourceFromMessagesMutation();
   const canEnterSelectionMode =
-    Boolean(args.chatId) && args.messages.length > 0 && !args.isMessagesLoading && !args.isStreaming;
+    Boolean(args.sessionId) &&
+    args.messages.length > 0 &&
+    !args.isMessagesLoading &&
+    !args.isStreaming;
   const rangeMeta = useMemo(
     () => getSelectedRangeMeta(args.messages, rangeStartMessageId, rangeEndMessageId),
     [args.messages, rangeEndMessageId, rangeStartMessageId],
@@ -87,7 +90,7 @@ export function useChatSelectionController(args: {
 
     try {
       const created = await createSourceFromMessagesMutation.mutateAsync({
-        name: buildMessageSourceName(args.chatTitle || args.fallbackTitle),
+        name: buildMessageSourceName(args.sessionTitle || args.fallbackTitle),
         messageIds: selectedMessageIds,
       });
 

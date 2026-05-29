@@ -2,13 +2,13 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { Pressable, Text, View } from "react-native";
 
 import { colors } from "@/theme/tokens";
-import { type Chat } from "@/features/sessions/api";
+import { type Session } from "@/features/sessions/api";
 import { sessionCopy } from "@/features/sessions/utils/session-copy";
 import { formatSessionUpdatedTime } from "@/features/sessions/utils/session-helpers";
 import { sessionListItemStyles as styles } from "@/features/sessions/session-list/components/session-list-item.styles";
 
 export function SessionListItem(props: {
-  chat: Chat;
+  session: Session;
   isMenuOpen: boolean;
   isDeleting: boolean;
   onPress: () => void;
@@ -47,8 +47,8 @@ export function SessionListItem(props: {
       ) : null}
 
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{props.chat.title}</Text>
-        <Text style={styles.cardTime}>{formatSessionUpdatedTime(props.chat.updatedAt)}</Text>
+        <Text style={styles.cardTitle}>{props.session.title}</Text>
+        <Text style={styles.cardTime}>{formatSessionUpdatedTime(props.session.updatedAt)}</Text>
       </View>
 
       <Text style={styles.cardText}>{sessionCopy.sessionList.itemDescription}</Text>

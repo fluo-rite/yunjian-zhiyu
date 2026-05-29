@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { ErrorState } from "@/components/feedback/error-state";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
+  createGroupCardsMutationContext,
   useGroupCardsQuery,
   useGroupDetailQuery,
 } from "@/features/library/api";
@@ -145,7 +146,12 @@ export function CardGroupDetailScreen({
           ListEmptyComponent={listEmptyComponent}
           ListHeaderComponent={listHeaderComponent}
           mode={controller.isSelectionMode ? "selectable" : "embedded"}
-          onPressItem={(card) => navigation.navigate("CardDetail", { cardId: card.id })}
+          onPressItem={(card) =>
+            navigation.navigate("CardDetail", {
+              cardId: card.id,
+              cardMutationContext: createGroupCardsMutationContext(route.params.groupId),
+            })
+          }
           onRefresh={() => {
             groupQuery.refetch();
             groupCardsQuery.refetch();

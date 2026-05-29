@@ -14,8 +14,10 @@ export function CardListView(props: {
   onToggleSelect?: (card: KnowledgeCard) => void;
   ListHeaderComponent?: ReactElement | null;
   ListEmptyComponent?: ReactElement | null;
+  ListFooterComponent?: ReactElement | null;
   refreshing?: boolean;
   onRefresh?: () => void;
+  onEndReached?: () => void;
 }) {
   const mode = props.mode ?? "browse";
 
@@ -26,7 +28,10 @@ export function CardListView(props: {
       keyboardShouldPersistTaps="handled"
       keyExtractor={(item) => item.id}
       ListEmptyComponent={props.ListEmptyComponent}
+      ListFooterComponent={props.ListFooterComponent}
       ListHeaderComponent={props.ListHeaderComponent}
+      onEndReached={props.onEndReached}
+      onEndReachedThreshold={0.4}
       onRefresh={props.onRefresh}
       refreshing={props.refreshing}
       renderItem={({ item }) => {

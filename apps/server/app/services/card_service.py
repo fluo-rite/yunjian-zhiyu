@@ -12,7 +12,6 @@ from app.schemas.card import (
     CardListResponse,
     CardRead,
     ConfirmCardsResponse,
-    DeleteCardResponse,
 )
 from app.schemas.common import PaginationMeta
 
@@ -85,18 +84,9 @@ class CardService:
         ).scalar_one_or_none()
 
     @staticmethod
-    def delete(db: Session, card: KnowledgeCard) -> DeleteCardResponse:
-        group_ids = db.execute(
-            select(CardGroupItem.group_id).where(CardGroupItem.card_id == card.id)
-        ).scalars().all()
-        source_ids = [card.source_id] if card.source_id is not None else []
+    def delete(db: Session, card: KnowledgeCard) -> None:
         db.delete(card)
         db.commit()
-        return DeleteCardResponse(
-            deleted_card_id=card.id,
-            affected_source_ids=source_ids,
-            affected_group_ids=group_ids,
-        )
 
     @staticmethod
     def list_by_ids(db: Session, user: User, card_ids: list[str]) -> list[KnowledgeCard]:

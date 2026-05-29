@@ -1,34 +1,57 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
-  useAbortChatMessageMutation,
-  useChatMessagesQuery,
-  useCreateChatMutation,
-  useSendChatMessageMutation,
+  useAbortSessionMessageMutation,
+  useCreateSessionMutation,
+  useSendSessionMessageMutation,
+  useSessionMessagesQuery,
   type Message,
 } from "@/features/sessions/api";
+import {
+  patchTerminalAssistantMessage,
+  refreshSessionLists,
+  refreshSessionMessages,
+} from "@/features/sessions/api/session-cache";
 import { useAssistantMessageStream } from "@/features/sessions/chat/hooks/use-assistant-message-stream";
 import { sessionCopy } from "@/features/sessions/utils/session-copy";
-import { buildChatTitle, findLatestStreamingAssistantMessage } from "@/features/sessions/utils/session-helpers";
+import {
+  buildSessionTitle,
+  findLatestStreamingAssistantMessage,
+} from "@/features/sessions/utils/session-helpers";
 
 const EMPTY_MESSAGES: Message[] = [];
+const ABORT_REFRESH_FALLBACK_MS = 3_000;
 
 export function useChatSessionController(args: {
-  initialChatId: string;
+  initialSessionId: string;
   initialTitle: string;
   isNew?: boolean;
 }) {
-  const [chatId, setChatId] = useState<string | null>(args.isNew ? null : args.initialChatId);
-  const [chatTitle, setChatTitle] = useState(args.initialTitle);
+  const [sessionId, setSessionId] = useState<string | null>(
+    args.isNew ? null : args.initialSessionId,
+  );
+  const [sessionTitle, setSessionTitle] = useState(args.initialTitle);
   const [streamAssistantMessageId, setStreamAssistantMessageId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const abortRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const messagesQuery = useChatMessagesQuery(chatId);
-  const createChatMutation = useCreateChatMutation();
-  const sendChatMessageMutation = useSendChatMessageMutation();
-  const abortChatMessageMutation = useAbortChatMessageMutation();
-  const stream = useAssistantMessageStream(chatId, streamAssistantMessageId);
+  const messagesQuery = useSessionMessagesQuery(sessionId);
+  const createSessionMutation = useCreateSessionMutation();
+  const sendSessionMessageMutation = useSendSessionMessageMutation();
+  const abortSessionMessageMutation = useAbortSessionMessageMutation();
+  const stream = useAssistantMessageStream(sessionId, streamAssistantMessageId);
   const messages = useMemo(() => messagesQuery.data?.items ?? EMPTY_MESSAGES, [messagesQuery.data]);
+
+  function clearAbortRefreshFallback() {
+    if (abortRefreshTimerRef.current === null) {
+      return;
+    }
+
+    clearTimeout(abortRefreshTimerRef.current);
+    abortRefreshTimerRef.current = null;
+  }
 
   useEffect(() => {
     const latestStreaming = findLatestStreamingAssistantMessage(messages);
@@ -46,12 +69,14 @@ export function useChatSessionController(args: {
   }, [messages, stream.isStreaming, streamAssistantMessageId]);
 
   useEffect(() => {
-    if (!stream.terminalMessage && !stream.errorMessage) {
+    if (!sessionId || !stream.terminalMessage) {
       return;
     }
 
-    messagesQuery.refetch().catch(() => {});
-  }, [messagesQuery, stream.errorMessage, stream.terminalMessage]);
+    clearAbortRefreshFallback();
+    patchTerminalAssistantMessage(queryClient, sessionId, stream.terminalMessage);
+    refreshSessionLists(queryClient).catch(() => {});
+  }, [queryClient, sessionId, stream.terminalMessage]);
 
   useEffect(() => {
     if (!stream.errorMessage) {
@@ -61,25 +86,33 @@ export function useChatSessionController(args: {
     Alert.alert(sessionCopy.chat.streamInterruptedTitle, stream.errorMessage);
   }, [stream.errorMessage]);
 
+  useEffect(() => {
+    return () => {
+      clearAbortRefreshFallback();
+    };
+  }, []);
+
   const fallbackTitle = useMemo(
-    () => (chatId ? sessionCopy.chat.detailTitle : sessionCopy.chat.newChatTitle),
-    [chatId],
+    () => (sessionId ? sessionCopy.chat.detailTitle : sessionCopy.chat.newChatTitle),
+    [sessionId],
   );
   const isSending =
-    createChatMutation.isPending || sendChatMessageMutation.isPending || stream.isConnecting;
-  const isStreaming = stream.isStreaming || abortChatMessageMutation.isPending;
+    createSessionMutation.isPending ||
+    sendSessionMessageMutation.isPending ||
+    stream.isConnecting;
+  const isStreaming = stream.isStreaming || abortSessionMessageMutation.isPending;
 
-  async function ensureChatCreated(content: string) {
-    if (chatId) {
-      return chatId;
+  async function ensureSessionCreated(content: string) {
+    if (sessionId) {
+      return sessionId;
     }
 
-    const created = await createChatMutation.mutateAsync({
-      title: buildChatTitle(content),
+    const created = await createSessionMutation.mutateAsync({
+      title: buildSessionTitle(content),
     });
 
-    setChatId(created.id);
-    setChatTitle(created.title);
+    setSessionId(created.id);
+    setSessionTitle(created.title);
 
     return created.id;
   }
@@ -90,9 +123,9 @@ export function useChatSessionController(args: {
     }
 
     try {
-      const nextChatId = await ensureChatCreated(content);
-      const result = await sendChatMessageMutation.mutateAsync({
-        chatId: nextChatId,
+      const nextSessionId = await ensureSessionCreated(content);
+      const result = await sendSessionMessageMutation.mutateAsync({
+        sessionId: nextSessionId,
         content,
         options: {
           useKnowledge: true,
@@ -101,7 +134,7 @@ export function useChatSessionController(args: {
       });
 
       setStreamAssistantMessageId(result.assistantMessageId);
-      await messagesQuery.refetch();
+      await refreshSessionMessages(queryClient, nextSessionId);
     } catch (error) {
       Alert.alert(
         sessionCopy.chat.sendFailureTitle,
@@ -111,15 +144,21 @@ export function useChatSessionController(args: {
   }
 
   async function abortMessage() {
-    if (!chatId || !streamAssistantMessageId || abortChatMessageMutation.isPending) {
+    if (!sessionId || !streamAssistantMessageId || abortSessionMessageMutation.isPending) {
       return;
     }
 
     try {
-      await abortChatMessageMutation.mutateAsync({
-        chatId,
+      await abortSessionMessageMutation.mutateAsync({
+        sessionId,
         assistantMessageId: streamAssistantMessageId,
       });
+
+      clearAbortRefreshFallback();
+      abortRefreshTimerRef.current = setTimeout(() => {
+        refreshSessionMessages(queryClient, sessionId).catch(() => {});
+        abortRefreshTimerRef.current = null;
+      }, ABORT_REFRESH_FALLBACK_MS);
     } catch (error) {
       Alert.alert(
         sessionCopy.chat.abortFailureTitle,
@@ -129,8 +168,8 @@ export function useChatSessionController(args: {
   }
 
   return {
-    chatId,
-    chatTitle,
+    sessionId,
+    sessionTitle,
     fallbackTitle,
     messages,
     messagesQuery,
@@ -138,7 +177,7 @@ export function useChatSessionController(args: {
     streamAssistantMessageId,
     isSending,
     isStreaming,
-    isAborting: abortChatMessageMutation.isPending,
+    isAborting: abortSessionMessageMutation.isPending,
     sendMessage,
     abortMessage,
   };

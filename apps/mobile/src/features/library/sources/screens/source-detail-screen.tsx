@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { ErrorState } from "@/components/feedback/error-state";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
+  createSourceCardsMutationContext,
   useSourceCardsQuery,
   useSourceDetailQuery,
 } from "@/features/library/api";
@@ -33,9 +34,13 @@ export function SourceDetailScreen({
   const capabilities = getSourceDetailCapabilities(mode);
 
   const sourceQuery = useSourceDetailQuery(route.params.sourceId);
-  const sourceCardsQuery = useSourceCardsQuery(capabilities.showGeneratedCards ? route.params.sourceId : null);
-
   const source = sourceQuery.data;
+  const sourceCardsQuery = useSourceCardsQuery(
+    capabilities.showGeneratedCards ? route.params.sourceId : null,
+    {
+      pollWhileProcessing: source?.status === "processing",
+    },
+  );
   const cards = useMemo(() => sourceCardsQuery.data?.items ?? [], [sourceCardsQuery.data?.items]);
   const pendingCards = useMemo(() => cards.filter((card) => card.status === "pending"), [cards]);
   const cardCounts = useMemo(() => countCardsByStatus(cards), [cards]);
@@ -185,6 +190,7 @@ export function SourceDetailScreen({
         onPressItem={(card) =>
           navigation.navigate("CardDetail", {
             cardId: card.id,
+            cardMutationContext: createSourceCardsMutationContext(route.params.sourceId),
             sourceContextId: route.params.sourceId,
           })
         }

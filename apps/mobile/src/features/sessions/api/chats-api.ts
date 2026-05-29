@@ -1,34 +1,48 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
 import {
-  abortChatMessageResponseSchema,
-  chatListResponseSchema,
-  chatSchema,
-  createChatMessageResponseSchema,
+  CHAT_LIST_STALE_TIME,
+  CHAT_MESSAGES_STALE_TIME,
+} from "@/lib/query/query-defaults";
+import { getNextPageFromPagination } from "@/lib/query/infinite-query";
+import {
+  abortSessionMessageResponseSchema,
+  createSessionMessageResponseSchema,
   messageListResponseSchema,
-  type AbortChatMessageResponse,
-  type Chat,
-  type ChatListResponse,
-  type CreateChatMessageResponse,
+  sessionListResponseSchema,
+  sessionSchema,
+  type AbortSessionMessageResponse,
+  type CreateSessionMessageResponse,
   type MessageListResponse,
+  type Session,
+  type SessionListResponse,
 } from "@/features/sessions/api/session-schemas";
+import {
+  removeSessionFromLists,
+  refreshSessionLists,
+  removeSessionQueries,
+  shouldRetrySessionEntityQuery,
+} from "@/features/sessions/api/session-cache";
 import { sessionQueryKeys } from "@/features/sessions/api/session-query-keys";
 
 const DEFAULT_CHAT_PAGE = 1;
 const DEFAULT_CHAT_PAGE_SIZE = 20;
 
-export type ListChatsParams = {
-  page?: number;
+export type SessionListFilters = {
   pageSize?: number;
 };
 
-export type CreateChatInput = {
+export type ListSessionsParams = SessionListFilters & {
+  page?: number;
+};
+
+export type CreateSessionInput = {
   title: string;
 };
 
-export type SendChatMessageInput = {
-  chatId: string;
+export type SendSessionMessageInput = {
+  sessionId: string;
   content: string;
   options?: {
     useKnowledge?: boolean;
@@ -36,20 +50,28 @@ export type SendChatMessageInput = {
   };
 };
 
-export type AbortChatMessageInput = {
-  chatId: string;
+export type AbortSessionMessageInput = {
+  sessionId: string;
   assistantMessageId: string;
 };
 
-function normalizeListChatsParams(params?: ListChatsParams) {
+function normalizeSessionListFilters(filters?: SessionListFilters) {
   return {
-    page: params?.page ?? DEFAULT_CHAT_PAGE,
-    pageSize: params?.pageSize ?? DEFAULT_CHAT_PAGE_SIZE,
+    pageSize: filters?.pageSize ?? DEFAULT_CHAT_PAGE_SIZE,
   };
 }
 
-export async function listChats(params?: ListChatsParams): Promise<ChatListResponse> {
-  const normalized = normalizeListChatsParams(params);
+function normalizeListSessionsParams(params?: ListSessionsParams) {
+  return {
+    ...normalizeSessionListFilters(params),
+    page: params?.page ?? DEFAULT_CHAT_PAGE,
+  };
+}
+
+export async function listSessions(
+  params?: ListSessionsParams,
+): Promise<SessionListResponse> {
+  const normalized = normalizeListSessionsParams(params);
   const response = await apiClient.get("/chats", {
     params: {
       page: normalized.page,
@@ -57,120 +79,109 @@ export async function listChats(params?: ListChatsParams): Promise<ChatListRespo
     },
   });
 
-  return chatListResponseSchema.parse(response);
+  return sessionListResponseSchema.parse(response);
 }
 
-export async function createChat(payload: CreateChatInput): Promise<Chat> {
+export async function createSession(payload: CreateSessionInput): Promise<Session> {
   const response = await apiClient.post("/chats", {
     body: payload,
   });
 
-  return chatSchema.parse(response);
+  return sessionSchema.parse(response);
 }
 
-export async function deleteChat(chatId: string) {
-  await apiClient.delete(`/chats/${chatId}`);
+export async function deleteSession(sessionId: string) {
+  await apiClient.delete(`/chats/${sessionId}`);
 }
 
-export async function listChatMessages(chatId: string): Promise<MessageListResponse> {
-  const response = await apiClient.get(`/chats/${chatId}/messages`);
+export async function listSessionMessages(sessionId: string): Promise<MessageListResponse> {
+  const response = await apiClient.get(`/chats/${sessionId}/messages`);
   return messageListResponseSchema.parse(response);
 }
 
-export async function sendChatMessage(
-  payload: SendChatMessageInput,
-): Promise<CreateChatMessageResponse> {
-  const response = await apiClient.post(`/chats/${payload.chatId}/messages`, {
+export async function sendSessionMessage(
+  payload: SendSessionMessageInput,
+): Promise<CreateSessionMessageResponse> {
+  const response = await apiClient.post(`/chats/${payload.sessionId}/messages`, {
     body: {
       content: payload.content,
       options: payload.options,
     },
   });
 
-  return createChatMessageResponseSchema.parse(response);
+  return createSessionMessageResponseSchema.parse(response);
 }
 
-export async function abortChatMessage(
-  payload: AbortChatMessageInput,
-): Promise<AbortChatMessageResponse> {
+export async function abortSessionMessage(
+  payload: AbortSessionMessageInput,
+): Promise<AbortSessionMessageResponse> {
   const response = await apiClient.post(
-    `/chats/${payload.chatId}/messages/${payload.assistantMessageId}/abort`,
+    `/chats/${payload.sessionId}/messages/${payload.assistantMessageId}/abort`,
   );
 
-  return abortChatMessageResponseSchema.parse(response);
+  return abortSessionMessageResponseSchema.parse(response);
 }
 
-export function useChatsQuery(params?: ListChatsParams) {
-  const normalized = normalizeListChatsParams(params);
+export function useInfiniteSessionsQuery(filters?: SessionListFilters) {
+  const normalizedFilters = normalizeSessionListFilters(filters);
 
+  return useInfiniteQuery({
+    queryKey: sessionQueryKeys.sessionList(normalizedFilters),
+    queryFn: ({ pageParam }) =>
+      listSessions({
+        ...normalizedFilters,
+        page: pageParam,
+      }),
+    initialPageParam: DEFAULT_CHAT_PAGE,
+    getNextPageParam: getNextPageFromPagination,
+    staleTime: CHAT_LIST_STALE_TIME,
+  });
+}
+
+export function useSessionMessagesQuery(sessionId: string | null) {
   return useQuery({
-    queryKey: sessionQueryKeys.chatList(normalized.page, normalized.pageSize),
-    queryFn: () => listChats(normalized),
+    queryKey: sessionId
+      ? sessionQueryKeys.sessionMessages(sessionId)
+      : sessionQueryKeys.sessionMessages("pending"),
+    queryFn: () => listSessionMessages(sessionId as string),
+    enabled: Boolean(sessionId),
+    staleTime: CHAT_MESSAGES_STALE_TIME,
+    retry: shouldRetrySessionEntityQuery,
   });
 }
 
-export function useChatMessagesQuery(chatId: string | null) {
-  return useQuery({
-    queryKey: chatId ? sessionQueryKeys.messages(chatId) : sessionQueryKeys.messages("pending"),
-    queryFn: () => listChatMessages(chatId as string),
-    enabled: Boolean(chatId),
-  });
-}
-
-export function useCreateChatMutation() {
+export function useCreateSessionMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createChat,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: sessionQueryKeys.chatLists(),
-      });
+    mutationFn: createSession,
+    onSuccess: async () => {
+      await refreshSessionLists(queryClient);
     },
   });
 }
 
-export function useDeleteChatMutation() {
+export function useDeleteSessionMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: deleteChat,
-    onSuccess: (_, chatId) => {
-      queryClient.invalidateQueries({
-        queryKey: sessionQueryKeys.chatLists(),
-      });
-      queryClient.removeQueries({
-        queryKey: sessionQueryKeys.messages(chatId),
-      });
+    mutationFn: deleteSession,
+    onSuccess: async (_, sessionId) => {
+      removeSessionFromLists(queryClient, sessionId);
+      await removeSessionQueries(queryClient, sessionId);
+      await refreshSessionLists(queryClient);
     },
   });
 }
 
-export function useSendChatMessageMutation() {
-  const queryClient = useQueryClient();
-
+export function useSendSessionMessageMutation() {
   return useMutation({
-    mutationFn: sendChatMessage,
-    onSuccess: (_, payload) => {
-      queryClient.invalidateQueries({
-        queryKey: sessionQueryKeys.messages(payload.chatId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: sessionQueryKeys.chatLists(),
-      });
-    },
+    mutationFn: sendSessionMessage,
   });
 }
 
-export function useAbortChatMessageMutation() {
-  const queryClient = useQueryClient();
-
+export function useAbortSessionMessageMutation() {
   return useMutation({
-    mutationFn: abortChatMessage,
-    onSuccess: (_, payload) => {
-      queryClient.invalidateQueries({
-        queryKey: sessionQueryKeys.messages(payload.chatId),
-      });
-    },
+    mutationFn: abortSessionMessage,
   });
 }

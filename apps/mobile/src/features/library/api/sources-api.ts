@@ -1,6 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import {
+  flattenInfiniteItems,
+  getNextPageFromPagination,
+} from "@/lib/query/infinite-query";
+import {
+  LIBRARY_QUERY_STALE_TIME,
+  PROCESSING_SOURCE_POLL_INTERVAL,
+} from "@/lib/query/query-defaults";
 import {
   knowledgeSourceCardsResponseSchema,
   knowledgeSourceDetailSchema,
@@ -10,8 +19,6 @@ import {
   type KnowledgeSourceCardsResponse,
   type KnowledgeSourceDetail,
   type KnowledgeSourceListResponse,
-  type SourceStatus,
-  type SourceType,
 } from "@/features/library/api/library-schemas";
 import {
   refreshCardLists,
@@ -20,16 +27,12 @@ import {
   shouldRetryLibraryEntityQuery,
 } from "@/features/library/api/library-cache";
 import { libraryQueryKeys } from "@/features/library/api/library-query-keys";
-
-const DEFAULT_SOURCE_PAGE = 1;
-const DEFAULT_SOURCE_PAGE_SIZE = 20;
-
-export type ListSourcesParams = {
-  page?: number;
-  pageSize?: number;
-  status?: SourceStatus;
-  sourceType?: SourceType;
-};
+import {
+  normalizeListSourcesParams,
+  normalizeSourceListFilters,
+  type ListSourcesParams,
+  type SourceListFilters,
+} from "@/features/library/api/source-query-filters";
 
 export type CreateSourceFromTextInput = {
   name: string;
@@ -53,14 +56,9 @@ export type DeleteSourceInput = {
   deleteCards: boolean;
 };
 
-function normalizeListSourcesParams(params?: ListSourcesParams) {
-  return {
-    page: params?.page ?? DEFAULT_SOURCE_PAGE,
-    pageSize: params?.pageSize ?? DEFAULT_SOURCE_PAGE_SIZE,
-    status: params?.status,
-    sourceType: params?.sourceType,
-  };
-}
+type SourceCardsQueryOptions = {
+  pollWhileProcessing?: boolean;
+};
 
 function normalizeUploadFileUri(fileUri: string) {
   if (/^[a-z]+:\/\//i.test(fileUri)) {
@@ -143,33 +141,67 @@ export async function deleteSource(payload: DeleteSourceInput): Promise<void> {
   });
 }
 
-export function useSourcesQuery(params?: ListSourcesParams) {
-  const normalized = normalizeListSourcesParams(params);
+export function useInfiniteSourcesQuery(filters?: SourceListFilters) {
+  const normalizedFilters = normalizeSourceListFilters(filters);
+  const [pollWhileProcessing, setPollWhileProcessing] = useState(false);
 
-  return useQuery({
-    queryKey: libraryQueryKeys.sourceList(normalized),
-    queryFn: () => listSources(normalized),
+  const query = useInfiniteQuery({
+    queryKey: libraryQueryKeys.sourceList(normalizedFilters),
+    queryFn: ({ pageParam }) =>
+      listSources({
+        ...normalizedFilters,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageFromPagination,
+    staleTime: pollWhileProcessing ? 0 : LIBRARY_QUERY_STALE_TIME,
+    refetchInterval: pollWhileProcessing ? PROCESSING_SOURCE_POLL_INTERVAL : false,
+    refetchIntervalInBackground: false,
   });
+
+  useEffect(() => {
+    const hasProcessingItems = flattenInfiniteItems(query.data).some(
+      (source) => source.status === "processing",
+    );
+    setPollWhileProcessing((current) => (current === hasProcessingItems ? current : hasProcessingItems));
+  }, [query.data]);
+
+  return query;
 }
 
 export function useSourceDetailQuery(sourceId: string | null) {
-  return useQuery({
+  const [pollWhileProcessing, setPollWhileProcessing] = useState(false);
+
+  const query = useQuery({
     queryKey: sourceId
       ? libraryQueryKeys.sourceDetail(sourceId)
       : libraryQueryKeys.sourceDetail("pending"),
     queryFn: () => getSource(sourceId as string),
     enabled: Boolean(sourceId),
+    staleTime: pollWhileProcessing ? 0 : LIBRARY_QUERY_STALE_TIME,
+    refetchInterval: pollWhileProcessing ? PROCESSING_SOURCE_POLL_INTERVAL : false,
+    refetchIntervalInBackground: false,
     retry: shouldRetryLibraryEntityQuery,
   });
+
+  useEffect(() => {
+    const isProcessing = query.data?.status === "processing";
+    setPollWhileProcessing((current) => (current === isProcessing ? current : isProcessing));
+  }, [query.data?.status]);
+
+  return query;
 }
 
-export function useSourceCardsQuery(sourceId: string | null) {
+export function useSourceCardsQuery(sourceId: string | null, options?: SourceCardsQueryOptions) {
   return useQuery({
     queryKey: sourceId
       ? libraryQueryKeys.sourceCards(sourceId)
       : libraryQueryKeys.sourceCards("pending"),
     queryFn: () => listSourceCards(sourceId as string),
     enabled: Boolean(sourceId),
+    staleTime: options?.pollWhileProcessing ? 0 : LIBRARY_QUERY_STALE_TIME,
+    refetchInterval: options?.pollWhileProcessing ? PROCESSING_SOURCE_POLL_INTERVAL : false,
+    refetchIntervalInBackground: false,
     retry: shouldRetryLibraryEntityQuery,
   });
 }

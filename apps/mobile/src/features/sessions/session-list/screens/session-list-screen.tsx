@@ -2,33 +2,38 @@ import { FlashList } from "@shopify/flash-list";
 import { useNavigation } from "@react-navigation/native";
 import { type NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Alert, Pressable, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { EmptyState } from "@/components/feedback/empty-state";
 import { ErrorState } from "@/components/feedback/error-state";
 import { PrimaryButton } from "@/components/ui/primary-button";
+import { flattenInfiniteItems } from "@/lib/query/infinite-query";
 import { type RootStackParamList } from "@/navigation/types";
-import { useChatsQuery, useDeleteChatMutation } from "@/features/sessions/api";
+import { useDeleteSessionMutation, useInfiniteSessionsQuery } from "@/features/sessions/api";
 import { SessionListItem } from "@/features/sessions/session-list/components/session-list-item";
 import { sessionCopy } from "@/features/sessions/utils/session-copy";
 import { sessionListScreenStyles as styles } from "@/features/sessions/session-list/screens/session-list-screen.styles";
 
+const footerContainerStyle = { alignItems: "center", paddingVertical: 16 } as const;
+const footerHintTextStyle = { color: "#64748B" } as const;
+const footerHintSpacingStyle = { color: "#64748B", marginTop: 8 } as const;
+
 export function SessionListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const chatsQuery = useChatsQuery();
-  const deleteChatMutation = useDeleteChatMutation();
-  const chats = chatsQuery.data?.items ?? [];
-  const [openMenuChatId, setOpenMenuChatId] = useState<string | null>(null);
+  const sessionsQuery = useInfiniteSessionsQuery();
+  const deleteSessionMutation = useDeleteSessionMutation();
+  const sessions = flattenInfiniteItems(sessionsQuery.data);
+  const [openMenuSessionId, setOpenMenuSessionId] = useState<string | null>(null);
 
-  async function handleDeleteChat(chatId: string) {
-    if (deleteChatMutation.isPending) {
+  async function handleDeleteSession(sessionId: string) {
+    if (deleteSessionMutation.isPending) {
       return;
     }
 
     try {
-      await deleteChatMutation.mutateAsync(chatId);
-      setOpenMenuChatId((current) => (current === chatId ? null : current));
+      await deleteSessionMutation.mutateAsync(sessionId);
+      setOpenMenuSessionId((current) => (current === sessionId ? null : current));
     } catch (error) {
       Alert.alert(
         sessionCopy.sessionList.deleteFailureTitle,
@@ -48,7 +53,7 @@ export function SessionListScreen() {
               label={sessionCopy.sessionList.newChatAction}
               onPress={() =>
                 navigation.navigate("Chat", {
-                  chatId: "draft-chat",
+                  sessionId: "draft-session",
                   title: sessionCopy.chat.newChatTitle,
                   isNew: true,
                 })
@@ -57,41 +62,41 @@ export function SessionListScreen() {
           </View>
 
           <View style={styles.section}>
-            {openMenuChatId ? (
+            {openMenuSessionId ? (
               <Pressable
                 onPress={() => {
-                  setOpenMenuChatId(null);
+                  setOpenMenuSessionId(null);
                 }}
                 style={styles.menuDismissLayer}
               />
             ) : null}
 
-            {chatsQuery.isLoading ? (
+            {sessionsQuery.isLoading ? (
               <EmptyState
                 description={sessionCopy.sessionList.loadingDescription}
                 title={sessionCopy.sessionList.loadingTitle}
               />
             ) : null}
 
-            {chatsQuery.isError ? (
+            {sessionsQuery.isError ? (
               <ErrorState
                 description={
-                  chatsQuery.error instanceof Error
-                    ? chatsQuery.error.message
+                  sessionsQuery.error instanceof Error
+                    ? sessionsQuery.error.message
                     : sessionCopy.sessionList.errorDescription
                 }
                 onRetry={() => {
-                  chatsQuery.refetch().catch(() => {});
+                  sessionsQuery.refetch().catch(() => {});
                 }}
                 retryLabel={sessionCopy.retry}
                 title={sessionCopy.sessionList.errorTitle}
               />
             ) : null}
 
-            {!chatsQuery.isLoading && !chatsQuery.isError ? (
+            {!sessionsQuery.isLoading && !sessionsQuery.isError ? (
               <FlashList
                 contentContainerStyle={styles.listContent}
-                data={chats}
+                data={sessions}
                 keyExtractor={(item) => item.id}
                 ListEmptyComponent={
                   <EmptyState
@@ -99,32 +104,53 @@ export function SessionListScreen() {
                     title={sessionCopy.sessionList.emptyTitle}
                   />
                 }
-                onRefresh={() => {
-                  chatsQuery.refetch().catch(() => {});
+                ListFooterComponent={
+                  sessions.length > 0 ? (
+                    <View style={styles.listContent}>
+                      {sessionsQuery.isFetchingNextPage ? (
+                        <View style={footerContainerStyle}>
+                          <ActivityIndicator />
+                          <Text style={footerHintSpacingStyle}>正在加载更多会话…</Text>
+                        </View>
+                      ) : !sessionsQuery.hasNextPage ? (
+                        <View style={footerContainerStyle}>
+                          <Text style={footerHintTextStyle}>没有更多会话了</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null
+                }
+                onEndReached={() => {
+                  if (sessionsQuery.hasNextPage && !sessionsQuery.isFetchingNextPage) {
+                    sessionsQuery.fetchNextPage().catch(() => {});
+                  }
                 }}
-                refreshing={chatsQuery.isRefetching}
+                onRefresh={() => {
+                  sessionsQuery.refetch().catch(() => {});
+                }}
+                refreshing={sessionsQuery.isRefetching}
                 renderItem={({ item }) => {
-                  const isMenuOpen = openMenuChatId === item.id;
+                  const isMenuOpen = openMenuSessionId === item.id;
                   const isDeletingCurrent =
-                    deleteChatMutation.isPending && deleteChatMutation.variables === item.id;
+                    deleteSessionMutation.isPending && deleteSessionMutation.variables === item.id;
 
                   return (
                     <SessionListItem
-                      chat={item}
+                      session={item}
                       isDeleting={isDeletingCurrent}
                       isMenuOpen={isMenuOpen}
                       onDelete={() => {
-                        handleDeleteChat(item.id).catch(() => {});
+                        handleDeleteSession(item.id).catch(() => {});
                       }}
                       onPress={() => {
-                        setOpenMenuChatId(null);
+                        setOpenMenuSessionId(null);
                         navigation.navigate("Chat", {
-                          chatId: item.id,
+                          sessionId: item.id,
                           title: item.title,
                         });
                       }}
                       onToggleMenu={() => {
-                        setOpenMenuChatId((current) => (current === item.id ? null : item.id));
+                        setOpenMenuSessionId((current) => (current === item.id ? null : item.id));
                       }}
                     />
                   );

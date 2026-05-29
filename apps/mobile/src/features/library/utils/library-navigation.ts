@@ -1,3 +1,4 @@
+import type { CardMutationContext } from "@/features/library/api/card-mutation-context";
 import type { RootStackParamList } from "@/navigation/types";
 
 export function buildSourceRelatedCardListParams(
@@ -11,10 +12,18 @@ export function buildSourceRelatedCardListParams(
   };
 }
 
-export function buildReadonlyCardDetailParams(cardId: string): RootStackParamList["CardDetail"] {
+export function buildReadonlyCardDetailParams(
+  cardId: string,
+  options?: {
+    cardMutationContext?: CardMutationContext;
+    sourceContextId?: string;
+  },
+): RootStackParamList["CardDetail"] {
   return {
     cardId,
+    cardMutationContext: options?.cardMutationContext,
     mode: "source_related_readonly",
+    sourceContextId: options?.sourceContextId,
   };
 }
 

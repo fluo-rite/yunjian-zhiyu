@@ -1,56 +1,51 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { getNextPageFromPagination } from "@/lib/query/infinite-query";
+import { LIBRARY_QUERY_STALE_TIME } from "@/lib/query/query-defaults";
+import { type CardMutationContext } from "@/features/library/api/card-mutation-context";
+import {
+  normalizeCardListFilters,
+  normalizeListCardsParams,
+  type CardListFilters,
+  type ListCardsParams,
+} from "@/features/library/api/card-query-filters";
 import {
   archiveCardResponseSchema,
   cardListResponseSchema,
   cardSchema,
   confirmCardsResponseSchema,
-  deleteCardResponseSchema,
-  type CardStatus,
-  type DeleteCardResponse,
   type KnowledgeCard,
   type KnowledgeCardListResponse,
-  type SourceType,
 } from "@/features/library/api/library-schemas";
 import {
-  refreshAffectedGroups,
-  refreshAffectedSources,
-  refreshCardDetail,
-  refreshCardLists,
-  shouldRetryLibraryEntityQuery,
+  invalidateOtherCardLists,
+  patchCardDetailIfPresent,
+  patchCardInContext,
+  patchCardsInContext,
+  removeCardFromContext,
   removeCardDetail,
+  shouldRetryLibraryEntityQuery,
 } from "@/features/library/api/library-cache";
 import { libraryQueryKeys } from "@/features/library/api/library-query-keys";
-
-const DEFAULT_CARD_PAGE = 1;
-const DEFAULT_CARD_PAGE_SIZE = 20;
-
-export type ListCardsParams = {
-  page?: number;
-  pageSize?: number;
-  status?: CardStatus;
-  sourceType?: SourceType;
-  sourceId?: string;
-  groupId?: string;
-  keyword?: string;
-};
 
 export type ConfirmCardsInput = {
   cardIds: string[];
 };
 
-function normalizeListCardsParams(params?: ListCardsParams) {
-  return {
-    page: params?.page ?? DEFAULT_CARD_PAGE,
-    pageSize: params?.pageSize ?? DEFAULT_CARD_PAGE_SIZE,
-    status: params?.status,
-    sourceType: params?.sourceType,
-    sourceId: params?.sourceId,
-    groupId: params?.groupId,
-    keyword: params?.keyword?.trim() || undefined,
-  };
-}
+export type ConfirmCardsMutationInput = ConfirmCardsInput & {
+  context: CardMutationContext;
+};
+
+export type ArchiveCardMutationInput = {
+  cardId: string;
+  context: CardMutationContext;
+};
+
+export type DeleteCardMutationInput = {
+  cardId: string;
+  context: CardMutationContext;
+};
 
 export async function listCards(params?: ListCardsParams): Promise<KnowledgeCardListResponse> {
   const normalized = normalizeListCardsParams(params);
@@ -89,17 +84,23 @@ export async function archiveCard(cardId: string) {
   return archiveCardResponseSchema.parse(response);
 }
 
-export async function deleteCard(cardId: string): Promise<DeleteCardResponse> {
-  const response = await apiClient.delete(`/cards/${cardId}`);
-  return deleteCardResponseSchema.parse(response);
+export async function deleteCard(cardId: string): Promise<void> {
+  await apiClient.delete(`/cards/${cardId}`);
 }
 
-export function useCardsQuery(params?: ListCardsParams) {
-  const normalized = normalizeListCardsParams(params);
+export function useInfiniteCardsQuery(filters?: CardListFilters) {
+  const normalizedFilters = normalizeCardListFilters(filters);
 
-  return useQuery({
-    queryKey: libraryQueryKeys.cardList(normalized),
-    queryFn: () => listCards(normalized),
+  return useInfiniteQuery({
+    queryKey: libraryQueryKeys.cardList(normalizedFilters),
+    queryFn: ({ pageParam }) =>
+      listCards({
+        ...normalizedFilters,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageFromPagination,
+    staleTime: LIBRARY_QUERY_STALE_TIME,
   });
 }
 
@@ -108,6 +109,7 @@ export function useCardDetailQuery(cardId: string | null) {
     queryKey: cardId ? libraryQueryKeys.cardDetail(cardId) : libraryQueryKeys.cardDetail("pending"),
     queryFn: () => getCard(cardId as string),
     enabled: Boolean(cardId),
+    staleTime: LIBRARY_QUERY_STALE_TIME,
     retry: shouldRetryLibraryEntityQuery,
   });
 }
@@ -116,17 +118,12 @@ export function useConfirmCardsMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: confirmCards,
-    onSuccess: async (result) => {
-      const sourceIds = result.items
-        .map((card) => card.sourceId)
-        .filter((sourceId): sourceId is string => Boolean(sourceId));
-
-      await Promise.all([
-        refreshCardLists(queryClient),
-        refreshAffectedSources(queryClient, sourceIds),
-        ...result.items.map((card) => refreshCardDetail(queryClient, card.id)),
-      ]);
+    mutationFn: ({ context: _context, ...payload }: ConfirmCardsMutationInput) =>
+      confirmCards(payload),
+    onSuccess: async (result, { context }) => {
+      patchCardsInContext(queryClient, context, result.items);
+      result.items.forEach((card) => patchCardDetailIfPresent(queryClient, card));
+      await invalidateOtherCardLists(queryClient, context);
     },
   });
 }
@@ -135,13 +132,11 @@ export function useArchiveCardMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: archiveCard,
-    onSuccess: async (card) => {
-      await Promise.all([
-        refreshCardLists(queryClient),
-        refreshCardDetail(queryClient, card.id),
-        ...(card.sourceId ? [refreshAffectedSources(queryClient, [card.sourceId])] : []),
-      ]);
+    mutationFn: ({ cardId }: ArchiveCardMutationInput) => archiveCard(cardId),
+    onSuccess: async (card, { context }) => {
+      patchCardInContext(queryClient, context, card);
+      patchCardDetailIfPresent(queryClient, card);
+      await invalidateOtherCardLists(queryClient, context);
     },
   });
 }
@@ -150,15 +145,11 @@ export function useDeleteCardMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: deleteCard,
-    onSuccess: async (result, cardId) => {
-      removeCardDetail(queryClient, result.deletedCardId || cardId);
-
-      await Promise.all([
-        refreshCardLists(queryClient),
-        refreshAffectedSources(queryClient, result.affectedSourceIds),
-        refreshAffectedGroups(queryClient, result.affectedGroupIds),
-      ]);
+    mutationFn: ({ cardId }: DeleteCardMutationInput) => deleteCard(cardId),
+    onSuccess: async (_, { cardId, context }) => {
+      removeCardFromContext(queryClient, context, cardId);
+      removeCardDetail(queryClient, cardId);
+      await invalidateOtherCardLists(queryClient, context);
     },
   });
 }

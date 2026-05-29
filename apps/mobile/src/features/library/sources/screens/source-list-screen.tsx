@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from "react";
-import { Alert, FlatList, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -11,8 +11,9 @@ import {
   type KnowledgeSource,
   type SourceStatus,
   type SourceType,
-  useSourcesQuery,
+  useInfiniteSourcesQuery,
 } from "@/features/library/api";
+import { flattenInfiniteItems } from "@/lib/query/infinite-query";
 import { FilterChipRow, type FilterChipItem } from "@/features/library/shared/components/filter-chip-row";
 import { SessionImportHintModal } from "@/features/library/sources/components/session-import-hint-modal";
 import { SourceImportSheet } from "@/features/library/sources/components/source-import-sheet";
@@ -22,6 +23,10 @@ import { pickSourceDocument } from "@/features/library/utils/source-document-pic
 import { getStableArray } from "@/features/library/utils/library-state";
 import { type RootStackParamList } from "@/navigation/types";
 import { sourceListScreenStyles as styles } from "@/features/library/sources/screens/source-list-screen.styles";
+
+const footerContainerStyle = { alignItems: "center", paddingBottom: 24, paddingTop: 8 } as const;
+const footerHintTextStyle = { color: "#64748B" } as const;
+const footerHintSpacingStyle = { color: "#64748B", marginTop: 8 } as const;
 
 type SourceStatusFilterKey = "all" | SourceStatus;
 type SourceTypeFilterKey = "all" | SourceType;
@@ -57,11 +62,11 @@ export function SourceListScreen({
   const [statusFilter, setStatusFilter] = useState<SourceStatusFilterKey>(route.params?.status ?? "all");
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilterKey>(route.params?.sourceType ?? "all");
 
-  const sourcesQuery = useSourcesQuery({
+  const sourcesQuery = useInfiniteSourcesQuery({
     sourceType: toSourceTypeValue(sourceTypeFilter),
     status: toSourceStatusValue(statusFilter),
   });
-  const sources = getStableArray(sourcesQuery.data?.items);
+  const sources = getStableArray(flattenInfiniteItems(sourcesQuery.data));
   const hasFilters = statusFilter !== "all" || sourceTypeFilter !== "all";
 
   function openImportSheet() {
@@ -119,8 +124,8 @@ export function SourceListScreen({
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>全部知识来源</Text>
           <Text style={styles.heroText}>查看不同资料的整理结果，并继续处理生成的卡片。</Text>
-          {sourcesQuery.data?.pagination ? (
-            <Text style={styles.resultMeta}>共 {sourcesQuery.data.pagination.total} 条来源</Text>
+          {sourcesQuery.data?.pages[0]?.pagination ? (
+            <Text style={styles.resultMeta}>共 {sourcesQuery.data.pages[0].pagination.total} 条来源</Text>
           ) : null}
         </View>
 
@@ -144,7 +149,7 @@ export function SourceListScreen({
         </View>
       </View>
     ),
-    [sourceTypeFilter, sourcesQuery.data?.pagination, statusFilter],
+    [sourceTypeFilter, sourcesQuery.data?.pages, statusFilter],
   );
 
   const listEmptyComponent = useMemo(() => {
@@ -182,7 +187,26 @@ export function SourceListScreen({
         data={sources}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={listEmptyComponent}
+        ListFooterComponent={
+          sources.length > 0 ? (
+            <View style={footerContainerStyle}>
+              {sourcesQuery.isFetchingNextPage ? (
+                <>
+                  <ActivityIndicator />
+                  <Text style={footerHintSpacingStyle}>正在加载更多来源…</Text>
+                </>
+              ) : !sourcesQuery.hasNextPage ? (
+                <Text style={footerHintTextStyle}>没有更多来源了</Text>
+              ) : null}
+            </View>
+          ) : null
+        }
         ListHeaderComponent={listHeaderComponent}
+        onEndReached={() => {
+          if (sourcesQuery.hasNextPage && !sourcesQuery.isFetchingNextPage) {
+            sourcesQuery.fetchNextPage().catch(() => {});
+          }
+        }}
         onRefresh={() => sourcesQuery.refetch()}
         refreshing={sourcesQuery.isRefetching}
         renderItem={({ item }) => (
