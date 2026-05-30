@@ -4,12 +4,12 @@ import { colors, radii, spacing, typography } from "@/theme/tokens";
 
 export const emptyStateStyles = StyleSheet.create({
   card: {
-    gap: spacing.md,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
   title: {
     color: colors.textPrimary,

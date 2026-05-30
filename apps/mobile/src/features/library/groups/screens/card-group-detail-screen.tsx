@@ -1,4 +1,4 @@
-﻿import { useMemo } from "react";
+import { useMemo } from "react";
 import { View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -44,15 +44,6 @@ export function CardGroupDetailScreen({
   const listHeaderComponent = group ? (
     <View style={styles.headerContent}>
       <CardGroupDetailOverviewSection group={group} />
-      <CardGroupSettingsSection
-        currentName={group.name}
-        isDeleting={controller.deleteGroupMutation.isPending}
-        isRenaming={controller.renameGroupMutation.isPending}
-        nameDraft={controller.nameDraft}
-        onChangeName={controller.setNameDraft}
-        onDelete={controller.deleteGroup}
-        onRename={controller.renameGroup}
-      />
       <CardGroupActionsSection
         cardCount={cards.length}
         isSelectionMode={controller.isSelectionMode}
@@ -79,6 +70,18 @@ export function CardGroupDetailScreen({
         }}
       />
     </View>
+  ) : null;
+
+  const listFooterComponent = group ? (
+    <CardGroupSettingsSection
+      currentName={group.name}
+      isDeleting={controller.deleteGroupMutation.isPending}
+      isRenaming={controller.renameGroupMutation.isPending}
+      nameDraft={controller.nameDraft}
+      onChangeName={controller.setNameDraft}
+      onDelete={controller.deleteGroup}
+      onRename={controller.renameGroup}
+    />
   ) : null;
 
   const listEmptyComponent = useMemo(() => {
@@ -144,6 +147,7 @@ export function CardGroupDetailScreen({
           isItemSelectable={() => controller.isSelectionMode}
           items={cards}
           ListEmptyComponent={listEmptyComponent}
+          ListFooterComponent={listFooterComponent}
           ListHeaderComponent={listHeaderComponent}
           mode={controller.isSelectionMode ? "selectable" : "embedded"}
           onPressItem={(card) =>

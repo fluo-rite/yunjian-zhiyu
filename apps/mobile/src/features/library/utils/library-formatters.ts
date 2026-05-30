@@ -20,7 +20,7 @@ const sourceStatusLabels: Record<SourceStatus, string> = {
 
 const sourceTypeLabels: Record<SourceType, string> = {
   manual_text: "文本",
-  document: "文档",
+  document: "文件",
   messages: "消息",
 };
 

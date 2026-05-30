@@ -4,12 +4,12 @@ import { colors, radii, shadows, spacing, typography } from "@/theme/tokens";
 
 export const sourceListItemStyles = StyleSheet.create({
   card: {
-    gap: spacing.md,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
     ...shadows.card,
   },
   cardPressed: {
@@ -34,10 +34,5 @@ export const sourceListItemStyles = StyleSheet.create({
   meta: {
     color: colors.textTertiary,
     fontSize: typography.meta,
-  },
-  description: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 22,
   },
 });

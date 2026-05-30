@@ -10,28 +10,24 @@ export const sourceListScreenStyles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   headerContent: {
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   heroCard: {
-    gap: spacing.sm,
+    gap: spacing.xs,
     borderRadius: radii.xxl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
     ...shadows.card,
   },
   heroTitle: {
     color: colors.textPrimary,
-    fontSize: typography.title,
+    fontSize: typography.section,
     fontWeight: "700",
-  },
-  heroText: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 22,
   },
   resultMeta: {
     color: colors.textTertiary,
@@ -41,12 +37,12 @@ export const sourceListScreenStyles = StyleSheet.create({
     width: "100%",
   },
   filterCard: {
-    gap: spacing.lg,
+    gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
   filterSection: {
     gap: spacing.sm,

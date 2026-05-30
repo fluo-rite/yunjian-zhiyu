@@ -1,15 +1,15 @@
-import { StyleSheet } from "react-native";
+﻿import { StyleSheet } from "react-native";
 
 import { colors, radii, shadows, spacing, typography } from "@/theme/tokens";
 
 export const cardListItemStyles = StyleSheet.create({
   card: {
-    gap: spacing.md,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
     ...shadows.card,
   },
   cardEmbedded: {
@@ -39,7 +39,7 @@ export const cardListItemStyles = StyleSheet.create({
   },
   headerAside: {
     alignItems: "flex-end",
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   title: {
     color: colors.textPrimary,
@@ -53,17 +53,17 @@ export const cardListItemStyles = StyleSheet.create({
   content: {
     color: colors.textSecondary,
     fontSize: typography.body,
-    lineHeight: 22,
+    lineHeight: 21,
   },
   tagsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   tag: {
     borderRadius: radii.xl,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   tagLabel: {
@@ -76,7 +76,7 @@ export const cardListItemStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   selectionDotSelected: {

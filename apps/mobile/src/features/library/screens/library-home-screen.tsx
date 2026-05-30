@@ -12,7 +12,6 @@ export function LibraryHomeScreen() {
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
-
         <View style={styles.entryList}>
           <Pressable
             onPress={() => navigation.navigate("CardList")}
@@ -23,7 +22,7 @@ export function LibraryHomeScreen() {
           >
             <Text style={styles.entryEyebrow}>全部内容</Text>
             <Text style={styles.entryTitle}>知识卡片</Text>
-            <Text style={styles.entryText}>浏览、搜索和筛选你的全部卡片。</Text>
+            <Text style={styles.entryText}>浏览、搜索和筛选你的卡片。</Text>
             <Text style={styles.entryLink}>查看卡片</Text>
           </Pressable>
 
@@ -49,7 +48,7 @@ export function LibraryHomeScreen() {
           >
             <Text style={styles.entryEyebrow}>资料来源</Text>
             <Text style={styles.entryTitle}>知识来源</Text>
-            <Text style={styles.entryText}>查看不同资料、笔记或消息整理出的内容。</Text>
+            <Text style={styles.entryText}>查看不同资料整理出的原文和卡片。</Text>
             <Text style={styles.entryLink}>查看来源</Text>
           </Pressable>
         </View>

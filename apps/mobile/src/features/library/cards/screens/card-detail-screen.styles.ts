@@ -9,18 +9,20 @@ export const cardDetailScreenStyles = StyleSheet.create({
   },
   stateWrap: {
     paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
   },
   content: {
     paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   heroCard: {
-    gap: spacing.lg,
+    gap: spacing.md,
     borderRadius: radii.xxl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
     ...shadows.card,
   },
   heroHeader: {
@@ -31,7 +33,7 @@ export const cardDetailScreenStyles = StyleSheet.create({
   },
   heroCopy: {
     flex: 1,
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   heroTitle: {
     color: colors.textPrimary,
@@ -46,12 +48,12 @@ export const cardDetailScreenStyles = StyleSheet.create({
   tagsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   tag: {
     borderRadius: radii.xl,
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   tagLabel: {
@@ -60,12 +62,12 @@ export const cardDetailScreenStyles = StyleSheet.create({
     fontWeight: "600",
   },
   sectionCard: {
-    gap: spacing.sm,
+    gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
   sectionTitle: {
     color: colors.textPrimary,
@@ -75,11 +77,16 @@ export const cardDetailScreenStyles = StyleSheet.create({
   sectionText: {
     color: colors.textSecondary,
     fontSize: typography.body,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   actionRow: {
-    gap: spacing.md,
-    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  infoList: {
+    gap: spacing.sm,
+  },
+  infoRow: {
+    gap: spacing.xs,
   },
   infoLabel: {
     color: colors.textTertiary,
@@ -89,7 +96,6 @@ export const cardDetailScreenStyles = StyleSheet.create({
   infoValue: {
     color: colors.textPrimary,
     fontSize: typography.body,
-    lineHeight: 22,
-    marginBottom: spacing.sm,
+    lineHeight: 21,
   },
 });

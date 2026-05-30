@@ -1,4 +1,4 @@
-﻿import { Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { Field } from "@/components/ui/field";
 import { PrimaryButton } from "@/components/ui/primary-button";
@@ -14,7 +14,6 @@ export function CardGroupDetailOverviewSection({
   return (
     <View style={styles.heroCard}>
       <Text style={styles.heroTitle}>{group.name}</Text>
-      <Text style={styles.heroText}>在这里管理分组名称、添加卡片，或整理组内内容。</Text>
       <Text style={styles.heroMeta}>最近更新 {formatDateTimeLabel(group.updatedAt)}</Text>
     </View>
   );
@@ -75,6 +74,11 @@ export function CardGroupActionsSection({
 }) {
   return (
     <>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>组内卡片</Text>
+        <Text style={styles.sectionCaption}>共 {cardCount} 张</Text>
+      </View>
+
       <View style={styles.actionsCard}>
         <PrimaryButton label="添加卡片" onPress={onAddCards} />
         <PrimaryButton label="按本组筛选" onPress={onOpenFilteredCards} variant="secondary" />
@@ -86,15 +90,10 @@ export function CardGroupActionsSection({
         />
       </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>组内卡片</Text>
-        <Text style={styles.sectionCaption}>共 {cardCount} 张</Text>
-      </View>
-
       {isSelectionMode ? (
         <View style={styles.selectionHintCard}>
           <Text style={styles.selectionHintTitle}>选择要移出的卡片</Text>
-          <Text style={styles.selectionHintText}>移除操作只会解除当前分组关系，不会删除卡片本身。</Text>
+          <Text style={styles.selectionHintText}>移除只会解除当前分组关系，不会删除卡片本身。</Text>
         </View>
       ) : null}
     </>

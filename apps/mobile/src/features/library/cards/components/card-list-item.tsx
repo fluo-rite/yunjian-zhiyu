@@ -1,13 +1,13 @@
-import { Pressable, Text, View } from "react-native";
+﻿import { Pressable, Text, View } from "react-native";
 
 import type { KnowledgeCard } from "@/features/library/api";
+import { CardStatusBadge } from "@/features/library/cards/components/card-status-badge";
+import { cardListItemStyles as styles } from "@/features/library/cards/components/card-list-item.styles";
 import {
   buildCardSnippet,
   formatCompactDateTimeLabel,
   getSourceTypeLabel,
 } from "@/features/library/utils/library-formatters";
-import { CardStatusBadge } from "@/features/library/cards/components/card-status-badge";
-import { cardListItemStyles as styles } from "@/features/library/cards/components/card-list-item.styles";
 
 export type CardListItemMode = "browse" | "embedded" | "selectable";
 
@@ -42,7 +42,7 @@ export function CardListItem(props: {
         <View style={styles.headerCopy}>
           <Text style={styles.title}>{props.card.title}</Text>
           <Text style={styles.meta}>
-            {getSourceTypeLabel(props.card.sourceType)} · 更新�?{formatCompactDateTimeLabel(props.card.updatedAt)}
+            {getSourceTypeLabel(props.card.sourceType)} · 更新于 {formatCompactDateTimeLabel(props.card.updatedAt)}
           </Text>
         </View>
 
@@ -51,7 +51,7 @@ export function CardListItem(props: {
           {mode === "selectable" && props.selectable ? (
             <View style={[styles.selectionDot, props.selected && styles.selectionDotSelected]}>
               <Text style={[styles.selectionText, props.selected && styles.selectionTextSelected]}>
-                {props.selected ? "已选中" : "选择"}
+                {props.selected ? "已选" : "选择"}
               </Text>
             </View>
           ) : null}
@@ -77,4 +77,3 @@ export function CardListItem(props: {
     </Pressable>
   );
 }
-

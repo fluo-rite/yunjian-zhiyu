@@ -1,4 +1,4 @@
-﻿import { Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { type KnowledgeSourceDetail } from "@/features/library/api";
@@ -10,9 +10,17 @@ import {
 } from "@/features/library/utils/library-formatters";
 import { sourceDetailScreenStyles as styles } from "@/features/library/sources/screens/source-detail-screen.styles";
 
+function SourceInfoRow(props: { label: string; value: string }) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{props.label}</Text>
+      <Text style={styles.infoValue}>{props.value}</Text>
+    </View>
+  );
+}
+
 export function SourceDetailOverviewSection({
   source,
-  mode,
 }: {
   source: KnowledgeSourceDetail;
   mode: "manage" | "card_source_readonly";
@@ -29,11 +37,6 @@ export function SourceDetailOverviewSection({
           </View>
           <SourceStatusBadge status={source.status} />
         </View>
-        <Text style={styles.heroText}>
-          {mode === "card_source_readonly"
-            ? "这里展示当前卡片对应的来源内容和基础信息。"
-            : "查看原始内容、卡片结果，以及当前需要确认的内容。"}
-        </Text>
       </View>
 
       <View style={styles.sectionCard}>
@@ -43,10 +46,12 @@ export function SourceDetailOverviewSection({
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>来源信息</Text>
-        <Text style={styles.sectionText}>来源类型：{getSourceTypeLabel(source.sourceType)}</Text>
-        <Text style={styles.sectionText}>来源状态：{getSourceStatusLabel(source.status)}</Text>
-        <Text style={styles.sectionText}>创建时间：{formatDateTimeLabel(source.createdAt)}</Text>
-        <Text style={styles.sectionText}>更新时间：{formatDateTimeLabel(source.updatedAt)}</Text>
+        <View style={styles.infoList}>
+          <SourceInfoRow label="来源类型" value={getSourceTypeLabel(source.sourceType)} />
+          <SourceInfoRow label="来源状态" value={getSourceStatusLabel(source.status)} />
+          <SourceInfoRow label="创建时间" value={formatDateTimeLabel(source.createdAt)} />
+          <SourceInfoRow label="更新时间" value={formatDateTimeLabel(source.updatedAt)} />
+        </View>
       </View>
     </>
   );
@@ -93,12 +98,17 @@ export function SourceDetailManagementSection({
   return (
     <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>来源管理</Text>
-      <Text style={styles.sectionText}>
-        当前来源关联 {linkedCount} 张卡片。你可以只删除来源，或同时删除相关卡片。
-      </Text>
+      <Text style={styles.sectionText}>关联 {linkedCount} 张卡片，可只删除来源，或同时删除相关卡片。</Text>
       <View style={styles.actionRow}>
-        <PrimaryButton label={isDeleting ? "处理中…" : "只删除来源"} onPress={onDeleteSourceOnly} variant="secondary" />
-        <PrimaryButton label={isDeleting ? "处理中…" : linkedCount > 0 ? "删除来源与卡片" : "删除来源"} onPress={onDeleteSourceAndCards} />
+        <PrimaryButton
+          label={isDeleting ? "处理中…" : "只删除来源"}
+          onPress={onDeleteSourceOnly}
+          variant="secondary"
+        />
+        <PrimaryButton
+          label={isDeleting ? "处理中…" : linkedCount > 0 ? "删除来源与卡片" : "删除来源"}
+          onPress={onDeleteSourceAndCards}
+        />
       </View>
     </View>
   );
@@ -120,10 +130,18 @@ export function SourceDetailPendingSection({
   return (
     <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>待确认卡片</Text>
-      <Text style={styles.sectionText}>选中需要保留的卡片后，可一次性确认加入卡片库。</Text>
+      <Text style={styles.sectionText}>选中要保留的卡片后，可一次确认加入卡片库。</Text>
       <View style={styles.actionRow}>
-        <PrimaryButton label={selectedCount === pendingCount ? "清空选择" : "全选待确认"} onPress={onToggleSelectAll} variant="secondary" />
-        <PrimaryButton disabled={selectedCount === 0 || isConfirming} label={isConfirming ? "确认中…" : `确认选中 (${selectedCount})`} onPress={onConfirm} />
+        <PrimaryButton
+          label={selectedCount === pendingCount ? "清空选择" : "全选待确认"}
+          onPress={onToggleSelectAll}
+          variant="secondary"
+        />
+        <PrimaryButton
+          disabled={selectedCount === 0 || isConfirming}
+          label={isConfirming ? "确认中…" : `确认选中 (${selectedCount})`}
+          onPress={onConfirm}
+        />
       </View>
     </View>
   );

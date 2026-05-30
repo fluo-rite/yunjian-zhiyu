@@ -19,6 +19,10 @@ const footerContainerStyle = { alignItems: "center", paddingVertical: 16 } as co
 const footerHintTextStyle = { color: "#64748B" } as const;
 const footerHintSpacingStyle = { color: "#64748B", marginTop: 8 } as const;
 
+function ListSeparator() {
+  return <View style={styles.listSeparator} />;
+}
+
 export function SessionListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const sessionsQuery = useInfiniteSessionsQuery();
@@ -97,6 +101,7 @@ export function SessionListScreen() {
               <FlashList
                 contentContainerStyle={styles.listContent}
                 data={sessions}
+                ItemSeparatorComponent={ListSeparator}
                 keyExtractor={(item) => item.id}
                 ListEmptyComponent={
                   <EmptyState
@@ -110,11 +115,11 @@ export function SessionListScreen() {
                       {sessionsQuery.isFetchingNextPage ? (
                         <View style={footerContainerStyle}>
                           <ActivityIndicator />
-                          <Text style={footerHintSpacingStyle}>正在加载更多会话…</Text>
+                          <Text style={footerHintSpacingStyle}>正在加载更多…</Text>
                         </View>
                       ) : !sessionsQuery.hasNextPage ? (
                         <View style={footerContainerStyle}>
-                          <Text style={footerHintTextStyle}>没有更多会话了</Text>
+                          <Text style={footerHintTextStyle}>没有更多内容了</Text>
                         </View>
                       ) : null}
                     </View>
@@ -164,4 +169,3 @@ export function SessionListScreen() {
     </SafeAreaView>
   );
 }
-

@@ -9,15 +9,16 @@ export const cardGroupDetailScreenStyles = StyleSheet.create({
   },
   body: {
     flex: 1,
+    paddingTop: spacing.sm,
   },
   headerContent: {
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   heroCard: {
-    gap: spacing.sm,
+    gap: spacing.xs,
     borderRadius: radii.xxl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
     ...shadows.card,
   },
   heroTitle: {
@@ -25,22 +26,17 @@ export const cardGroupDetailScreenStyles = StyleSheet.create({
     fontSize: typography.title,
     fontWeight: "700",
   },
-  heroText: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 22,
-  },
   heroMeta: {
     color: colors.textTertiary,
     fontSize: typography.meta,
   },
   manageCard: {
-    gap: spacing.lg,
+    gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
   manageTitle: {
     color: colors.textPrimary,
@@ -48,12 +44,12 @@ export const cardGroupDetailScreenStyles = StyleSheet.create({
     fontWeight: "700",
   },
   actionsCard: {
-    gap: spacing.md,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -71,12 +67,12 @@ export const cardGroupDetailScreenStyles = StyleSheet.create({
     fontSize: typography.meta,
   },
   selectionHintCard: {
-    gap: spacing.sm,
+    gap: spacing.xs,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
   selectionHintTitle: {
     color: colors.textPrimary,
@@ -86,6 +82,6 @@ export const cardGroupDetailScreenStyles = StyleSheet.create({
   selectionHintText: {
     color: colors.textSecondary,
     fontSize: typography.body,
-    lineHeight: 22,
+    lineHeight: 21,
   },
 });

@@ -12,7 +12,10 @@ import { cardDetailOnlyMutationContext } from "@/features/library/api/card-mutat
 import { CardStatusBadge } from "@/features/library/cards/components/card-status-badge";
 import { cardDetailScreenStyles as styles } from "@/features/library/cards/screens/card-detail-screen.styles";
 import { formatDateTimeLabel, getSourceTypeLabel } from "@/features/library/utils/library-formatters";
-import { buildReadonlySourceDetailParams, buildSourceRelatedCardListParams } from "@/features/library/utils/library-navigation";
+import {
+  buildReadonlySourceDetailParams,
+  buildSourceRelatedCardListParams,
+} from "@/features/library/utils/library-navigation";
 import { getStableArray } from "@/features/library/utils/library-state";
 import { getCardDetailCapabilities } from "@/features/library/utils/library-view-capabilities";
 import { libraryCopy } from "@/features/library/utils/library-copy";
@@ -23,14 +26,22 @@ function getCardTagKey(cardId: string, tag: string) {
   return `${cardId}:${tag}`;
 }
 
+function InfoRow(props: { label: string; value: string }) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{props.label}</Text>
+      <Text style={styles.infoValue}>{props.value}</Text>
+    </View>
+  );
+}
+
 export function CardDetailScreen({
   navigation,
   route,
 }: NativeStackScreenProps<RootStackParamList, "CardDetail">) {
   const mode = route.params.mode ?? defaultCardDetailMode;
   const capabilities = getCardDetailCapabilities(mode);
-  const cardMutationContext =
-    route.params.cardMutationContext ?? cardDetailOnlyMutationContext;
+  const cardMutationContext = route.params.cardMutationContext ?? cardDetailOnlyMutationContext;
   const sourceContextId = route.params.sourceContextId;
 
   const cardQuery = useCardDetailQuery(route.params.cardId);
@@ -119,7 +130,7 @@ export function CardDetailScreen({
         }
         rightLabel={showSourceLink ? libraryCopy.cardDetail.sourceDetailAction : undefined}
         subtitle={mode === "source_related_readonly" ? "卡片内容" : "卡片详情"}
-        title={card?.title ?? "知识卡片详情"}
+        title={card?.title ?? "知识卡片"}
       />
 
       {cardQuery.isLoading ? (
@@ -177,14 +188,12 @@ export function CardDetailScreen({
 
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>来源信息</Text>
-            <Text style={styles.infoLabel}>来源类型</Text>
-            <Text style={styles.infoValue}>{getSourceTypeLabel(card.sourceType)}</Text>
-            <Text style={styles.infoLabel}>来源 ID</Text>
-            <Text style={styles.infoValue}>{card.sourceId ?? "暂无来源 ID"}</Text>
-            <Text style={styles.infoLabel}>创建时间</Text>
-            <Text style={styles.infoValue}>{formatDateTimeLabel(card.createdAt)}</Text>
-            <Text style={styles.infoLabel}>更新时间</Text>
-            <Text style={styles.infoValue}>{formatDateTimeLabel(card.updatedAt)}</Text>
+            <View style={styles.infoList}>
+              <InfoRow label="来源类型" value={getSourceTypeLabel(card.sourceType)} />
+              <InfoRow label="来源 ID" value={card.sourceId ?? "暂无来源 ID"} />
+              <InfoRow label="创建时间" value={formatDateTimeLabel(card.createdAt)} />
+              <InfoRow label="更新时间" value={formatDateTimeLabel(card.updatedAt)} />
+            </View>
 
             {capabilities.showRelatedCardsLink && card.sourceId ? (
               <PrimaryButton
@@ -206,7 +215,6 @@ export function CardDetailScreen({
           {capabilities.showOperations ? (
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>{libraryCopy.cardDetail.operationsTitle}</Text>
-              <Text style={styles.sectionText}>{libraryCopy.cardDetail.operationsDescription}</Text>
 
               <View style={styles.actionRow}>
                 {card.status === "active" ? (

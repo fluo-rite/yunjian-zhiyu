@@ -1,9 +1,9 @@
-﻿import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import type { KnowledgeSource } from "@/features/library/api";
-import { buildSourceMetaLine } from "@/features/library/utils/library-formatters";
 import { SourceStatusBadge } from "@/features/library/sources/components/source-status-badge";
 import { sourceListItemStyles as styles } from "@/features/library/sources/components/source-list-item.styles";
+import { buildSourceMetaLine } from "@/features/library/utils/library-formatters";
 
 export function SourceListItem(props: {
   source: KnowledgeSource;
@@ -26,7 +26,6 @@ export function SourceListItem(props: {
         </View>
         <SourceStatusBadge status={props.source.status} />
       </View>
-      <Text style={styles.description}>打开后可查看原文、卡片结果与当前整理状态。</Text>
     </Pressable>
   );
 }

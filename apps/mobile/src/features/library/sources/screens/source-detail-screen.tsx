@@ -1,4 +1,4 @@
-﻿import { useMemo } from "react";
+import { useMemo } from "react";
 import { ScrollView, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,8 +21,8 @@ import {
 } from "@/features/library/sources/components/source-detail-sections";
 import { useSourceDetailController } from "@/features/library/sources/hooks/use-source-detail-controller";
 import { sourceDetailScreenStyles as styles } from "@/features/library/sources/screens/source-detail-screen.styles";
-import { getSourceDetailCapabilities } from "@/features/library/utils/library-view-capabilities";
 import { countCardsByStatus } from "@/features/library/utils/library-formatters";
+import { getSourceDetailCapabilities } from "@/features/library/utils/library-view-capabilities";
 import { defaultSourceDetailMode } from "@/features/library/utils/library-view-modes";
 import { type RootStackParamList } from "@/navigation/types";
 
@@ -63,14 +63,6 @@ export function SourceDetailScreen({
           pending={cardCounts.pending}
         />
       ) : null}
-      {capabilities.showManageActions ? (
-        <SourceDetailManagementSection
-          isDeleting={controller.deleteSourceMutation.isPending}
-          linkedCount={cards.length}
-          onDeleteSourceAndCards={() => controller.deleteSource(cards.length > 0)}
-          onDeleteSourceOnly={() => controller.deleteSource(false)}
-        />
-      ) : null}
       {capabilities.showPendingConfirm && pendingCards.length > 0 ? (
         <SourceDetailPendingSection
           isConfirming={controller.confirmCardsMutation.isPending}
@@ -90,6 +82,16 @@ export function SourceDetailScreen({
       {capabilities.showGeneratedCards ? <SourceDetailCardsSectionHeader count={cards.length} /> : null}
     </View>
   ) : null;
+
+  const listFooterComponent =
+    capabilities.showManageActions && source ? (
+      <SourceDetailManagementSection
+        isDeleting={controller.deleteSourceMutation.isPending}
+        linkedCount={cards.length}
+        onDeleteSourceAndCards={() => controller.deleteSource(cards.length > 0)}
+        onDeleteSourceOnly={() => controller.deleteSource(false)}
+      />
+    ) : null;
 
   const listEmptyComponent = useMemo(() => {
     if (sourceQuery.isLoading || sourceCardsQuery.isLoading) {
@@ -185,6 +187,7 @@ export function SourceDetailScreen({
         isItemSelectable={(card) => card.status === "pending"}
         items={cards}
         ListEmptyComponent={listEmptyComponent}
+        ListFooterComponent={listFooterComponent}
         ListHeaderComponent={listHeaderComponent}
         mode="selectable"
         onPressItem={(card) =>

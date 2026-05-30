@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,16 +13,16 @@ import {
   type SourceType,
   useInfiniteSourcesQuery,
 } from "@/features/library/api";
-import { flattenInfiniteItems } from "@/lib/query/infinite-query";
 import { FilterChipRow, type FilterChipItem } from "@/features/library/shared/components/filter-chip-row";
 import { SessionImportHintModal } from "@/features/library/sources/components/session-import-hint-modal";
 import { SourceImportSheet } from "@/features/library/sources/components/source-import-sheet";
 import { SourceListItem } from "@/features/library/sources/components/source-list-item";
-import { libraryCopy } from "@/features/library/utils/library-copy";
-import { pickSourceDocument } from "@/features/library/utils/source-document-picker";
-import { getStableArray } from "@/features/library/utils/library-state";
-import { type RootStackParamList } from "@/navigation/types";
 import { sourceListScreenStyles as styles } from "@/features/library/sources/screens/source-list-screen.styles";
+import { libraryCopy } from "@/features/library/utils/library-copy";
+import { getStableArray } from "@/features/library/utils/library-state";
+import { pickSourceDocument } from "@/features/library/utils/source-document-picker";
+import { flattenInfiniteItems } from "@/lib/query/infinite-query";
+import { type RootStackParamList } from "@/navigation/types";
 
 const footerContainerStyle = { alignItems: "center", paddingBottom: 24, paddingTop: 8 } as const;
 const footerHintTextStyle = { color: "#64748B" } as const;
@@ -122,8 +122,7 @@ export function SourceListScreen({
     () => (
       <View style={styles.headerContent}>
         <View style={styles.heroCard}>
-          <Text style={styles.heroTitle}>全部知识来源</Text>
-          <Text style={styles.heroText}>查看不同资料的整理结果，并继续处理生成的卡片。</Text>
+          <Text style={styles.heroTitle}>来源总览</Text>
           {sourcesQuery.data?.pages[0]?.pagination ? (
             <Text style={styles.resultMeta}>共 {sourcesQuery.data.pages[0].pagination.total} 条来源</Text>
           ) : null}
@@ -146,15 +145,28 @@ export function SourceListScreen({
             <Text style={styles.filterLabel}>类型</Text>
             <FilterChipRow items={sourceTypeItems} onSelect={setSourceTypeFilter} selectedKey={sourceTypeFilter} />
           </View>
+
+          {hasFilters ? (
+            <PrimaryButton
+              label={libraryCopy.cardList.clearLocalFilters}
+              onPress={handleResetFilters}
+              variant="secondary"
+            />
+          ) : null}
         </View>
       </View>
     ),
-    [sourceTypeFilter, sourcesQuery.data?.pages, statusFilter],
+    [hasFilters, sourceTypeFilter, sourcesQuery.data?.pages, statusFilter],
   );
 
   const listEmptyComponent = useMemo(() => {
     if (sourcesQuery.isLoading) {
-      return <EmptyState description={libraryCopy.sourceList.loadingDescription} title={libraryCopy.sourceList.loadingTitle} />;
+      return (
+        <EmptyState
+          description={libraryCopy.sourceList.loadingDescription}
+          title={libraryCopy.sourceList.loadingTitle}
+        />
+      );
     }
 
     if (sourcesQuery.isError) {
@@ -171,7 +183,11 @@ export function SourceListScreen({
     return (
       <EmptyState
         actionLabel={hasFilters ? libraryCopy.cardList.clearLocalFilters : libraryCopy.sourceList.importContentAction}
-        description={hasFilters ? libraryCopy.sourceList.emptyFilteredDescription : libraryCopy.sourceList.emptyDefaultDescription}
+        description={
+          hasFilters
+            ? libraryCopy.sourceList.emptyFilteredDescription
+            : libraryCopy.sourceList.emptyDefaultDescription
+        }
         onActionPress={hasFilters ? handleResetFilters : openImportSheet}
         title={libraryCopy.sourceList.emptyTitle}
       />
@@ -193,10 +209,10 @@ export function SourceListScreen({
               {sourcesQuery.isFetchingNextPage ? (
                 <>
                   <ActivityIndicator />
-                  <Text style={footerHintSpacingStyle}>正在加载更多来源…</Text>
+                  <Text style={footerHintSpacingStyle}>正在加载更多…</Text>
                 </>
               ) : !sourcesQuery.hasNextPage ? (
-                <Text style={footerHintTextStyle}>没有更多来源了</Text>
+                <Text style={footerHintTextStyle}>没有更多内容了</Text>
               ) : null}
             </View>
           ) : null

@@ -45,7 +45,6 @@ export function CardGroupListScreen({
     <View style={styles.headerContent}>
       <View style={styles.heroCard}>
         <Text style={styles.heroTitle}>卡片分组</Text>
-        <Text style={styles.heroText}>按主题管理你的卡片，整理出更清晰的结构。</Text>
         <Text style={styles.resultMeta}>共 {groups.length} 个分组</Text>
       </View>
 

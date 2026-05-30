@@ -8,6 +8,7 @@ export const chatMessageListStyles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
   },
   listHeader: {

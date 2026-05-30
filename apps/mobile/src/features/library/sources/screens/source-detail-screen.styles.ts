@@ -9,16 +9,17 @@ export const sourceDetailScreenStyles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
   },
   headerContent: {
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   heroCard: {
-    gap: spacing.md,
+    gap: spacing.sm,
     borderRadius: radii.xxl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
     ...shadows.card,
   },
   heroHeader: {
@@ -29,7 +30,7 @@ export const sourceDetailScreenStyles = StyleSheet.create({
   },
   heroCopy: {
     flex: 1,
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   heroTitle: {
     color: colors.textPrimary,
@@ -41,14 +42,9 @@ export const sourceDetailScreenStyles = StyleSheet.create({
     fontSize: typography.caption,
     lineHeight: 20,
   },
-  heroText: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 22,
-  },
   statsRow: {
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   statCard: {
     flex: 1,
@@ -57,7 +53,7 @@ export const sourceDetailScreenStyles = StyleSheet.create({
     borderColor: colors.borderSoft,
     borderRadius: radii.lg,
     backgroundColor: colors.surface,
-    padding: spacing.lg,
+    padding: spacing.md,
   },
   statLabel: {
     color: colors.textTertiary,
@@ -75,7 +71,7 @@ export const sourceDetailScreenStyles = StyleSheet.create({
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -98,6 +94,22 @@ export const sourceDetailScreenStyles = StyleSheet.create({
     lineHeight: 22,
   },
   actionRow: {
-    gap: spacing.md,
+    gap: spacing.sm,
+  },
+  infoList: {
+    gap: spacing.sm,
+  },
+  infoRow: {
+    gap: spacing.xs,
+  },
+  infoLabel: {
+    color: colors.textTertiary,
+    fontSize: typography.meta,
+    fontWeight: "700",
+  },
+  infoValue: {
+    color: colors.textPrimary,
+    fontSize: typography.body,
+    lineHeight: 21,
   },
 });

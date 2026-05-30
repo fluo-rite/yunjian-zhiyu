@@ -5,14 +5,15 @@ import { colors, radii, shadows, spacing, typography } from "@/theme/tokens";
 export const sessionListItemStyles = StyleSheet.create({
   card: {
     position: "relative",
-    gap: spacing.sm,
+    gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
+    minHeight: 96,
     paddingTop: spacing.xl,
     paddingRight: spacing.xl,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xl,
     paddingLeft: spacing.xl,
     ...shadows.card,
   },
@@ -39,15 +40,10 @@ export const sessionListItemStyles = StyleSheet.create({
     color: colors.textTertiary,
     fontSize: typography.meta,
   },
-  cardText: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 22,
-  },
   cardFooter: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: spacing.xs,
+    marginTop: spacing.md,
   },
   moreButton: {
     alignItems: "center",
@@ -61,8 +57,8 @@ export const sessionListItemStyles = StyleSheet.create({
   },
   deleteMenu: {
     position: "absolute",
-    right: spacing.lg,
-    bottom: 52,
+    right: spacing.xl + 38,
+    bottom: spacing.md,
     minWidth: 88,
     alignItems: "center",
     borderWidth: 1,

@@ -4,12 +4,12 @@ import { colors, radii, spacing, typography } from "@/theme/tokens";
 
 export const errorStateStyles = StyleSheet.create({
   card: {
-    gap: spacing.md,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: "rgba(220, 38, 38, 0.18)",
     borderRadius: radii.xl,
     backgroundColor: "rgba(220, 38, 38, 0.06)",
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
   title: {
     color: colors.danger,

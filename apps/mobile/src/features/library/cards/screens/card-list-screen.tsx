@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,16 +13,16 @@ import {
   type CardStatus,
   useInfiniteCardsQuery,
 } from "@/features/library/api";
-import { flattenInfiniteItems } from "@/lib/query/infinite-query";
 import { CardListView } from "@/features/library/shared/components/card-list-view";
 import { FilterChipRow, type FilterChipItem } from "@/features/library/shared/components/filter-chip-row";
+import { cardListScreenStyles as styles } from "@/features/library/cards/screens/card-list-screen.styles";
+import { libraryCopy } from "@/features/library/utils/library-copy";
 import { buildReadonlyCardDetailParams } from "@/features/library/utils/library-navigation";
+import { getStableArray } from "@/features/library/utils/library-state";
 import { getCardListCapabilities } from "@/features/library/utils/library-view-capabilities";
 import { defaultCardListMode } from "@/features/library/utils/library-view-modes";
-import { libraryCopy } from "@/features/library/utils/library-copy";
-import { getStableArray } from "@/features/library/utils/library-state";
+import { flattenInfiniteItems } from "@/lib/query/infinite-query";
 import { type RootStackParamList } from "@/navigation/types";
-import { cardListScreenStyles as styles } from "@/features/library/cards/screens/card-list-screen.styles";
 
 const footerContainerStyle = { alignItems: "center", paddingBottom: 24, paddingTop: 8 } as const;
 const footerHintTextStyle = { color: "#64748B" } as const;
@@ -95,12 +95,7 @@ export function CardListScreen({
   const listHeaderComponent = (
     <View style={styles.headerContent}>
       <View style={styles.heroCard}>
-        <Text style={styles.heroTitle}>{mode === "source_related" ? "相关卡片" : "卡片列表"}</Text>
-        <Text style={styles.heroText}>
-          {mode === "source_related"
-            ? "仅展示与当前卡片同源的卡片，方便快速浏览相关内容。"
-            : "搜索、筛选并继续浏览你整理过的全部卡片。"}
-        </Text>
+        <Text style={styles.heroTitle}>{screenSubtitle}</Text>
         {capabilities.showHeroContext && route.params?.sourceName ? (
           <Text style={styles.contextText}>来源：{route.params.sourceName}</Text>
         ) : null}
@@ -201,10 +196,10 @@ export function CardListScreen({
               {cardsQuery.isFetchingNextPage ? (
                 <>
                   <ActivityIndicator />
-                  <Text style={footerHintSpacingStyle}>正在加载更多卡片…</Text>
+                  <Text style={footerHintSpacingStyle}>正在加载更多…</Text>
                 </>
               ) : !cardsQuery.hasNextPage ? (
-                <Text style={footerHintTextStyle}>没有更多卡片了</Text>
+                <Text style={footerHintTextStyle}>没有更多内容了</Text>
               ) : null}
             </View>
           ) : null

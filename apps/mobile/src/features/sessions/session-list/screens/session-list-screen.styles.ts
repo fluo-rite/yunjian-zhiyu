@@ -18,7 +18,7 @@ export const sessionListScreenStyles = StyleSheet.create({
   },
   header: {
     gap: spacing.lg,
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.lg,
   },
   section: {
     flex: 1,
@@ -35,5 +35,8 @@ export const sessionListScreenStyles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: spacing.xxl,
+  },
+  listSeparator: {
+    height: spacing.md,
   },
 });

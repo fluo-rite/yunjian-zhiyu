@@ -47,12 +47,11 @@ export function SessionListItem(props: {
       ) : null}
 
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{props.session.title}</Text>
+        <Text numberOfLines={1} style={styles.cardTitle}>
+          {props.session.title}
+        </Text>
         <Text style={styles.cardTime}>{formatSessionUpdatedTime(props.session.updatedAt)}</Text>
       </View>
-
-      <Text style={styles.cardText}>{sessionCopy.sessionList.itemDescription}</Text>
-
       <View style={styles.cardFooter}>
         <Pressable
           accessibilityLabel={sessionCopy.sessionList.moreAction}
@@ -71,4 +70,3 @@ export function SessionListItem(props: {
     </Pressable>
   );
 }
-

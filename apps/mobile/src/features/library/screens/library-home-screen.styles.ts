@@ -12,10 +12,10 @@ export const libraryHomeScreenStyles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
-    gap: spacing.xl,
+    gap: spacing.lg,
   },
   entryList: {
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   entryCard: {
     gap: spacing.sm,
@@ -23,7 +23,7 @@ export const libraryHomeScreenStyles = StyleSheet.create({
     borderColor: colors.borderSoft,
     borderRadius: radii.xl,
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    padding: spacing.lg,
     ...shadows.card,
   },
   entryCardPressed: {
