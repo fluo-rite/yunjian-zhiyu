@@ -10,6 +10,7 @@ from app.schemas.card import (
     CardRead,
     ConfirmCardsRequest,
     ConfirmCardsResponse,
+    RestoreCardResponse,
 )
 from app.services.card_service import CardService
 
@@ -62,6 +63,11 @@ def confirm_cards(
     cards = CardService.list_by_ids(db, current_user, payload.card_ids)
     if len(cards) != len(payload.card_ids):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or more cards were not found.")
+    if any(card.status != "pending" for card in cards):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only pending cards can be confirmed.",
+        )
     return CardService.confirm_many(db, cards)
 
 
@@ -74,7 +80,29 @@ def archive_card(
     card = CardService.get_or_none(db, current_user, card_id)
     if card is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found.")
+    if card.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only active cards can be archived.",
+        )
     return CardService.archive(db, card)
+
+
+@router.post("/{card_id}/restore", response_model=RestoreCardResponse)
+def restore_card(
+    card_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> RestoreCardResponse:
+    card = CardService.get_or_none(db, current_user, card_id)
+    if card is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found.")
+    if card.status != "archived":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only archived cards can be restored.",
+        )
+    return CardService.restore(db, card)
 
 
 @router.delete("/{card_id}", status_code=status.HTTP_204_NO_CONTENT)

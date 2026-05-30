@@ -7,7 +7,13 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { ErrorState } from "@/components/feedback/error-state";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { ScreenHeader } from "@/components/ui/screen-header";
-import { useArchiveCardMutation, useCardDetailQuery, useDeleteCardMutation } from "@/features/library/api";
+import {
+  useArchiveCardMutation,
+  useCardDetailQuery,
+  useConfirmCardsMutation,
+  useDeleteCardMutation,
+  useRestoreCardMutation,
+} from "@/features/library/api";
 import { cardDetailOnlyMutationContext } from "@/features/library/api/card-mutation-context";
 import { CardStatusBadge } from "@/features/library/cards/components/card-status-badge";
 import { cardDetailScreenStyles as styles } from "@/features/library/cards/screens/card-detail-screen.styles";
@@ -18,8 +24,8 @@ import {
 } from "@/features/library/utils/library-navigation";
 import { getStableArray } from "@/features/library/utils/library-state";
 import { getCardDetailCapabilities } from "@/features/library/utils/library-view-capabilities";
-import { libraryCopy } from "@/features/library/utils/library-copy";
 import { defaultCardDetailMode } from "@/features/library/utils/library-view-modes";
+import { libraryCopy } from "@/features/library/utils/library-copy";
 import { type RootStackParamList } from "@/navigation/types";
 
 function getCardTagKey(cardId: string, tag: string) {
@@ -45,7 +51,9 @@ export function CardDetailScreen({
   const sourceContextId = route.params.sourceContextId;
 
   const cardQuery = useCardDetailQuery(route.params.cardId);
+  const confirmCardsMutation = useConfirmCardsMutation();
   const archiveCardMutation = useArchiveCardMutation();
+  const restoreCardMutation = useRestoreCardMutation();
   const deleteCardMutation = useDeleteCardMutation();
   const card = cardQuery.data;
   const tagPreview = useMemo(() => getStableArray(card?.tags), [card?.tags]);
@@ -53,6 +61,25 @@ export function CardDetailScreen({
     capabilities.showSourceLink &&
     Boolean(card?.sourceId) &&
     (!sourceContextId || sourceContextId !== card?.sourceId);
+
+  async function handleConfirmCard() {
+    if (!card || card.status !== "pending" || confirmCardsMutation.isPending) {
+      return;
+    }
+
+    try {
+      await confirmCardsMutation.mutateAsync({
+        cardIds: [card.id],
+        context: cardMutationContext,
+      });
+      Alert.alert(libraryCopy.actionCompleted, libraryCopy.cardDetail.confirmSuccessMessage);
+    } catch (error) {
+      Alert.alert(
+        libraryCopy.cardDetail.confirmFailureTitle,
+        error instanceof Error ? error.message : libraryCopy.loadFailed,
+      );
+    }
+  }
 
   async function handleArchiveCard() {
     if (!card || card.status !== "active" || archiveCardMutation.isPending) {
@@ -68,6 +95,25 @@ export function CardDetailScreen({
     } catch (error) {
       Alert.alert(
         libraryCopy.cardDetail.archiveFailureTitle,
+        error instanceof Error ? error.message : libraryCopy.loadFailed,
+      );
+    }
+  }
+
+  async function handleRestoreCard() {
+    if (!card || card.status !== "archived" || restoreCardMutation.isPending) {
+      return;
+    }
+
+    try {
+      await restoreCardMutation.mutateAsync({
+        cardId: card.id,
+        context: cardMutationContext,
+      });
+      Alert.alert(libraryCopy.actionCompleted, libraryCopy.cardDetail.restoreSuccessMessage);
+    } catch (error) {
+      Alert.alert(
+        libraryCopy.cardDetail.restoreFailureTitle,
         error instanceof Error ? error.message : libraryCopy.loadFailed,
       );
     }
@@ -190,7 +236,7 @@ export function CardDetailScreen({
             <Text style={styles.sectionTitle}>来源信息</Text>
             <View style={styles.infoList}>
               <InfoRow label="来源类型" value={getSourceTypeLabel(card.sourceType)} />
-              <InfoRow label="来源 ID" value={card.sourceId ?? "暂无来源 ID"} />
+              <InfoRow label="来源 ID" value={card.sourceId ?? "已与来源解除关联"} />
               <InfoRow label="创建时间" value={formatDateTimeLabel(card.createdAt)} />
               <InfoRow label="更新时间" value={formatDateTimeLabel(card.updatedAt)} />
             </View>
@@ -217,6 +263,19 @@ export function CardDetailScreen({
               <Text style={styles.sectionTitle}>{libraryCopy.cardDetail.operationsTitle}</Text>
 
               <View style={styles.actionRow}>
+                {card.status === "pending" ? (
+                  <PrimaryButton
+                    disabled={confirmCardsMutation.isPending}
+                    iconName="checkmark-outline"
+                    label={
+                      confirmCardsMutation.isPending
+                        ? libraryCopy.cardDetail.confirmPendingAction
+                        : libraryCopy.cardDetail.confirmAction
+                    }
+                    onPress={handleConfirmCard}
+                  />
+                ) : null}
+
                 {card.status === "active" ? (
                   <PrimaryButton
                     disabled={archiveCardMutation.isPending}
@@ -232,10 +291,14 @@ export function CardDetailScreen({
 
                 {card.status === "archived" ? (
                   <PrimaryButton
-                    disabled
-                    iconName="archive"
-                    label={libraryCopy.cardDetail.archivedAction}
-                    variant="secondary"
+                    disabled={restoreCardMutation.isPending}
+                    iconName="refresh-outline"
+                    label={
+                      restoreCardMutation.isPending
+                        ? libraryCopy.cardDetail.restorePendingAction
+                        : libraryCopy.cardDetail.restoreAction
+                    }
+                    onPress={handleRestoreCard}
                   />
                 ) : null}
 

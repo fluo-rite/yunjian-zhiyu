@@ -775,6 +775,10 @@ def test_card_confirm_archive_and_group_flow(monkeypatch) -> None:
     assert archive_response.status_code == 200
     assert archive_response.json()["status"] == "archived"
 
+    restore_response = client.post(f"/api/v1/cards/{card_id}/restore", headers=headers)
+    assert restore_response.status_code == 200
+    assert restore_response.json()["status"] == "active"
+
     remove_response = client.request(
         "DELETE",
         f"/api/v1/card-groups/{group_id}/cards",
@@ -786,6 +790,53 @@ def test_card_confirm_archive_and_group_flow(monkeypatch) -> None:
     group_cards_after_remove = client.get(f"/api/v1/card-groups/{group_id}/cards", headers=headers)
     assert group_cards_after_remove.status_code == 200
     assert group_cards_after_remove.json()["items"] == []
+
+
+def test_confirm_rejects_archived_cards_and_restore_requires_archived(monkeypatch) -> None:
+    reset_database()
+    dispatcher = install_source_runtime_test_doubles(monkeypatch)
+    headers = create_user("card-status-rules@example.com", "card-status-rules-user")
+
+    source_response = client.post(
+        "/api/v1/knowledge-sources/from-text",
+        headers=headers,
+        json={"name": "状态流转来源", "content": "用于验证 confirm archive restore 的状态限制。"},
+    )
+    source_id = source_response.json()["id"]
+    dispatcher.wait_for_idle()
+
+    source_cards = client.get(f"/api/v1/knowledge-sources/{source_id}/cards", headers=headers)
+    card_id = source_cards.json()["items"][0]["id"]
+
+    restore_pending_response = client.post(f"/api/v1/cards/{card_id}/restore", headers=headers)
+    assert restore_pending_response.status_code == 409, restore_pending_response.text
+    assert restore_pending_response.json()["detail"] == "Only archived cards can be restored."
+
+    confirm_response = client.post(
+        "/api/v1/cards/confirm",
+        headers=headers,
+        json={"cardIds": [card_id]},
+    )
+    assert confirm_response.status_code == 200, confirm_response.text
+
+    archive_response = client.post(f"/api/v1/cards/{card_id}/archive", headers=headers)
+    assert archive_response.status_code == 200, archive_response.text
+
+    archive_again_response = client.post(f"/api/v1/cards/{card_id}/archive", headers=headers)
+    assert archive_again_response.status_code == 409, archive_again_response.text
+    assert archive_again_response.json()["detail"] == "Only active cards can be archived."
+
+    confirm_archived_response = client.post(
+        "/api/v1/cards/confirm",
+        headers=headers,
+        json={"cardIds": [card_id]},
+    )
+    assert confirm_archived_response.status_code == 409, confirm_archived_response.text
+    assert confirm_archived_response.json()["detail"] == "Only pending cards can be confirmed."
+
+    restore_response = client.post(f"/api/v1/cards/{card_id}/restore", headers=headers)
+    assert restore_response.status_code == 200, restore_response.text
+    assert restore_response.json()["status"] == "active"
 
 
 def test_delete_card_returns_affected_source_ids_and_group_ids(monkeypatch) -> None:

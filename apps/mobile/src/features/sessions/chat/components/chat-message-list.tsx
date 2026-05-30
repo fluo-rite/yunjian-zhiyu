@@ -1,12 +1,12 @@
-import { FlashList, type FlashListRef } from "@shopify/flash-list";
-import { memo, useEffect, useMemo, useRef } from "react";
-import { Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { FlashList } from "@shopify/flash-list";
+import { memo, useMemo } from "react";
+import { Text, View } from "react-native";
 
 import { EmptyState } from "@/components/feedback/empty-state";
 import { ErrorState } from "@/components/feedback/error-state";
+import { ChatMessageItem } from "@/features/sessions/chat/components/chat-message-item";
 import { type Message } from "@/features/sessions/api";
 import { sessionCopy } from "@/features/sessions/utils/session-copy";
-import { ChatMessageItem } from "@/features/sessions/chat/components/chat-message-item";
 import { chatMessageListStyles as styles } from "@/features/sessions/chat/components/chat-message-list.styles";
 
 export type ChatMessageListProps = {
@@ -25,9 +25,6 @@ export type ChatMessageListProps = {
   rangeEndMessageId?: string | null;
   onToggleSelect?: (message: Message) => void;
 };
-
-const BOTTOM_STICKY_THRESHOLD = 80;
-const AUTO_SCROLL_INTERVAL_MS = 100;
 
 function ListSeparator() {
   return <View style={styles.itemSeparator} />;
@@ -49,11 +46,6 @@ function ChatMessageListComponent({
   rangeEndMessageId,
   onToggleSelect,
 }: ChatMessageListProps) {
-  const listRef = useRef<FlashListRef<Message> | null>(null);
-  const isNearBottomRef = useRef(true);
-  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastMessage = messages[messages.length - 1];
-
   const listExtraData = useMemo(
     () => ({
       composerSpacerHeight,
@@ -121,53 +113,6 @@ function ChatMessageListComponent({
     return sessionCopy.chat.selectionRestartPromptLabel;
   }
 
-  function cancelScheduledAutoScroll() {
-    if (scrollTimerRef.current === null) {
-      return;
-    }
-
-    clearTimeout(scrollTimerRef.current);
-    scrollTimerRef.current = null;
-  }
-
-  useEffect(() => {
-    if (!isNearBottomRef.current) {
-      return;
-    }
-
-    if (!selectionMode && scrollTimerRef.current === null) {
-      scrollTimerRef.current = setTimeout(() => {
-        scrollTimerRef.current = null;
-        listRef.current?.scrollToEnd({ animated: messages.length > 0 });
-      }, AUTO_SCROLL_INTERVAL_MS);
-    }
-
-    return () => {
-      cancelScheduledAutoScroll();
-    };
-  }, [
-    composerSpacerHeight,
-    lastMessage?.content,
-    lastMessage?.id,
-    messages.length,
-    selectionMode,
-    streamedContent,
-    terminalMessage,
-  ]);
-
-  useEffect(() => {
-    return () => {
-      cancelScheduledAutoScroll();
-    };
-  }, []);
-
-  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
-
-    isNearBottomRef.current = distanceFromBottom < BOTTOM_STICKY_THRESHOLD;
-  }
-
   const listHeaderComponent = useMemo(() => {
     const showWelcomeCard = messages.length === 0 && !isLoading && !isError;
 
@@ -211,8 +156,10 @@ function ChatMessageListComponent({
       keyExtractor={(item) => item.id}
       ListFooterComponent={<View style={[styles.footerSpacer, { height: composerSpacerHeight }]} />}
       ListHeaderComponent={listHeaderComponent}
-      onScroll={handleScroll}
-      ref={listRef}
+      maintainVisibleContentPosition={{
+        startRenderingFromBottom: true,
+        autoscrollToBottomThreshold: 0.2,
+      }}
       renderItem={({ item }) => {
         const isCurrentStreamTarget = item.id === streamAssistantMessageId;
         const renderedMessage =
@@ -239,7 +186,6 @@ function ChatMessageListComponent({
           />
         );
       }}
-      scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
       style={styles.list}
     />
@@ -247,4 +193,3 @@ function ChatMessageListComponent({
 }
 
 export const ChatMessageList = memo(ChatMessageListComponent);
-

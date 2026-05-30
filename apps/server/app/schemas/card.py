@@ -67,3 +67,7 @@ class ConfirmCardsResponse(CamelModel):
 
 class ArchiveCardResponse(CardRead):
     pass
+
+
+class RestoreCardResponse(CardRead):
+    pass

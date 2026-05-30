@@ -15,6 +15,7 @@ import {
   cardListResponseSchema,
   cardSchema,
   confirmCardsResponseSchema,
+  restoreCardResponseSchema,
   type KnowledgeCard,
   type KnowledgeCardListResponse,
 } from "@/features/library/api/library-schemas";
@@ -38,6 +39,11 @@ export type ConfirmCardsMutationInput = ConfirmCardsInput & {
 };
 
 export type ArchiveCardMutationInput = {
+  cardId: string;
+  context: CardMutationContext;
+};
+
+export type RestoreCardMutationInput = {
   cardId: string;
   context: CardMutationContext;
 };
@@ -82,6 +88,11 @@ export async function confirmCards(payload: ConfirmCardsInput) {
 export async function archiveCard(cardId: string) {
   const response = await apiClient.post(`/cards/${cardId}/archive`);
   return archiveCardResponseSchema.parse(response);
+}
+
+export async function restoreCard(cardId: string) {
+  const response = await apiClient.post(`/cards/${cardId}/restore`);
+  return restoreCardResponseSchema.parse(response);
 }
 
 export async function deleteCard(cardId: string): Promise<void> {
@@ -133,6 +144,19 @@ export function useArchiveCardMutation() {
 
   return useMutation({
     mutationFn: ({ cardId }: ArchiveCardMutationInput) => archiveCard(cardId),
+    onSuccess: async (card, { context }) => {
+      patchCardInContext(queryClient, context, card);
+      patchCardDetailIfPresent(queryClient, card);
+      await invalidateOtherCardLists(queryClient, context);
+    },
+  });
+}
+
+export function useRestoreCardMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ cardId }: RestoreCardMutationInput) => restoreCard(cardId),
     onSuccess: async (card, { context }) => {
       patchCardInContext(queryClient, context, card);
       patchCardDetailIfPresent(queryClient, card);

@@ -37,6 +37,7 @@ export const confirmCardsResponseSchema = z.object({
 });
 
 export const archiveCardResponseSchema = cardSchema;
+export const restoreCardResponseSchema = cardSchema;
 
 export const cardGroupSchema = z.object({
   id: z.string(),

@@ -12,6 +12,7 @@ from app.schemas.card import (
     CardListResponse,
     CardRead,
     ConfirmCardsResponse,
+    RestoreCardResponse,
 )
 from app.schemas.common import PaginationMeta
 
@@ -133,3 +134,11 @@ class CardService:
         db.commit()
         db.refresh(card)
         return ArchiveCardResponse.model_validate(card)
+
+    @staticmethod
+    def restore(db: Session, card: KnowledgeCard) -> RestoreCardResponse:
+        card.status = "active"
+        db.add(card)
+        db.commit()
+        db.refresh(card)
+        return RestoreCardResponse.model_validate(card)
