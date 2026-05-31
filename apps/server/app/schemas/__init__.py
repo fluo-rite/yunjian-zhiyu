@@ -13,6 +13,7 @@ from app.schemas.chat import ChatCreate, ChatListResponse, ChatRead
 from app.schemas.knowledge_source import (
     CreateKnowledgeSourceFromMessagesRequest,
     CreateKnowledgeSourceFromTextRequest,
+    CreateKnowledgeSourceFromUploadedDocumentRequest,
     DeleteKnowledgeSourceRequest,
     KnowledgeSourceCardsResponse,
     KnowledgeSourceDetailRead,
@@ -40,6 +41,17 @@ from app.schemas.stream import (
     MessageDoneEventData,
     MessageStartEventData,
 )
+from app.schemas.upload import (
+    AbortMultipartUploadRequest,
+    CompleteUploadRequest,
+    CompleteUploadResponse,
+    DirectUploadInitRequest,
+    DirectUploadInitResponse,
+    MultipartPartUrlRequest,
+    MultipartPartUrlResponse,
+    MultipartUploadInitRequest,
+    MultipartUploadInitResponse,
+)
 
 __all__ = [
     "AgentStreamEvent",
@@ -64,6 +76,7 @@ __all__ = [
     "CreateCardGroupRequest",
     "CreateKnowledgeSourceFromMessagesRequest",
     "CreateKnowledgeSourceFromTextRequest",
+    "CreateKnowledgeSourceFromUploadedDocumentRequest",
     "DeleteKnowledgeSourceRequest",
     "ConfirmCardsRequest",
     "ConfirmCardsResponse",
@@ -82,6 +95,15 @@ __all__ = [
     "KnowledgeSourceRead",
     "RegisterRequest",
     "TokenPair",
+    "AbortMultipartUploadRequest",
+    "CompleteUploadRequest",
+    "CompleteUploadResponse",
+    "DirectUploadInitRequest",
+    "DirectUploadInitResponse",
+    "MultipartPartUrlRequest",
+    "MultipartPartUrlResponse",
+    "MultipartUploadInitRequest",
+    "MultipartUploadInitResponse",
     "UpdateCardGroupRequest",
     "UpdateGroupCardsRequest",
     "UserRead",

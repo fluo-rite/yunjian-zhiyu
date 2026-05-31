@@ -56,6 +56,7 @@ export function CreateSourceDocumentScreen({
     try {
       const created = await createSourceMutation.mutateAsync({
         fileName: selectedFile.fileName,
+        fileSize: selectedFile.fileSize,
         fileType: selectedFile.fileType,
         fileUri: selectedFile.fileUri,
         name: trimmedName,

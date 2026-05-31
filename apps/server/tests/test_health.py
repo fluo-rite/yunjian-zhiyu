@@ -15,6 +15,7 @@ from app.agents.chat_agent.prompt_builder import (
 )
 from app.agents.chat_agent.agent import ChatAgent
 from app.models.card import KnowledgeCard
+from app.models.knowledge_source import KnowledgeSource
 from app.schemas.message import CitationRead
 from app.services.card_generation_service import (
     GeneratedKnowledgeCard,
@@ -29,6 +30,7 @@ from app.services.chat_generation_service import ChatTaskDispatcher, run_chat_ge
 from app.services.stream_adapter_service import StreamAdapterService
 from app.services.stream_store_service import StreamRecord
 from app.services.web_search_service import WebSearchService
+from app.services.storage import ObjectStorageValidationError
 
 
 client = TestClient(app)
@@ -237,6 +239,107 @@ class FakeEmbeddingService:
         return [size, size / 10, size / 100]
 
 
+class FakeObjectStorageService:
+    def __init__(self) -> None:
+        self.stored_objects: dict[str, dict[str, Any]] = {}
+        self.deleted_objects: list[str] = []
+        self.aborted_uploads: list[tuple[str, str]] = []
+        self.fail_delete_for: set[str] = set()
+
+    @staticmethod
+    def build_object_key(*, user_id: str, source_type: str = "document", filename: str = "uploaded.txt") -> str:
+        return f"knowledge_sources/{user_id}/{source_type}/{filename}"
+
+    def init_direct_upload(self, *, user_id: str, filename: str, size: int, mime_type: str | None, source_type: str):
+        object_key = self.build_object_key(user_id=user_id, source_type=source_type, filename=filename)
+        self.stored_objects[object_key] = {
+            "size": size,
+            "mime_type": mime_type,
+            "content": b"",
+        }
+        return SimpleNamespace(
+            object_key=object_key,
+            upload_url=f"https://oss.example.com/direct/{filename}",
+            expires_in=600,
+        )
+
+    def init_multipart_upload(
+        self,
+        *,
+        user_id: str,
+        filename: str,
+        size: int,
+        mime_type: str | None,
+        source_type: str,
+    ):
+        object_key = self.build_object_key(user_id=user_id, source_type=source_type, filename=filename)
+        self.stored_objects[object_key] = {
+            "size": size,
+            "mime_type": mime_type,
+            "content": b"",
+        }
+        part_size = 5 * 1024 * 1024
+        return SimpleNamespace(
+            object_key=object_key,
+            upload_id="upload-123",
+            part_size=part_size,
+            total_parts=(size + part_size - 1) // part_size,
+        )
+
+    def sign_multipart_part_url(self, *, user_id: str, object_key: str, upload_id: str, part_number: int):
+        _ = upload_id
+        self.assert_owned_object_key(object_key=object_key, user_id=user_id, source_type="document")
+        return SimpleNamespace(
+            part_number=part_number,
+            upload_url=f"https://oss.example.com/multipart/{part_number}",
+            expires_in=3600,
+        )
+
+    def complete_upload(
+        self,
+        *,
+        user_id: str,
+        object_key: str,
+        source_type: str,
+        mode: str,
+        upload_id: str | None,
+        parts: list[dict[str, object]] | None,
+    ):
+        _ = upload_id
+        self.assert_owned_object_key(object_key=object_key, user_id=user_id, source_type=source_type)
+        if mode == "multipart" and not parts:
+            raise ObjectStorageValidationError("parts are required for multipart uploads.")
+        stored = self.stored_objects[object_key]
+        return SimpleNamespace(
+            object_key=object_key,
+            size=int(stored["size"]),
+            mime_type=stored["mime_type"],
+        )
+
+    def abort_upload(self, *, user_id: str, object_key: str, upload_id: str) -> None:
+        self.assert_owned_object_key(object_key=object_key, user_id=user_id, source_type="document")
+        self.aborted_uploads.append((object_key, upload_id))
+
+    def download_object_bytes(self, *, user_id: str, object_key: str, source_type: str) -> bytes:
+        self.assert_owned_object_key(object_key=object_key, user_id=user_id, source_type=source_type)
+        stored = self.stored_objects.get(object_key)
+        if stored is None:
+            raise ObjectStorageValidationError("Uploaded object was not found.")
+        return stored["content"]
+
+    def delete_object(self, *, user_id: str, object_key: str, source_type: str) -> None:
+        self.assert_owned_object_key(object_key=object_key, user_id=user_id, source_type=source_type)
+        if object_key in self.fail_delete_for:
+            raise ObjectStorageValidationError("OSS delete failed.")
+        self.deleted_objects.append(object_key)
+        self.stored_objects.pop(object_key, None)
+
+    def assert_owned_object_key(self, *, object_key: str, user_id: str, source_type: str) -> None:
+        expected_prefix = f"knowledge_sources/{user_id}/{source_type}/"
+        if not object_key.startswith(expected_prefix):
+            raise ObjectStorageValidationError("You do not have access to this uploaded object.")
+
+
 def reset_database() -> None:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
@@ -318,6 +421,13 @@ def install_source_runtime_test_doubles(monkeypatch) -> FakeSourceTaskDispatcher
         lambda: FakeEmbeddingService(),
     )
     return dispatcher
+
+
+def install_object_storage_test_double(monkeypatch) -> FakeObjectStorageService:
+    storage = FakeObjectStorageService()
+    monkeypatch.setattr("app.api.routes.uploads.get_object_storage_service", lambda: storage)
+    monkeypatch.setattr("app.services.knowledge_source_service.get_object_storage_service", lambda: storage)
+    return storage
 
 
 def _parse_sse_events(body: str) -> list[dict[str, Any]]:
@@ -993,6 +1103,204 @@ def test_knowledge_source_from_document_rejects_invalid_utf8_text_file() -> None
     )
     assert response.status_code == 400, response.text
     assert response.json()["detail"] == "Unable to decode the uploaded text file as UTF-8."
+
+
+def test_upload_routes_support_direct_and_multipart_plans(monkeypatch) -> None:
+    reset_database()
+    storage = install_object_storage_test_double(monkeypatch)
+    headers = create_user("upload-routes@example.com", "upload-routes-user")
+    user_id = client.get("/api/v1/auth/me", headers=headers).json()["id"]
+
+    direct_response = client.post(
+        "/api/v1/uploads/direct/init",
+        headers=headers,
+        json={
+            "filename": "guide.txt",
+            "size": 1024,
+            "mimeType": "text/plain",
+            "sourceType": "document",
+        },
+    )
+    assert direct_response.status_code == 200, direct_response.text
+    direct_body = direct_response.json()
+    assert direct_body["objectKey"] == storage.build_object_key(user_id=user_id, filename="guide.txt")
+    assert direct_body["uploadUrl"].startswith("https://oss.example.com/direct/")
+
+    multipart_response = client.post(
+        "/api/v1/uploads/multipart/init",
+        headers=headers,
+        json={
+            "filename": "large.pdf",
+            "size": 30 * 1024 * 1024,
+            "mimeType": "application/pdf",
+            "sourceType": "document",
+        },
+    )
+    assert multipart_response.status_code == 200, multipart_response.text
+    multipart_body = multipart_response.json()
+    assert multipart_body["uploadId"] == "upload-123"
+    assert multipart_body["partSize"] == 5 * 1024 * 1024
+    assert multipart_body["totalParts"] == 6
+
+    part_url_response = client.post(
+        "/api/v1/uploads/multipart/part-url",
+        headers=headers,
+        json={
+            "objectKey": multipart_body["objectKey"],
+            "uploadId": multipart_body["uploadId"],
+            "partNumber": 2,
+        },
+    )
+    assert part_url_response.status_code == 200, part_url_response.text
+    assert part_url_response.json()["partNumber"] == 2
+
+    complete_response = client.post(
+        "/api/v1/uploads/complete",
+        headers=headers,
+        json={
+            "mode": "multipart",
+            "objectKey": multipart_body["objectKey"],
+            "uploadId": multipart_body["uploadId"],
+            "filename": "large.pdf",
+            "mimeType": "application/pdf",
+            "sourceType": "document",
+            "parts": [
+                {"partNumber": 1, "etag": "\"etag-1\""},
+                {"partNumber": 2, "etag": "\"etag-2\""},
+            ],
+        },
+    )
+    assert complete_response.status_code == 200, complete_response.text
+    assert complete_response.json()["size"] == 30 * 1024 * 1024
+
+    abort_response = client.post(
+        "/api/v1/uploads/abort",
+        headers=headers,
+        json={
+            "objectKey": multipart_body["objectKey"],
+            "uploadId": multipart_body["uploadId"],
+        },
+    )
+    assert abort_response.status_code == 204, abort_response.text
+    assert storage.aborted_uploads == [(multipart_body["objectKey"], multipart_body["uploadId"])]
+
+
+def test_knowledge_source_from_uploaded_document_creates_document_source(monkeypatch) -> None:
+    reset_database()
+    dispatcher = install_source_runtime_test_doubles(monkeypatch)
+    storage = install_object_storage_test_double(monkeypatch)
+    headers = create_user("uploaded-document@example.com", "uploaded-document-user")
+    user_id = client.get("/api/v1/auth/me", headers=headers).json()["id"]
+    object_key = storage.build_object_key(user_id=user_id, filename="fastapi.txt")
+    storage.stored_objects[object_key] = {
+        "size": 18,
+        "mime_type": "text/plain",
+        "content": b"FastAPI upload doc",
+    }
+
+    response = client.post(
+        "/api/v1/knowledge-sources/from-uploaded-document",
+        headers=headers,
+        json={
+            "name": "Uploaded FastAPI doc",
+            "objectKey": object_key,
+            "filename": "fastapi.txt",
+            "mimeType": "text/plain",
+            "size": 18,
+        },
+    )
+    assert response.status_code == 202, response.text
+    source_id = response.json()["id"]
+    dispatcher.wait_for_idle()
+
+    detail_response = client.get(f"/api/v1/knowledge-sources/{source_id}", headers=headers)
+    assert detail_response.status_code == 200, detail_response.text
+    assert detail_response.json()["sourceType"] == "document"
+    assert "FastAPI upload doc" in detail_response.json()["rawContent"]
+
+    with SessionLocal() as db:
+        source = db.get(KnowledgeSource, source_id)
+        assert source is not None
+        assert source.oss_object_key == object_key
+
+
+def test_delete_document_source_removes_oss_object_and_blocks_on_storage_failure(monkeypatch) -> None:
+    reset_database()
+    dispatcher = install_source_runtime_test_doubles(monkeypatch)
+    storage = install_object_storage_test_double(monkeypatch)
+    headers = create_user("delete-oss-source@example.com", "delete-oss-source-user")
+    user_id = client.get("/api/v1/auth/me", headers=headers).json()["id"]
+    object_key = storage.build_object_key(user_id=user_id, filename="delete-me.txt")
+    storage.stored_objects[object_key] = {
+        "size": 16,
+        "mime_type": "text/plain",
+        "content": b"Delete me source",
+    }
+
+    create_response = client.post(
+        "/api/v1/knowledge-sources/from-uploaded-document",
+        headers=headers,
+        json={
+            "name": "Delete me source",
+            "objectKey": object_key,
+            "filename": "delete-me.txt",
+            "mimeType": "text/plain",
+            "size": 16,
+        },
+    )
+    assert create_response.status_code == 202, create_response.text
+    source_id = create_response.json()["id"]
+    dispatcher.wait_for_idle()
+
+    delete_response = client.request(
+        "DELETE",
+        f"/api/v1/knowledge-sources/{source_id}",
+        headers=headers,
+        json={"deleteCards": False},
+    )
+    assert delete_response.status_code == 204, delete_response.text
+    assert storage.deleted_objects == [object_key]
+
+    missing_response = client.get(f"/api/v1/knowledge-sources/{source_id}", headers=headers)
+    assert missing_response.status_code == 404
+
+    failed_object_key = storage.build_object_key(user_id=user_id, filename="keep-me.txt")
+    storage.stored_objects[failed_object_key] = {
+        "size": 14,
+        "mime_type": "text/plain",
+        "content": b"Keep me source",
+    }
+    storage.fail_delete_for.add(failed_object_key)
+
+    failed_create_response = client.post(
+        "/api/v1/knowledge-sources/from-uploaded-document",
+        headers=headers,
+        json={
+            "name": "Keep me source",
+            "objectKey": failed_object_key,
+            "filename": "keep-me.txt",
+            "mimeType": "text/plain",
+            "size": 14,
+        },
+    )
+    assert failed_create_response.status_code == 202, failed_create_response.text
+    failed_source_id = failed_create_response.json()["id"]
+    dispatcher.wait_for_idle()
+
+    failed_delete_response = client.request(
+        "DELETE",
+        f"/api/v1/knowledge-sources/{failed_source_id}",
+        headers=headers,
+        json={"deleteCards": False},
+    )
+    assert failed_delete_response.status_code == 400, failed_delete_response.text
+    assert failed_delete_response.json()["detail"] == "OSS delete failed."
+
+    still_exists_response = client.get(
+        f"/api/v1/knowledge-sources/{failed_source_id}",
+        headers=headers,
+    )
+    assert still_exists_response.status_code == 200, still_exists_response.text
 
 
 def test_knowledge_source_processing_marks_source_failed_when_no_cards_are_generated(monkeypatch) -> None:

@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     retrieval_rerank_min_score: float = 0.2
     web_search_url: str | None = None
     web_search_key: str | None = None
+    oss_endpoint: str | None = None
+    oss_bucket: str | None = None
+    oss_access_key_id: str | None = None
+    oss_access_key_secret: str | None = None
+    oss_region: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
@@ -117,6 +122,17 @@ class Settings(BaseSettings):
             "webSearchConfigured": bool(
                 self.web_search_url
                 and self.web_search_key
+            ),
+            "ossEndpoint": self.oss_endpoint,
+            "ossBucket": self.oss_bucket,
+            "ossAccessKeyId": _mask_secret(self.oss_access_key_id),
+            "ossAccessKeySecret": _mask_secret(self.oss_access_key_secret),
+            "ossRegion": self.oss_region,
+            "ossConfigured": bool(
+                self.oss_endpoint
+                and self.oss_bucket
+                and self.oss_access_key_id
+                and self.oss_access_key_secret
             ),
         }
 

@@ -13,6 +13,7 @@ from app.schemas.common import PaginationMeta
 from app.schemas.knowledge_source import (
     CreateKnowledgeSourceFromMessagesRequest,
     CreateKnowledgeSourceFromTextRequest,
+    CreateKnowledgeSourceFromUploadedDocumentRequest,
     DeleteKnowledgeSourceRequest,
     KnowledgeSourceCardsResponse,
     KnowledgeSourceDeletePreviewResponse,
@@ -23,6 +24,7 @@ from app.schemas.knowledge_source import (
 )
 from app.services.card_generation_service import get_knowledge_source_task_dispatcher
 from app.services.knowledge_ingestion.parse import get_document_parse_service
+from app.services.storage import ObjectStorageValidationError, get_object_storage_service
 
 
 class KnowledgeSourceNotFoundError(RuntimeError):
@@ -152,12 +154,63 @@ class KnowledgeSourceService:
             mime_type=mime_type,
             content_bytes=content_bytes,
         )
+        return await KnowledgeSourceService._create_document_source(
+            db=db,
+            user=user,
+            parsed=parsed,
+            oss_object_key=None,
+        )
+
+    @staticmethod
+    async def create_from_uploaded_document(
+        db: Session,
+        user: User,
+        payload: CreateKnowledgeSourceFromUploadedDocumentRequest,
+    ) -> KnowledgeSourceRead:
+        storage = get_object_storage_service()
+        storage.assert_owned_object_key(
+            object_key=payload.object_key,
+            user_id=user.id,
+            source_type="document",
+        )
+        content_bytes = storage.download_object_bytes(
+            user_id=user.id,
+            object_key=payload.object_key,
+            source_type="document",
+        )
+        if len(content_bytes) != payload.size:
+            raise ObjectStorageValidationError(
+                "Uploaded object size does not match the completed upload."
+            )
+
+        parsed = KnowledgeSourceService._extract_document_payload(
+            name=payload.name,
+            filename=payload.filename,
+            mime_type=payload.mime_type,
+            content_bytes=content_bytes,
+        )
+        return await KnowledgeSourceService._create_document_source(
+            db=db,
+            user=user,
+            parsed=parsed,
+            oss_object_key=payload.object_key,
+        )
+
+    @staticmethod
+    async def _create_document_source(
+        *,
+        db: Session,
+        user: User,
+        parsed: DocumentPayload,
+        oss_object_key: str | None,
+    ) -> KnowledgeSourceRead:
         source = KnowledgeSource(
             user_id=user.id,
             name=parsed.name,
             source_type="document",
             raw_content=parsed.raw_content,
             status="processing",
+            oss_object_key=oss_object_key,
             source_metadata=parsed.source_metadata,
         )
         db.add(source)
@@ -281,6 +334,12 @@ class KnowledgeSourceService:
         payload: DeleteKnowledgeSourceRequest,
     ) -> None:
         source = KnowledgeSourceService.get_or_raise(db, user, source_id)
+        if source.oss_object_key:
+            get_object_storage_service().delete_object(
+                user_id=user.id,
+                object_key=source.oss_object_key,
+                source_type=source.source_type,
+            )
         if payload.delete_cards:
             db.execute(
                 delete(KnowledgeCard).where(

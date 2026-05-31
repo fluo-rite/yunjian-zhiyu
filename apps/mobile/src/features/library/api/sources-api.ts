@@ -33,6 +33,7 @@ import {
   type ListSourcesParams,
   type SourceListFilters,
 } from "@/features/library/api/source-query-filters";
+import { uploadKnowledgeDocumentAndCreateSource } from "@/features/library/api/source-upload-api";
 
 export type CreateSourceFromTextInput = {
   name: string;
@@ -49,6 +50,7 @@ export type CreateSourceFromDocumentInput = {
   fileUri: string;
   fileName: string;
   fileType: string | null;
+  fileSize: number | null;
 };
 
 export type DeleteSourceInput = {
@@ -59,14 +61,6 @@ export type DeleteSourceInput = {
 type SourceCardsQueryOptions = {
   pollWhileProcessing?: boolean;
 };
-
-function normalizeUploadFileUri(fileUri: string) {
-  if (/^[a-z]+:\/\//i.test(fileUri)) {
-    return fileUri;
-  }
-
-  return `file://${fileUri}`;
-}
 
 export async function listSources(params?: ListSourcesParams): Promise<KnowledgeSourceListResponse> {
   const normalized = normalizeListSourcesParams(params);
@@ -115,21 +109,13 @@ export async function createSourceFromMessages(
 export async function createSourceFromDocument(
   payload: CreateSourceFromDocumentInput,
 ): Promise<KnowledgeSource> {
-  const formData = new FormData();
-  formData.append("name", payload.name);
-  formData.append(
-    "file",
-    {
-      uri: normalizeUploadFileUri(payload.fileUri),
-      name: payload.fileName,
-      type: payload.fileType ?? "application/octet-stream",
-    } as any,
-  );
-
-  const response = await apiClient.upload("/knowledge-sources/from-document", {
-    body: formData,
+  const response = await uploadKnowledgeDocumentAndCreateSource({
+    name: payload.name,
+    fileUri: payload.fileUri,
+    fileName: payload.fileName,
+    fileType: payload.fileType,
+    fileSize: payload.fileSize,
   });
-
   return knowledgeSourceSchema.parse(response);
 }
 

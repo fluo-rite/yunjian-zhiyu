@@ -46,6 +46,14 @@ class CreateKnowledgeSourceFromMessagesRequest(CamelModel):
     )
 
 
+class CreateKnowledgeSourceFromUploadedDocumentRequest(CamelModel):
+    name: str = Field(min_length=1, max_length=200)
+    object_key: str = Field(min_length=1, max_length=500)
+    filename: str = Field(min_length=1, max_length=255)
+    mime_type: str | None = Field(default=None, max_length=100)
+    size: int = Field(gt=0)
+
+
 class KnowledgeSourceRead(CamelModel):
     model_config = ConfigDict(
         json_schema_extra={

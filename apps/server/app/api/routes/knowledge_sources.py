@@ -11,6 +11,7 @@ from app.models.user import User
 from app.schemas.knowledge_source import (
     CreateKnowledgeSourceFromMessagesRequest,
     CreateKnowledgeSourceFromTextRequest,
+    CreateKnowledgeSourceFromUploadedDocumentRequest,
     DeleteKnowledgeSourceRequest,
     KnowledgeSourceCardsResponse,
     KnowledgeSourceDeletePreviewResponse,
@@ -24,6 +25,11 @@ from app.services.knowledge_source_service import (
     InvalidKnowledgeSourceMessagesError,
     KnowledgeSourceNotFoundError,
     KnowledgeSourceService,
+)
+from app.services.storage import (
+    ObjectStorageConfigurationError,
+    ObjectStorageOwnershipError,
+    ObjectStorageValidationError,
 )
 
 router = APIRouter(prefix="/knowledge-sources", tags=["knowledge-sources"])
@@ -80,6 +86,31 @@ async def create_source_from_document(
         )
     except DocumentParseError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+
+
+@router.post(
+    "/from-uploaded-document",
+    response_model=KnowledgeSourceRead,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def create_source_from_uploaded_document(
+    payload: CreateKnowledgeSourceFromUploadedDocumentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> KnowledgeSourceRead:
+    try:
+        return await KnowledgeSourceService.create_from_uploaded_document(db, current_user, payload)
+    except DocumentParseError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    except ObjectStorageOwnershipError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    except ObjectStorageValidationError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    except ObjectStorageConfigurationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Object storage is not configured.",
+        ) from error
 
 
 @router.get("", response_model=KnowledgeSourceListResponse)
@@ -148,4 +179,13 @@ def delete_source(
         KnowledgeSourceService.delete(db, current_user, source_id, payload)
     except KnowledgeSourceNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge source not found.") from None
+    except ObjectStorageOwnershipError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    except ObjectStorageValidationError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    except ObjectStorageConfigurationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Object storage is not configured.",
+        ) from error
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -2,6 +2,14 @@
   "name": "@yunjian/mobile",
   "version": "1.0.0",
   "private": true,
+  "codegenConfig": {
+    "name": "yunjianzhiyuSpec",
+    "type": "modules",
+    "jsSrcsDir": "src/specs",
+    "android": {
+      "javaPackageName": "com.yunjianzhiyu.mobile.ossupload"
+    }
+  },
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",

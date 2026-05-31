@@ -23,6 +23,7 @@ class KnowledgeSource(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     source_type: Mapped[str] = mapped_column(String(20))
     raw_content: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), default="processing", index=True)
+    oss_object_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     source_metadata: Mapped[dict | None] = mapped_column("source_meta", JSON, nullable=True)
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     processing_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
