@@ -1,6 +1,7 @@
 package com.yunjianzhiyu.mobile.ossupload
 
 import android.net.Uri
+import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -46,6 +47,7 @@ private class NativeUploadException(
     override val message: String,
 ) : RuntimeException(message)
 
+@ReactModule(name = NativeRNOssMultipartUploadSpec.NAME)
 class RNOssMultipartUploadModule(reactContext: ReactApplicationContext) :
     NativeRNOssMultipartUploadSpec(reactContext) {
 
@@ -176,6 +178,7 @@ class RNOssMultipartUploadModule(reactContext: ReactApplicationContext) :
                           ?: ""
                       )
                   .trim()
+                  .trim('"')
           if (etag.isBlank()) {
             throw NativeUploadException(
                 ERR_ETAG_MISSING,

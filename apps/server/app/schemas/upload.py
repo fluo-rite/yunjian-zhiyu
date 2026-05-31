@@ -39,6 +39,7 @@ class MultipartPartUrlRequest(CamelModel):
     object_key: str = Field(min_length=1, max_length=500)
     upload_id: str = Field(min_length=1, max_length=255)
     part_number: int = Field(ge=1)
+    mime_type: str | None = Field(default=None, max_length=100)
 
 
 class MultipartPartUrlResponse(CamelModel):

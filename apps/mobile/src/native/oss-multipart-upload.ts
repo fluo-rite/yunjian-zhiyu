@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Platform, TurboModuleRegistry } from "react-native";
 
 import type {
   Spec as NativeOssMultipartUploadSpec,
@@ -29,11 +29,11 @@ function getAndroidModule() {
   }
 
   try {
-    return require("@/specs/NativeRNOssMultipartUpload").default as NativeOssMultipartUploadSpec;
-  } catch (error) {
+    return TurboModuleRegistry.getEnforcing<NativeOssMultipartUploadSpec>("RNOssMultipartUpload");
+  } catch {
     throw new NativeUploadError(
       "ERR_MODULE_UNAVAILABLE",
-      error instanceof Error ? error.message : "Android native upload module is unavailable.",
+      "RNOssMultipartUpload is not available in the installed Android binary. Rebuild and reinstall the app.",
     );
   }
 }

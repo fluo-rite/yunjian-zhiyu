@@ -32,4 +32,4 @@ export interface Spec extends TurboModule {
   getUploadFeatureFlags(): Object;
 }
 
-export default TurboModuleRegistry.getEnforcing<Spec>("RNOssMultipartUpload");
+export default TurboModuleRegistry.get<Spec>("RNOssMultipartUpload");

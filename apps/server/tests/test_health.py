@@ -286,8 +286,17 @@ class FakeObjectStorageService:
             total_parts=(size + part_size - 1) // part_size,
         )
 
-    def sign_multipart_part_url(self, *, user_id: str, object_key: str, upload_id: str, part_number: int):
+    def sign_multipart_part_url(
+        self,
+        *,
+        user_id: str,
+        object_key: str,
+        upload_id: str,
+        part_number: int,
+        mime_type: str | None,
+    ):
         _ = upload_id
+        _ = mime_type
         self.assert_owned_object_key(object_key=object_key, user_id=user_id, source_type="document")
         return SimpleNamespace(
             part_number=part_number,

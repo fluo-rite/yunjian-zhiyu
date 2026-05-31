@@ -86,6 +86,7 @@ def get_multipart_part_url(
                 object_key=payload.object_key,
                 upload_id=payload.upload_id,
                 part_number=payload.part_number,
+                mime_type=payload.mime_type,
             )
         )
     except RuntimeError as error:
@@ -105,7 +106,7 @@ def complete_upload(
                 source_type=payload.source_type,
                 mode=payload.mode,
                 upload_id=payload.upload_id,
-                parts=[part.model_dump(by_alias=False) for part in payload.parts or []],
+                parts=[part.model_dump() for part in payload.parts or []],
             )
         )
     except RuntimeError as error:

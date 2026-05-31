@@ -112,12 +112,14 @@ async function getMultipartPartUploadUrl(input: {
   objectKey: string;
   uploadId: string;
   partNumber: number;
+  mimeType: string | null;
 }) {
   const response = await apiClient.post("/uploads/multipart/part-url", {
     body: {
       objectKey: input.objectKey,
       uploadId: input.uploadId,
       partNumber: input.partNumber,
+      mimeType: input.mimeType,
     },
   });
 
@@ -236,6 +238,7 @@ async function uploadMultipartDocument(input: UploadKnowledgeDocumentInput & { f
               objectKey: initData.objectKey,
               uploadId: initData.uploadId,
               partNumber,
+              mimeType: input.fileType ?? "application/octet-stream",
             });
             const result = await uploadPart({
               requestId,
@@ -244,6 +247,7 @@ async function uploadMultipartDocument(input: UploadKnowledgeDocumentInput & { f
               offset,
               length,
               partNumber,
+              contentType: input.fileType ?? "application/octet-stream",
             });
 
             requestIds.delete(requestId);

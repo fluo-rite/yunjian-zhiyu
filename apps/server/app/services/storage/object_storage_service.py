@@ -156,14 +156,17 @@ class ObjectStorageService:
         object_key: str,
         upload_id: str,
         part_number: int,
+        mime_type: str | None,
     ) -> SignedPartUpload:
         if part_number <= 0:
             raise ObjectStorageValidationError("partNumber must be greater than 0.")
         self.assert_owned_object_key(object_key=object_key, user_id=user_id, source_type="document")
+        headers = self._build_headers(mime_type)
         upload_url = self._bucket.sign_url(
             "PUT",
             object_key,
             MULTIPART_PART_UPLOAD_EXPIRES_IN_SECONDS,
+            headers=headers or None,
             params={
                 "partNumber": str(part_number),
                 "uploadId": upload_id,
@@ -196,7 +199,7 @@ class ObjectStorageService:
                 raise ObjectStorageValidationError("parts are required for multipart uploads.")
             normalized_parts = []
             for item in parts:
-                part_number = int(item["partNumber"])
+                part_number = int(item["part_number"])
                 etag = str(item["etag"])
                 normalized_parts.append(PartInfo(part_number, etag))
             normalized_parts.sort(key=lambda item: item.part_number)
