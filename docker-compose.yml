@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: yunjian-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: yunjian_zhiyu
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: Asia/Hong_Kong
+    ports:
+      - "5432:5432"
+    volumes:
+      - yunjian_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d yunjian_zhiyu"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: yunjian-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - yunjian_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  yunjian_postgres_data:
+  yunjian_redis_data:

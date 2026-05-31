@@ -17,11 +17,13 @@ class EmbeddingService:
         settings = get_settings()
         api_key = settings.embedding_api_key
         model = settings.embedding_model
+        base_url = (settings.embedding_base_url or "").strip() or None
         if not api_key or not model:
             raise EmbeddingServiceConfigurationError("Embedding service is not configured.")
 
         self._dashscope_module: Any | None = None
         self._api_key = api_key
+        self._base_url = base_url
         self.model_name = model
 
     def _get_dashscope_module(self) -> Any:
@@ -32,6 +34,8 @@ class EmbeddingService:
                 raise EmbeddingServiceConfigurationError(
                     "DashScope SDK is not installed. Please install the 'dashscope' package."
                 ) from error
+            if self._base_url:
+                self._dashscope_module.base_http_api_url = self._base_url
         return self._dashscope_module
 
     def _extract_embedding_vector(self, response: Any) -> list[float]:
