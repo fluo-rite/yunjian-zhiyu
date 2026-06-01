@@ -1,197 +1,210 @@
-# 云笺智语
+# 云笺智语 Yunjian Zhiyu
 
-云笺智语项目的 monorepo 仓库。
+> 面向个人知识管理场景的 AI 知识助手。  
+> 支持资料导入、知识卡片生成、检索增强问答，以及移动端流式对话体验。
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/readme-assets/02-chat-rag-answer.jpg" width="240" alt="Chat RAG Answer" /></td>
+    <td align="center"><img src="./docs/readme-assets/07-source-list.jpg" width="240" alt="Source List" /></td>
+    <td align="center"><img src="./docs/readme-assets/10-card-group-detail.jpg" width="240" alt="Card Group Detail" /></td>
+  </tr>
+  <tr>
+    <td align="center">知识增强问答</td>
+    <td align="center">知识来源管理</td>
+    <td align="center">卡片分组管理</td>
+  </tr>
+</table>
+
+## 项目简介
+
+云笺智语提供一条围绕个人资料沉淀与复用的知识工作流：将文本、文档和聊天内容导入系统，转换为结构化知识来源与知识卡片，再在对话场景中通过检索增强生成提供更稳定、可追溯的回答。
+
+项目采用移动端与服务端分离架构：
+
+- 移动端基于 React Native，提供会话、知识库、资料来源和卡片分组等核心页面
+- 服务端基于 FastAPI，提供认证、聊天、知识处理、上传和分组管理等 API
+- 异步任务基于 Redis 与 ARQ，承担聊天生成和知识处理链路
+- 检索与生成链路结合向量检索、Rerank 和流式回答输出
+
+## 核心特性
+
+- `多来源知识导入`
+  支持手动文本、文档文件和聊天消息三类知识来源。
+
+- `知识卡片抽取`
+  将原始资料切块、抽取、清洗并生成可管理的知识卡片。
+
+- `检索增强问答`
+  在会话中优先召回个人知识，再结合模型生成回答。
+
+- `流式对话体验`
+  支持消息增量返回、中间状态展示和生成中断。
+
+- `知识组织与管理`
+  支持卡片筛选、状态管理、分组整理和来源追踪。
+
+- `异步处理链路`
+  使用 ARQ Worker 解耦聊天生成、知识处理与主请求路径。
+
+## 功能预览
+
+### 会话与知识增强问答
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/readme-assets/01-sessions-home.jpg" width="220" alt="Sessions Home" /></td>
+    <td align="center"><img src="./docs/readme-assets/02-chat-rag-answer.jpg" width="220" alt="Chat RAG Answer" /></td>
+    <td align="center"><img src="./docs/readme-assets/03-chat-streaming-status.jpg" width="220" alt="Chat Streaming Status" /></td>
+  </tr>
+  <tr>
+    <td align="center">会话列表</td>
+    <td align="center">知识增强回答</td>
+    <td align="center">流式生成状态</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./docs/readme-assets/04-chat-selection-mode.jpg" width="220" alt="Chat Selection Mode" /></td>
+    <td align="center"><img src="./docs/readme-assets/05-chat-citations-modal.jpg" width="220" alt="Chat Citations Modal" /></td>
+    <td align="center"></td>
+  </tr>
+  <tr>
+    <td align="center">消息选取导入</td>
+    <td align="center">引用内容查看</td>
+    <td align="center"></td>
+  </tr>
+</table>
+
+### 知识库与资料来源
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/readme-assets/06-library-home.jpg" width="220" alt="Library Home" /></td>
+    <td align="center"><img src="./docs/readme-assets/07-source-list.jpg" width="220" alt="Source List" /></td>
+  </tr>
+  <tr>
+    <td align="center">知识库首页</td>
+    <td align="center">知识来源列表</td>
+  </tr>
+</table>
+
+### 卡片与分组管理
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/readme-assets/08-card-list.jpg" width="220" alt="Card List" /></td>
+    <td align="center"><img src="./docs/readme-assets/09-card-group-list.jpg" width="220" alt="Card Group List" /></td>
+    <td align="center"><img src="./docs/readme-assets/10-card-group-detail.jpg" width="220" alt="Card Group Detail" /></td>
+  </tr>
+  <tr>
+    <td align="center">知识卡片</td>
+    <td align="center">卡片分组</td>
+    <td align="center">分组详情</td>
+  </tr>
+</table>
+
+## 典型流程
+
+```mermaid
+flowchart LR
+    A["导入资料"] --> B["创建知识来源"]
+    B --> C["异步解析与切块"]
+    C --> D["抽取知识卡片"]
+    D --> E["确认与分组"]
+    E --> F["发起提问"]
+    F --> G["召回知识卡片"]
+    G --> H["流式生成回答"]
+```
 
 ## 技术栈
 
-- 移动端：React Native CLI、TypeScript
-- 后端：Python、FastAPI、uv
+- `Mobile`: React Native, TypeScript, React Navigation, React Query, Redux Toolkit
+- `Backend`: FastAPI, SQLAlchemy, Pydantic, Alembic
+- `Async`: Redis, ARQ
+- `Storage`: PostgreSQL, pgvector, Object Storage
+- `LLM Workflow`: LangGraph, LangChain, OpenAI-compatible API
+
+## 系统架构
+
+```mermaid
+flowchart TD
+    Mobile["React Native Mobile App"] --> API["FastAPI API"]
+    API --> PG["PostgreSQL"]
+    API --> Redis["Redis"]
+    API --> OSS["Object Storage"]
+    API --> Worker["ARQ Worker"]
+    Worker --> Redis
+    Worker --> PG
+    Worker --> OSS
+    Worker --> LLM["LLM Provider"]
+    Worker --> Embed["Embedding / Rerank"]
+```
 
 ## 仓库结构
 
-- `apps/mobile/`: React Native 移动端应用
-- `apps/server/`: FastAPI 后端服务
-- `develop_doc/`: 项目说明、设计文档和开发资料
-
-## 环境要求
-
-- Node.js 20+
-- pnpm 10+
-- Python 3.12+
-- uv
-- Android Studio / Android SDK（Android 调试需要）
-- Xcode（iOS 调试需要）
-
-## 安装依赖
-
-移动端依赖安装在 `apps/mobile` 目录下执行。
-
-在 `D:\code\yunjian-zhiyu\apps\mobile` 中运行：
-
-```bash
-pnpm install
+```text
+yunjian-zhiyu/
+├── apps/
+│   ├── mobile/   # React Native 客户端
+│   └── server/   # FastAPI 后端服务
+├── docs/
+│   └── readme-assets/
+├── docker-compose.yml
+└── README.md
 ```
 
-后端依赖安装在 `apps/server` 目录下执行。
+## 快速开始
 
-在 `D:\code\yunjian-zhiyu\apps\server` 中运行：
-
-```bash
-uv sync
-```
-
-## 环境配置
-
-开始开发前，先为后端创建 `.env`：
-
-在 `D:\code\yunjian-zhiyu\apps\server` 中运行：
+### 1. 启动依赖服务
 
 ```bash
-Copy-Item .env.example .env
+docker compose up -d
 ```
 
-移动端当前通过 [apps/mobile/app.config.json](D:/code/yunjian-zhiyu/apps/mobile/app.config.json) 读取 API 运行时配置。
+### 2. 初始化数据库
 
-## 启动开发服务
+```bash
+uv run --project apps/server alembic -c apps/server/alembic.ini upgrade head
+```
 
-### 启动后端
-
-在仓库根目录 `D:\code\yunjian-zhiyu` 中运行：
+### 3. 启动后端 API
 
 ```bash
 pnpm dev:server
 ```
 
-这条命令会把 FastAPI 启动在 `0.0.0.0:8000`。
-
-### 启动 ARQ Worker
-
-如果要联调聊天流式生成链路，还需要在另一个终端启动 ARQ Worker。
-
-在 `D:\code\yunjian-zhiyu\apps\server` 中运行：
+### 4. 启动 ARQ Worker
 
 ```bash
-uv run arq app.workers.arq_worker.WorkerSettings
+pnpm dev:worker
 ```
 
-### 启动 Metro
+### 5. 启动移动端
 
-在仓库根目录 `D:\code\yunjian-zhiyu` 中运行：
+直接运行 Android 客户端：
 
 ```bash
 pnpm dev:mobile
 ```
 
-如果 Metro 缓存异常，建议清一次缓存：
-
-在 `D:\code\yunjian-zhiyu\apps\mobile` 中运行：
+单独启动 Metro：
 
 ```bash
-pnpm start --reset-cache
+pnpm --dir apps/mobile start
 ```
 
-## 运行移动端应用
+## 当前进展
 
-### Android
+当前版本已完成以下核心能力：
 
-在 `D:\code\yunjian-zhiyu\apps\mobile` 中运行：
+- 认证与登录态持久化
+- 会话列表与聊天详情
+- 流式消息展示与中断
+- 知识来源创建与列表管理
+- 知识卡片列表、状态与分组管理
+- 从聊天消息导入知识来源
+- 文档上传与异步知识处理
+- 基于知识卡片的召回与重排
 
-```bash
-pnpm android
-```
+## License
 
-### iOS
-
-在 `D:\code\yunjian-zhiyu\apps\mobile` 中运行：
-
-```bash
-pnpm ios
-```
-
-## Android 真机调试
-
-让 Android 真机访问电脑上运行的后端，通常有两种方式。
-
-### 方式一：USB + `adb reverse`
-
-这是最推荐的方式，配置简单，也通常能规避 Windows 防火墙和局域网入站限制。
-
-1. 用 USB 连接手机，并打开开发者模式和 USB 调试。
-2. 在任意终端运行：
-
-```bash
-adb reverse tcp:8000 tcp:8000
-```
-
-3. 把 [apps/mobile/app.config.json](D:/code/yunjian-zhiyu/apps/mobile/app.config.json) 里的 `developmentBaseUrl` 设置为：
-
-```json
-"http://127.0.0.1:8000/api/v1"
-```
-
-4. 重启 Metro，并重新运行 App。
-
-### 方式二：局域网 IP 直连
-
-当你不方便使用 `adb reverse` 时，可以改用局域网 IP。
-
-1. 确保手机和电脑连接在同一个局域网。
-2. 确保后端通过 `0.0.0.0:8000` 暴露服务：
-
-```bash
-pnpm dev:server
-```
-
-3. 找到电脑的局域网 IP，例如 `192.168.1.23`。
-4. 把 [apps/mobile/app.config.json](D:/code/yunjian-zhiyu/apps/mobile/app.config.json) 里的 `developmentBaseUrl` 设置为：
-
-```json
-"http://192.168.1.23:8000/api/v1"
-```
-
-5. 重启 Metro，并重新运行 App。
-
-如果这种方式不通，优先排查：
-
-- Windows 防火墙是否拦截 `8000`
-- 手机和电脑是否真的在同一网络
-- 后端是否已经成功启动
-
-## 连通性验证
-
-先不要急着测登录注册，建议先在手机浏览器里验证后端连通性。
-
-### 使用 `adb reverse` 时
-
-打开：
-
-```text
-http://127.0.0.1:8000/health
-```
-
-### 使用局域网 IP 时
-
-把 `127.0.0.1` 替换成你的电脑局域网 IP，例如：
-
-```text
-http://192.168.1.23:8000/health
-```
-
-预期返回：
-
-```json
-{"status":"ok"}
-```
-
-## 常用命令
-
-在仓库根目录 `D:\code\yunjian-zhiyu` 中运行：
-
-```bash
-pnpm dev:mobile
-pnpm dev:server
-pnpm lint:mobile
-pnpm lint:server
-pnpm test:server
-pnpm check
-```
+This project is under active development. License information can be added here when ready.
