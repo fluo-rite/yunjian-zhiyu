@@ -52,7 +52,7 @@ export function CardGroupListScreen({
         <Field
           label="新建分组"
           onChangeText={setDraftName}
-          placeholder="例如：React Native 路由"
+          placeholder="分组名称"
           value={draftName}
         />
         <PrimaryButton

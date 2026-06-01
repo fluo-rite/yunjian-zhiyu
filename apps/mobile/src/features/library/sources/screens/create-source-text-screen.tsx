@@ -54,7 +54,7 @@ export function CreateSourceTextScreen({
           <Field
             label="来源名称"
             onChangeText={setName}
-            placeholder="例如：React Native 路由设计笔记"
+            placeholder="来源名称"
             value={name}
           />
           <Field

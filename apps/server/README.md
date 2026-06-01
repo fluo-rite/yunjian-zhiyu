@@ -57,8 +57,10 @@ uv run --project apps/server alembic -c apps/server/alembic.ini upgrade head
 Run an ARQ worker in a separate terminal:
 
 ```bash
-uv run --project apps/server arq app.workers.arq_worker.WorkerSettings
+pnpm dev:worker
 ```
+
+Both commands run from `apps/server`, so the `app.*` package imports resolve correctly.
 
 Both Alembic and the ARQ worker now load `DATABASE_URL` and `REDIS_URL` automatically from `apps/server/.env` through the shared settings module, so you do not need to export those variables manually in PowerShell first.
 

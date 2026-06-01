@@ -59,7 +59,7 @@ class GeneratedKnowledgeCard(BaseModel):
 
 
 class GeneratedKnowledgeCardBatch(BaseModel):
-    cards: list[GeneratedKnowledgeCard] = Field(default_factory=list, max_length=10)
+    cards: list[GeneratedKnowledgeCard] = Field(default_factory=list)
 
 
 class ExtractedCardDraft(BaseModel):
