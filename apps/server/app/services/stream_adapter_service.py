@@ -71,6 +71,12 @@ class StreamAdapterService:
                 label=event["label"],
             )
 
+        if event["type"] == "message_start":
+            return StreamAdapterService.build_start_event(
+                chat_id=chat_id,
+                assistant_message_id=assistant_message_id,
+            )
+
         if event["type"] == "message_delta":
             return StreamAdapterService.build_delta_event(
                 assistant_message_id=assistant_message_id,

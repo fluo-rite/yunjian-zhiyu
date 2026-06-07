@@ -570,6 +570,19 @@ def test_stream_adapter_maps_status_raw_event() -> None:
     assert event.data["label"] == "正在检索知识库"
 
 
+def test_stream_adapter_maps_message_start_raw_event() -> None:
+    event = StreamAdapterService.adapt_graph_chunk(
+        chat_id="chat-1",
+        assistant_message_id="assistant-1",
+        event={"type": "message_start"},
+    )
+
+    assert event is not None
+    assert event.event == "message.start"
+    assert event.data["chatId"] == "chat-1"
+    assert event.data["messageId"] == "assistant-1"
+
+
 def test_policy_marks_fresh_queries_and_search_fallback() -> None:
     prompt = build_web_search_decision_prompt(
         query="2026法定节假日安排",
