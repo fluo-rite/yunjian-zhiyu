@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { connectAssistantMessageStream } from "@/lib/stream/message-stream";
+import {
+  connectAssistantMessageStream,
+  type AssistantMessageStreamEvent,
+} from "@/lib/stream/message-stream";
 import {
   getStreamReconnectDecision,
   STREAM_RECONNECT_MAX_ATTEMPTS,
 } from "@/lib/stream/stream-reconnect";
-import { SseConnectionError } from "@/lib/stream/sse-client";
+import {
+  SseConnectionError,
+  type SseConnectionCloseDetails,
+} from "@/lib/stream/sse-client";
 import { selectAccessToken } from "@/store/auth-slice";
 import { useAppSelector } from "@/store/hooks";
 import { type Message } from "@/features/sessions/api";
@@ -33,6 +39,8 @@ type StreamState = {
 
 const STREAM_FLUSH_INTERVAL_MS = 100;
 const STREAM_RECONNECTING_LABEL = "网络波动，正在恢复连接…";
+
+type ConnectionMode = "initial" | "manual_retry" | "auto_reconnect";
 
 const initialState: StreamState = {
   lastEventId: null,
@@ -63,6 +71,8 @@ export function useAssistantMessageStream(
   const reconnectAttemptRef = useRef(0);
   const reconnectWindowStartedAtRef = useRef<number | null>(null);
   const lastEventIdRef = useRef<string | null>(null);
+  const openConnectionRef = useRef<(mode: ConnectionMode) => void>(() => {});
+  const scheduleReconnectRef = useRef<(message: string) => void>(() => {});
   const paramsRef = useRef<{
     sessionId: string | null;
     assistantMessageId: string | null;
@@ -132,7 +142,7 @@ export function useAssistantMessageStream(
     }, STREAM_FLUSH_INTERVAL_MS);
   }, [flushPendingDelta]);
 
-  const markInterrupted = useCallback((message: string) => {
+  const setInterruptedState = useCallback((message: string) => {
     clearReconnectTimer();
     setState((current) => ({
       ...current,
@@ -146,6 +156,81 @@ export function useAssistantMessageStream(
     }));
   }, [clearReconnectTimer]);
 
+  const setConnectingState = useCallback((mode: ConnectionMode) => {
+    setState((current) => {
+      switch (mode) {
+        case "initial":
+          return {
+            ...initialState,
+            isConnecting: true,
+            canManualReconnect: false,
+            connectionState: "connecting",
+          };
+        case "manual_retry":
+          return {
+            ...current,
+            isConnecting: true,
+            isReconnecting: false,
+            reconnectAttempt: 0,
+            canManualReconnect: false,
+            connectionState: "connecting",
+            errorMessage: null,
+            ephemeralPhaseLabel: null,
+          };
+        case "auto_reconnect":
+          return {
+            ...current,
+            isConnecting: true,
+            isReconnecting: true,
+            reconnectAttempt: reconnectAttemptRef.current,
+            canManualReconnect: false,
+            connectionState: "reconnecting",
+            errorMessage: null,
+            ephemeralPhaseLabel: STREAM_RECONNECTING_LABEL,
+          };
+      }
+    });
+  }, []);
+
+  const setReconnectPendingState = useCallback((attempt: number) => {
+    setState((current) => ({
+      ...current,
+      isConnecting: false,
+      isReconnecting: true,
+      reconnectAttempt: attempt,
+      canManualReconnect: false,
+      connectionState: "reconnecting",
+      errorMessage: null,
+      ephemeralPhaseLabel: STREAM_RECONNECTING_LABEL,
+    }));
+  }, []);
+
+  const setStreamingState = useCallback((patch: Partial<StreamState>) => {
+    setState((current) => ({
+      ...current,
+      ...patch,
+      isConnecting: false,
+      isReconnecting: false,
+      reconnectAttempt: reconnectAttemptRef.current,
+      canManualReconnect: false,
+      connectionState: "streaming",
+      errorMessage: null,
+    }));
+  }, []);
+
+  const setTerminalState = useCallback((patch: Partial<StreamState>) => {
+    setState((current) => ({
+      ...current,
+      ...patch,
+      isConnecting: false,
+      isReconnecting: false,
+      reconnectAttempt: reconnectAttemptRef.current,
+      canManualReconnect: false,
+      connectionState: "terminal",
+      ephemeralPhaseLabel: null,
+    }));
+  }, []);
+
   const updateLastEventId = useCallback((eventId: string | undefined, fallback: string | null) => {
     if (!eventId) {
       return fallback;
@@ -154,6 +239,174 @@ export function useAssistantMessageStream(
     lastEventIdRef.current = eventId;
     return eventId;
   }, []);
+
+  const handleStreamEvent = useCallback((event: AssistantMessageStreamEvent, generation: number) => {
+    if (generation !== connectionGenerationRef.current) {
+      return;
+    }
+
+    switch (event.type) {
+      case "status": {
+        const lastEventId = updateLastEventId(event.id, lastEventIdRef.current);
+        setStreamingState({
+          lastEventId,
+          ephemeralPhaseLabel: event.data.label,
+        });
+        return;
+      }
+      case "message.start": {
+        const lastEventId = updateLastEventId(event.id, lastEventIdRef.current);
+        setStreamingState({
+          lastEventId,
+          ephemeralPhaseLabel: null,
+        });
+        return;
+      }
+      case "message.delta": {
+        pendingDeltaRef.current += event.data.delta;
+        const lastEventId = updateLastEventId(event.id, lastEventIdRef.current);
+        setStreamingState({
+          lastEventId,
+          ephemeralPhaseLabel: null,
+        });
+        scheduleDeltaFlush();
+        return;
+      }
+      case "message.done": {
+        hasTerminalEventRef.current = true;
+        pendingDeltaRef.current = "";
+        cancelDeltaFlush();
+        clearReconnectTimer();
+        const lastEventId = updateLastEventId(event.id, lastEventIdRef.current);
+        setTerminalState({
+          lastEventId,
+          streamedContent: event.data.message.content,
+          terminalMessage: event.data.message,
+          errorMessage: null,
+        });
+        resetReconnectBudget();
+        return;
+      }
+      case "message.aborted": {
+        hasTerminalEventRef.current = true;
+        pendingDeltaRef.current = "";
+        cancelDeltaFlush();
+        clearReconnectTimer();
+        const lastEventId = updateLastEventId(event.id, lastEventIdRef.current);
+        setTerminalState({
+          lastEventId,
+          streamedContent: event.data.message.content,
+          terminalMessage: event.data.message,
+          errorMessage: null,
+        });
+        resetReconnectBudget();
+        return;
+      }
+      case "error": {
+        hasTerminalEventRef.current = true;
+        pendingDeltaRef.current = "";
+        cancelDeltaFlush();
+        clearReconnectTimer();
+        const lastEventId = updateLastEventId(event.id, lastEventIdRef.current);
+        setTerminalState({
+          lastEventId,
+          terminalMessage: event.data.finalMessage ?? null,
+          errorMessage: event.data.message,
+        });
+        resetReconnectBudget();
+        return;
+      }
+      default:
+        return;
+    }
+  }, [
+    cancelDeltaFlush,
+    clearReconnectTimer,
+    resetReconnectBudget,
+    scheduleDeltaFlush,
+    setStreamingState,
+    setTerminalState,
+    updateLastEventId,
+  ]);
+
+  const handleConnectionError = useCallback((error: Error, generation: number) => {
+    if (generation !== connectionGenerationRef.current || disconnectHandledRef.current) {
+      return;
+    }
+
+    disconnectHandledRef.current = true;
+
+    if (
+      error instanceof SseConnectionError &&
+      typeof error.status === "number" &&
+      error.status >= 400 &&
+      error.status < 500
+    ) {
+      setInterruptedState(error.message);
+      return;
+    }
+
+    if (error.message.startsWith("Invalid SSE payload")) {
+      setInterruptedState(error.message);
+      return;
+    }
+
+    if (hasTerminalEventRef.current) {
+      return;
+    }
+
+    scheduleReconnectRef.current(error.message);
+  }, [setInterruptedState]);
+
+  const handleConnectionClose = useCallback((details: SseConnectionCloseDetails, generation: number) => {
+    if (
+      generation !== connectionGenerationRef.current ||
+      details.closedByCaller ||
+      hasTerminalEventRef.current ||
+      disconnectHandledRef.current
+    ) {
+      return;
+    }
+
+    disconnectHandledRef.current = true;
+
+    if (details.status >= 400 && details.status < 500) {
+      setInterruptedState(`SSE request failed with status ${details.status}.`);
+      return;
+    }
+
+    scheduleReconnectRef.current("SSE connection closed unexpectedly.");
+  }, [setInterruptedState]);
+
+  const openConnection = useCallback((mode: ConnectionMode) => {
+    const params = paramsRef.current;
+    if (!params.sessionId || !params.assistantMessageId || !params.accessToken) {
+      return;
+    }
+
+    disconnectHandledRef.current = false;
+    closeConnection();
+
+    const generation = ++connectionGenerationRef.current;
+    setConnectingState(mode);
+
+    connectionRef.current = connectAssistantMessageStream({
+      sessionId: params.sessionId,
+      assistantMessageId: params.assistantMessageId,
+      accessToken: params.accessToken,
+      lastEventId: mode === "initial" ? null : lastEventIdRef.current,
+      onEvent: (event) => handleStreamEvent(event, generation),
+      onError: (error) => handleConnectionError(error, generation),
+      onClose: (details) => handleConnectionClose(details, generation),
+    });
+  }, [
+    closeConnection,
+    handleConnectionClose,
+    handleConnectionError,
+    handleStreamEvent,
+    setConnectingState,
+  ]);
+  openConnectionRef.current = openConnection;
 
   const scheduleReconnect = useCallback((message: string) => {
     clearReconnectTimer();
@@ -166,428 +419,20 @@ export function useAssistantMessageStream(
     });
 
     if (!decision.shouldReconnect) {
-      markInterrupted(message);
+      setInterruptedState(message);
       return;
     }
 
     reconnectAttemptRef.current = decision.nextAttempt;
     reconnectWindowStartedAtRef.current = decision.firstFailureAt;
-
-    setState((current) => ({
-      ...current,
-      isConnecting: false,
-      isReconnecting: true,
-      reconnectAttempt: decision.nextAttempt,
-      canManualReconnect: false,
-      connectionState: "reconnecting",
-      errorMessage: null,
-      ephemeralPhaseLabel: STREAM_RECONNECTING_LABEL,
-    }));
+    setReconnectPendingState(decision.nextAttempt);
 
     reconnectTimerRef.current = setTimeout(() => {
       reconnectTimerRef.current = null;
-      const params = paramsRef.current;
-
-      if (!params.sessionId || !params.assistantMessageId || !params.accessToken) {
-        return;
-      }
-
-      disconnectHandledRef.current = false;
-      closeConnection();
-
-      const generation = ++connectionGenerationRef.current;
-      connectionRef.current = connectAssistantMessageStream({
-        sessionId: params.sessionId,
-        assistantMessageId: params.assistantMessageId,
-        accessToken: params.accessToken,
-        lastEventId: lastEventIdRef.current,
-        onEvent(event) {
-          if (generation !== connectionGenerationRef.current) {
-            return;
-          }
-
-          switch (event.type) {
-            case "status":
-              setState((current) => ({
-                ...current,
-                isConnecting: false,
-                isReconnecting: false,
-                reconnectAttempt: reconnectAttemptRef.current,
-                canManualReconnect: false,
-                connectionState: "streaming",
-                lastEventId: updateLastEventId(event.id, current.lastEventId),
-                errorMessage: null,
-                ephemeralPhaseLabel: event.data.label,
-              }));
-              return;
-            case "message.start":
-              setState((current) => ({
-                ...current,
-                isConnecting: false,
-                isReconnecting: false,
-                reconnectAttempt: reconnectAttemptRef.current,
-                canManualReconnect: false,
-                connectionState: "streaming",
-                lastEventId: updateLastEventId(event.id, current.lastEventId),
-                errorMessage: null,
-                ephemeralPhaseLabel: null,
-              }));
-              return;
-            case "message.delta":
-              pendingDeltaRef.current += event.data.delta;
-              setState((current) => ({
-                ...current,
-                isConnecting: false,
-                isReconnecting: false,
-                reconnectAttempt: reconnectAttemptRef.current,
-                canManualReconnect: false,
-                connectionState: "streaming",
-                lastEventId: updateLastEventId(event.id, current.lastEventId),
-                errorMessage: null,
-                ephemeralPhaseLabel: null,
-              }));
-              scheduleDeltaFlush();
-              return;
-            case "message.done":
-              hasTerminalEventRef.current = true;
-              pendingDeltaRef.current = "";
-              cancelDeltaFlush();
-              clearReconnectTimer();
-              setState((current) => ({
-                ...current,
-                isConnecting: false,
-                isReconnecting: false,
-                reconnectAttempt: reconnectAttemptRef.current,
-                canManualReconnect: false,
-                connectionState: "terminal",
-                lastEventId: updateLastEventId(event.id, current.lastEventId),
-                streamedContent: event.data.message.content,
-                terminalMessage: event.data.message,
-                errorMessage: null,
-                ephemeralPhaseLabel: null,
-              }));
-              resetReconnectBudget();
-              return;
-            case "message.aborted":
-              hasTerminalEventRef.current = true;
-              pendingDeltaRef.current = "";
-              cancelDeltaFlush();
-              clearReconnectTimer();
-              setState((current) => ({
-                ...current,
-                isConnecting: false,
-                isReconnecting: false,
-                reconnectAttempt: reconnectAttemptRef.current,
-                canManualReconnect: false,
-                connectionState: "terminal",
-                lastEventId: updateLastEventId(event.id, current.lastEventId),
-                streamedContent: event.data.message.content,
-                terminalMessage: event.data.message,
-                errorMessage: null,
-                ephemeralPhaseLabel: null,
-              }));
-              resetReconnectBudget();
-              return;
-            case "error":
-              hasTerminalEventRef.current = true;
-              pendingDeltaRef.current = "";
-              cancelDeltaFlush();
-              clearReconnectTimer();
-              setState((current) => ({
-                ...current,
-                isConnecting: false,
-                isReconnecting: false,
-                reconnectAttempt: reconnectAttemptRef.current,
-                canManualReconnect: false,
-                connectionState: "terminal",
-                lastEventId: updateLastEventId(event.id, current.lastEventId),
-                terminalMessage: event.data.finalMessage ?? null,
-                errorMessage: event.data.message,
-                ephemeralPhaseLabel: null,
-              }));
-              resetReconnectBudget();
-              return;
-            default:
-              return;
-          }
-        },
-        onError(error) {
-          if (generation !== connectionGenerationRef.current || disconnectHandledRef.current) {
-            return;
-          }
-
-          disconnectHandledRef.current = true;
-
-          if (
-            error instanceof SseConnectionError &&
-            typeof error.status === "number" &&
-            error.status >= 400 &&
-            error.status < 500
-          ) {
-            markInterrupted(error.message);
-            return;
-          }
-
-          if (error.message.startsWith("Invalid SSE payload")) {
-            markInterrupted(error.message);
-            return;
-          }
-
-          if (hasTerminalEventRef.current) {
-            return;
-          }
-
-          scheduleReconnect(error.message);
-        },
-        onClose(details) {
-          if (
-            generation !== connectionGenerationRef.current ||
-            details.closedByCaller ||
-            hasTerminalEventRef.current ||
-            disconnectHandledRef.current
-          ) {
-            return;
-          }
-
-          disconnectHandledRef.current = true;
-
-          if (details.status >= 400 && details.status < 500) {
-            markInterrupted(`SSE request failed with status ${details.status}.`);
-            return;
-          }
-
-          scheduleReconnect("SSE connection closed unexpectedly.");
-        },
-      });
+      openConnectionRef.current("auto_reconnect");
     }, decision.delayMs);
-  }, [
-    cancelDeltaFlush,
-    clearReconnectTimer,
-    closeConnection,
-    flushPendingDelta,
-    markInterrupted,
-    resetReconnectBudget,
-    scheduleDeltaFlush,
-    updateLastEventId,
-  ]);
-
-  const connectWithMode = useCallback((mode: "initial" | "manual" | "reconnect") => {
-    const params = paramsRef.current;
-    if (!params.sessionId || !params.assistantMessageId || !params.accessToken) {
-      return;
-    }
-
-    disconnectHandledRef.current = false;
-    closeConnection();
-
-    const generation = ++connectionGenerationRef.current;
-
-    setState((current) => {
-      switch (mode) {
-        case "initial":
-          return {
-            ...initialState,
-            isConnecting: true,
-            canManualReconnect: false,
-            connectionState: "connecting",
-          };
-        case "manual":
-          return {
-            ...current,
-            isConnecting: true,
-            isReconnecting: false,
-            reconnectAttempt: 0,
-            canManualReconnect: false,
-            connectionState: "connecting",
-            errorMessage: null,
-            ephemeralPhaseLabel: null,
-          };
-        case "reconnect":
-          return {
-            ...current,
-            isConnecting: true,
-            isReconnecting: true,
-            canManualReconnect: false,
-            connectionState: "reconnecting",
-            errorMessage: null,
-            ephemeralPhaseLabel: STREAM_RECONNECTING_LABEL,
-          };
-      }
-    });
-
-    connectionRef.current = connectAssistantMessageStream({
-      sessionId: params.sessionId,
-      assistantMessageId: params.assistantMessageId,
-      accessToken: params.accessToken,
-      lastEventId: mode === "initial" ? null : lastEventIdRef.current,
-      onEvent(event) {
-        if (generation !== connectionGenerationRef.current) {
-          return;
-        }
-
-        switch (event.type) {
-          case "status":
-            setState((current) => ({
-              ...current,
-              isConnecting: false,
-              isReconnecting: false,
-              reconnectAttempt: reconnectAttemptRef.current,
-              canManualReconnect: false,
-              connectionState: "streaming",
-              lastEventId: updateLastEventId(event.id, current.lastEventId),
-              errorMessage: null,
-              ephemeralPhaseLabel: event.data.label,
-            }));
-            return;
-          case "message.start":
-            setState((current) => ({
-              ...current,
-              isConnecting: false,
-              isReconnecting: false,
-              reconnectAttempt: reconnectAttemptRef.current,
-              canManualReconnect: false,
-              connectionState: "streaming",
-              lastEventId: updateLastEventId(event.id, current.lastEventId),
-              errorMessage: null,
-              ephemeralPhaseLabel: null,
-            }));
-            return;
-          case "message.delta":
-            pendingDeltaRef.current += event.data.delta;
-            setState((current) => ({
-              ...current,
-              isConnecting: false,
-              isReconnecting: false,
-              reconnectAttempt: reconnectAttemptRef.current,
-              canManualReconnect: false,
-              connectionState: "streaming",
-              lastEventId: updateLastEventId(event.id, current.lastEventId),
-              errorMessage: null,
-              ephemeralPhaseLabel: null,
-            }));
-            scheduleDeltaFlush();
-            return;
-          case "message.done":
-            hasTerminalEventRef.current = true;
-            pendingDeltaRef.current = "";
-            cancelDeltaFlush();
-            clearReconnectTimer();
-            setState((current) => ({
-              ...current,
-              isConnecting: false,
-              isReconnecting: false,
-              reconnectAttempt: reconnectAttemptRef.current,
-              canManualReconnect: false,
-              connectionState: "terminal",
-              lastEventId: updateLastEventId(event.id, current.lastEventId),
-              streamedContent: event.data.message.content,
-              terminalMessage: event.data.message,
-              errorMessage: null,
-              ephemeralPhaseLabel: null,
-            }));
-            resetReconnectBudget();
-            return;
-          case "message.aborted":
-            hasTerminalEventRef.current = true;
-            pendingDeltaRef.current = "";
-            cancelDeltaFlush();
-            clearReconnectTimer();
-            setState((current) => ({
-              ...current,
-              isConnecting: false,
-              isReconnecting: false,
-              reconnectAttempt: reconnectAttemptRef.current,
-              canManualReconnect: false,
-              connectionState: "terminal",
-              lastEventId: updateLastEventId(event.id, current.lastEventId),
-              streamedContent: event.data.message.content,
-              terminalMessage: event.data.message,
-              errorMessage: null,
-              ephemeralPhaseLabel: null,
-            }));
-            resetReconnectBudget();
-            return;
-          case "error":
-            hasTerminalEventRef.current = true;
-            pendingDeltaRef.current = "";
-            cancelDeltaFlush();
-            clearReconnectTimer();
-            setState((current) => ({
-              ...current,
-              isConnecting: false,
-              isReconnecting: false,
-              reconnectAttempt: reconnectAttemptRef.current,
-              canManualReconnect: false,
-              connectionState: "terminal",
-              lastEventId: updateLastEventId(event.id, current.lastEventId),
-              terminalMessage: event.data.finalMessage ?? null,
-              errorMessage: event.data.message,
-              ephemeralPhaseLabel: null,
-            }));
-            resetReconnectBudget();
-            return;
-          default:
-            return;
-        }
-      },
-      onError(error) {
-        if (generation !== connectionGenerationRef.current || disconnectHandledRef.current) {
-          return;
-        }
-
-        disconnectHandledRef.current = true;
-
-        if (
-          error instanceof SseConnectionError &&
-          typeof error.status === "number" &&
-          error.status >= 400 &&
-          error.status < 500
-        ) {
-          markInterrupted(error.message);
-          return;
-        }
-
-        if (error.message.startsWith("Invalid SSE payload")) {
-          markInterrupted(error.message);
-          return;
-        }
-
-        if (hasTerminalEventRef.current) {
-          return;
-        }
-
-        scheduleReconnect(error.message);
-      },
-      onClose(details) {
-        if (
-          generation !== connectionGenerationRef.current ||
-          details.closedByCaller ||
-          hasTerminalEventRef.current ||
-          disconnectHandledRef.current
-        ) {
-          return;
-        }
-
-        disconnectHandledRef.current = true;
-
-        if (details.status >= 400 && details.status < 500) {
-          markInterrupted(`SSE request failed with status ${details.status}.`);
-          return;
-        }
-
-        scheduleReconnect("SSE connection closed unexpectedly.");
-      },
-    });
-  }, [
-    cancelDeltaFlush,
-    clearReconnectTimer,
-    closeConnection,
-    markInterrupted,
-    resetReconnectBudget,
-    scheduleDeltaFlush,
-    scheduleReconnect,
-    updateLastEventId,
-  ]);
+  }, [clearReconnectTimer, flushPendingDelta, setInterruptedState, setReconnectPendingState]);
+  scheduleReconnectRef.current = scheduleReconnect;
 
   useEffect(() => {
     paramsRef.current = {
@@ -617,7 +462,7 @@ export function useAssistantMessageStream(
     resetReconnectBudget();
     clearReconnectTimer();
     cancelDeltaFlush();
-    connectWithMode("initial");
+    openConnection("initial");
 
     return () => {
       invalidateConnectionGeneration();
@@ -633,7 +478,7 @@ export function useAssistantMessageStream(
     cancelDeltaFlush,
     clearReconnectTimer,
     closeConnection,
-    connectWithMode,
+    openConnection,
     invalidateConnectionGeneration,
     resetReconnectBudget,
     sessionId,
@@ -648,8 +493,8 @@ export function useAssistantMessageStream(
     disconnectHandledRef.current = false;
     resetReconnectBudget();
     clearReconnectTimer();
-    connectWithMode("manual");
-  }, [clearReconnectTimer, connectWithMode, resetReconnectBudget, state.connectionState]);
+    openConnection("manual_retry");
+  }, [clearReconnectTimer, openConnection, resetReconnectBudget, state.connectionState]);
 
   const isStreaming = useMemo(() => {
     return Boolean(sessionId && assistantMessageId) && !state.terminalMessage && !state.errorMessage;
