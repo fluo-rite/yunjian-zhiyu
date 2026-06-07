@@ -82,6 +82,20 @@ export const chatMessageItemStyles = StyleSheet.create({
     fontSize: typography.meta,
     fontWeight: "600",
   },
+  reconnectActionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  reconnectAction: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
   selectionIndicator: {
     alignSelf: "flex-start",
     borderRadius: 999,

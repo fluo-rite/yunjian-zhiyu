@@ -16,7 +16,11 @@ import {
   decodeStatusEvent,
   isStreamContractError,
 } from "@/lib/stream/stream-decoders";
-import { connectSse, type SseConnection } from "@/lib/stream/sse-client";
+import {
+  connectSse,
+  type SseConnection,
+  type SseConnectionCloseDetails,
+} from "@/lib/stream/sse-client";
 
 export type AssistantMessageStreamEvent =
   | { type: "status"; id?: string; data: StatusEvent }
@@ -33,7 +37,7 @@ export type AssistantMessageStreamOptions = {
   lastEventId?: string | null;
   onEvent: (event: AssistantMessageStreamEvent) => void;
   onError?: (error: Error) => void;
-  onClose?: () => void;
+  onClose?: (details: SseConnectionCloseDetails) => void;
 };
 
 function buildStreamUrl(sessionId: string, assistantMessageId: string) {

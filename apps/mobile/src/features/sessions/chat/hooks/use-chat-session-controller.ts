@@ -83,8 +83,12 @@ export function useChatSessionController(args: {
       return;
     }
 
+    if (stream.connectionState === "interrupted") {
+      return;
+    }
+
     Alert.alert(sessionCopy.chat.streamInterruptedTitle, stream.errorMessage);
-  }, [stream.errorMessage]);
+  }, [stream.connectionState, stream.errorMessage]);
 
   useEffect(() => {
     return () => {
@@ -167,6 +171,14 @@ export function useChatSessionController(args: {
     }
   }
 
+  async function refreshMessages() {
+    if (!sessionId) {
+      return;
+    }
+
+    await refreshSessionMessages(queryClient, sessionId);
+  }
+
   return {
     sessionId,
     sessionTitle,
@@ -180,6 +192,7 @@ export function useChatSessionController(args: {
     isAborting: abortSessionMessageMutation.isPending,
     sendMessage,
     abortMessage,
+    refreshMessages,
   };
 }
 

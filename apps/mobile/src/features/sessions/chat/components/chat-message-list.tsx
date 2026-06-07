@@ -19,11 +19,15 @@ export type ChatMessageListProps = {
   streamedContent?: string;
   terminalMessage?: Message | null;
   ephemeralPhaseLabel?: string | null;
+  streamConnectionState?: "idle" | "connecting" | "streaming" | "reconnecting" | "terminal" | "interrupted";
+  streamErrorMessage?: string | null;
   selectionMode?: boolean;
   selectedIds?: ReadonlySet<string>;
   rangeStartMessageId?: string | null;
   rangeEndMessageId?: string | null;
   onToggleSelect?: (message: Message) => void;
+  onRetryStream?: () => void;
+  onRefreshMessages?: () => void;
 };
 
 function ListSeparator() {
@@ -40,11 +44,15 @@ function ChatMessageListComponent({
   streamedContent,
   terminalMessage,
   ephemeralPhaseLabel,
+  streamConnectionState,
+  streamErrorMessage,
   selectionMode,
   selectedIds,
   rangeStartMessageId,
   rangeEndMessageId,
   onToggleSelect,
+  onRetryStream,
+  onRefreshMessages,
 }: ChatMessageListProps) {
   const listExtraData = useMemo(
     () => ({
@@ -56,10 +64,14 @@ function ChatMessageListComponent({
       streamedContent,
       terminalMessage,
       ephemeralPhaseLabel,
+      streamConnectionState,
+      streamErrorMessage,
       selectionMode,
       selectedIds,
       rangeStartMessageId,
       rangeEndMessageId,
+      onRetryStream,
+      onRefreshMessages,
     }),
     [
       composerSpacerHeight,
@@ -67,8 +79,12 @@ function ChatMessageListComponent({
       errorMessage,
       isError,
       isLoading,
+      onRefreshMessages,
+      onRetryStream,
       selectedIds,
       selectionMode,
+      streamConnectionState,
+      streamErrorMessage,
       streamAssistantMessageId,
       streamedContent,
       terminalMessage,
@@ -168,11 +184,17 @@ function ChatMessageListComponent({
             : isCurrentStreamTarget && streamedContent
               ? { ...item, content: streamedContent }
               : item;
+        const interruptionLabel =
+          isCurrentStreamTarget && streamConnectionState === "interrupted"
+            ? streamErrorMessage || sessionCopy.chat.streamReconnectInterruptedLabel
+            : null;
 
         return (
           <ChatMessageItem
             ephemeralStatusLabel={isCurrentStreamTarget ? ephemeralPhaseLabel : null}
+            interruptionLabel={interruptionLabel}
             message={renderedMessage}
+            onRefreshMessages={isCurrentStreamTarget ? onRefreshMessages : undefined}
             onPress={
               selectionMode && onToggleSelect
                 ? () => {
@@ -180,9 +202,11 @@ function ChatMessageListComponent({
                   }
                 : undefined
             }
+            onRetryStream={isCurrentStreamTarget ? onRetryStream : undefined}
             selectionLabel={getSelectionLabel(renderedMessage.id)}
             selected={selectedIds?.has(renderedMessage.id) ?? false}
             selectionMode={selectionMode}
+            showReconnectActions={Boolean(interruptionLabel)}
           />
         );
       }}

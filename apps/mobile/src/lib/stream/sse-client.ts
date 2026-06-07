@@ -4,6 +4,21 @@ type SseEventPayload = {
   data: string;
 };
 
+export class SseConnectionError extends Error {
+  status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "SseConnectionError";
+    this.status = status;
+  }
+}
+
+export type SseConnectionCloseDetails = {
+  closedByCaller: boolean;
+  status: number;
+};
+
 export type SseConnectionOptions = {
   url: string;
   accessToken?: string | null;
@@ -11,7 +26,7 @@ export type SseConnectionOptions = {
   onOpen?: () => void;
   onEvent: (event: SseEventPayload) => void;
   onError?: (error: Error) => void;
-  onClose?: () => void;
+  onClose?: (details: SseConnectionCloseDetails) => void;
 };
 
 export type SseConnection = {
@@ -135,17 +150,22 @@ export function connectSse(options: SseConnectionOptions): SseConnection {
       return;
     }
 
-    options.onError?.(new Error("SSE connection failed."));
+    options.onError?.(new SseConnectionError("SSE connection failed.", xhr.status || undefined));
   };
 
   xhr.onloadend = () => {
     processResponseChunk();
 
     if (!closedByCaller && xhr.status >= 400) {
-      options.onError?.(new Error(`SSE request failed with status ${xhr.status}.`));
+      options.onError?.(
+        new SseConnectionError(`SSE request failed with status ${xhr.status}.`, xhr.status),
+      );
     }
 
-    options.onClose?.();
+    options.onClose?.({
+      closedByCaller,
+      status: xhr.status,
+    });
   };
 
   const streamUrl = options.lastEventId

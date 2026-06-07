@@ -95,9 +95,17 @@ export function ChatScreen({
           }
           rangeEndMessageId={selectionController.rangeEndMessageId}
           rangeStartMessageId={selectionController.rangeStartMessageId}
+          onRefreshMessages={() => {
+            sessionController.refreshMessages().catch(() => {});
+          }}
+          onRetryStream={() => {
+            sessionController.stream.retryNow();
+          }}
           selectedIds={selectionController.selectedMessageIdSet}
           selectionMode={selectionController.selectionMode}
           streamAssistantMessageId={sessionController.streamAssistantMessageId}
+          streamConnectionState={sessionController.stream.connectionState}
+          streamErrorMessage={sessionController.stream.errorMessage}
           streamedContent={sessionController.stream.streamedContent}
           terminalMessage={sessionController.stream.terminalMessage}
         />

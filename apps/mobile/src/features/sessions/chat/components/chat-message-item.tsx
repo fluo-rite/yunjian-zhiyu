@@ -9,10 +9,14 @@ export type ChatMessageItemProps = {
   message: Message;
   renderMode?: "plain" | "markdown";
   ephemeralStatusLabel?: string | null;
+  interruptionLabel?: string | null;
+  showReconnectActions?: boolean;
   selectionMode?: boolean;
   selected?: boolean;
   selectionLabel?: string | null;
   onPress?: () => void;
+  onRetryStream?: () => void;
+  onRefreshMessages?: () => void;
 };
 
 function getCitationTypeLabel(citation: Citation) {
@@ -35,10 +39,14 @@ function ChatMessageItemComponent({
   message,
   renderMode,
   ephemeralStatusLabel,
+  interruptionLabel,
+  showReconnectActions,
   selectionMode,
   selected,
   selectionLabel,
   onPress,
+  onRetryStream,
+  onRefreshMessages,
 }: ChatMessageItemProps) {
   const [isCitationModalVisible, setIsCitationModalVisible] = useState(false);
   const isUser = message.role === "user";
@@ -47,7 +55,10 @@ function ChatMessageItemComponent({
   const assistantContent = !isUser ? message.content : "";
 
   const assistantFallbackText =
-    !assistantContent && message.status === "streaming" && !ephemeralStatusLabel
+    !assistantContent &&
+    message.status === "streaming" &&
+    !ephemeralStatusLabel &&
+    !interruptionLabel
       ? "正在生成回复…"
       : null;
 
@@ -72,6 +83,7 @@ function ChatMessageItemComponent({
 
           {!isUser && assistantFallbackText ? <Text style={styles.statusText}>{assistantFallbackText}</Text> : null}
           {!isUser && ephemeralStatusLabel ? <Text style={styles.streamingStatusText}>{ephemeralStatusLabel}</Text> : null}
+          {!isUser && interruptionLabel ? <Text style={styles.errorText}>{interruptionLabel}</Text> : null}
           {!isUser && message.status === "failed" ? (
             <Text style={styles.errorText}>{message.errorMessage || "这次回复没有成功完成。"}</Text>
           ) : null}
@@ -92,6 +104,26 @@ function ChatMessageItemComponent({
           >
             <Text style={styles.citationTriggerText}>查看引用内容</Text>
           </Pressable>
+        ) : null}
+
+        {!selectionMode && showReconnectActions ? (
+          <View style={styles.reconnectActionRow}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onRetryStream}
+              style={({ pressed }) => [styles.reconnectAction, pressed && styles.citationTriggerPressed]}
+            >
+              <Text style={styles.citationTriggerText}>重试继续接收</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={onRefreshMessages}
+              style={({ pressed }) => [styles.reconnectAction, pressed && styles.citationTriggerPressed]}
+            >
+              <Text style={styles.citationTriggerText}>刷新消息</Text>
+            </Pressable>
+          </View>
         ) : null}
       </View>
     </View>
