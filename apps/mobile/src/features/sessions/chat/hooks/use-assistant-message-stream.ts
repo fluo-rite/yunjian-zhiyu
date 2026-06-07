@@ -112,6 +112,10 @@ export function useAssistantMessageStream(
     connectionRef.current = null;
   }, []);
 
+  const invalidateConnectionGeneration = useCallback(() => {
+    ++connectionGenerationRef.current;
+  }, []);
+
   const resetReconnectBudget = useCallback(() => {
     reconnectAttemptRef.current = 0;
     reconnectWindowStartedAtRef.current = null;
@@ -593,7 +597,7 @@ export function useAssistantMessageStream(
     };
 
     if (!sessionId || !assistantMessageId || !accessToken) {
-      ++connectionGenerationRef.current;
+      invalidateConnectionGeneration();
       closeConnection();
       clearReconnectTimer();
       resetReconnectBudget();
@@ -616,7 +620,7 @@ export function useAssistantMessageStream(
     connectWithMode("initial");
 
     return () => {
-      ++connectionGenerationRef.current;
+      invalidateConnectionGeneration();
       pendingDeltaRef.current = "";
       disconnectHandledRef.current = false;
       clearReconnectTimer();
@@ -630,6 +634,7 @@ export function useAssistantMessageStream(
     clearReconnectTimer,
     closeConnection,
     connectWithMode,
+    invalidateConnectionGeneration,
     resetReconnectBudget,
     sessionId,
   ]);
